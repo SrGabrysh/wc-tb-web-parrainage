@@ -1,26 +1,34 @@
 # WC TB-Web Parrainage
 
-**Version:** 1.0.0  
+**Version:** 1.2.0  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
 ## Description
 
-Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine deux fonctionnalités principales :
+Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine trois fonctionnalités principales :
 
 1. **Système de code parrain au checkout** - Permet aux clients de saisir un code parrain lors de la commande avec validation en temps réel
-2. **Webhooks enrichis** - Ajoute automatiquement les métadonnées d'abonnement WooCommerce Subscriptions dans les webhooks
+2. **Masquage conditionnel des codes promo** - Masque automatiquement les champs de codes promo pour les produits configurés
+3. **Webhooks enrichis** - Ajoute automatiquement les métadonnées d'abonnement WooCommerce Subscriptions dans les webhooks
 
 ## Fonctionnalités
 
 ### ✨ Système de Parrainage
 
-- Champ "Code parrain" au checkout WooCommerce
+- Champ "Code parrain" au checkout WooCommerce (conditionnel selon produits configurés)
 - Validation en temps réel via AJAX (format et existence en BDD)
 - Messages dynamiques selon les produits du panier
 - Prévention de l'auto-parrainage
 - Stockage complet des informations dans les commandes
 - Affichage enrichi dans l'administration des commandes
+
+### 🚫 Masquage Conditionnel des Codes Promo
+
+- Masquage automatique des champs codes promo au panier et checkout
+- Activation selon les produits configurés dans l'interface d'administration
+- Désactivation complète des fonctionnalités de coupons pour les produits concernés
+- Logs des actions de masquage pour le suivi
 
 ### 🔗 Webhooks Enrichis
 
@@ -64,7 +72,8 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine deux 
 Rendez-vous dans **Réglages > TB-Web Parrainage** pour configurer :
 
 - ✅ **Activer les webhooks enrichis** - Ajoute les métadonnées d'abonnement
-- ✅ **Activer le système de parrainage** - Affiche le champ code parrain au checkout
+- ✅ **Activer le système de parrainage** - Affiche le champ code parrain au checkout (conditionnel)
+- ✅ **Masquer les codes promo** - Masque automatiquement les codes promo pour les produits configurés
 - 🕐 **Rétention des logs** - Durée de conservation (1-365 jours)
 
 ## Utilisation
@@ -77,9 +86,15 @@ Les codes parrain correspondent aux **ID d'abonnements actifs** WooCommerce Subs
 - Validation automatique en base de données
 - Affichage des informations du parrain lors de la validation
 
-### Messages par Produit
+### Configuration par Produit
 
-Le plugin supporte des messages personnalisés par produit. Par défaut configuré pour :
+Le plugin utilise une interface d'administration pour configurer les produits. Les fonctionnalités suivantes s'appliquent **uniquement aux produits configurés** :
+
+- **Champ "Code parrain"** : Visible et obligatoire seulement pour les produits configurés
+- **Masquage codes promo** : Les codes promo sont masqués automatiquement
+- **Messages personnalisés** : Descriptions et avantages spécifiques par produit
+
+Par défaut configuré pour :
 
 - **Produits 6713, 6524, 6519** : "1 mois gratuit supplémentaire"
 - **Produit 6354** : "10% de remise"
@@ -225,6 +240,18 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 1.2.0 (2024-07-22)
+
+- **Nouveau** : Masquage conditionnel des codes promo
+- **Nouveau** : Option d'activation du masquage des codes promo dans les paramètres
+- **Amélioration** : Champ code parrain conditionnel (uniquement pour les produits configurés)
+- **Amélioration** : Logs enrichis pour le suivi des actions de masquage
+- **Amélioration** : Documentation mise à jour
+
+### Version 1.1.0 (2024-01-XX)
+
+- Améliorations diverses et corrections de bugs
 
 ### Version 1.0.0 (2024-01-XX)
 

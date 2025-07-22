@@ -11,6 +11,7 @@ class Plugin {
     private $logger;
     private $webhook_manager;
     private $parrainage_manager;
+    private $coupon_manager;
     
     public function __construct() {
         $this->logger = new Logger();
@@ -21,6 +22,7 @@ class Plugin {
     private function init_managers() {
         $this->webhook_manager = new WebhookManager( $this->logger );
         $this->parrainage_manager = new ParrainageManager( $this->logger );
+        $this->coupon_manager = new CouponManager( $this->logger );
     }
     
     private function init_hooks() {
@@ -36,6 +38,11 @@ class Plugin {
         
         if ( ! empty( $settings['enable_parrainage'] ) ) {
             $this->parrainage_manager->init();
+        }
+        
+        // Initialiser le gestionnaire de coupons si activé
+        if ( ! empty( $settings['enable_coupon_hiding'] ) ) {
+            $this->coupon_manager->init();
         }
         
         // Nettoyage automatique des logs
@@ -164,6 +171,7 @@ class Plugin {
             $settings = array(
                 'enable_webhooks' => isset( $_POST['enable_webhooks'] ),
                 'enable_parrainage' => isset( $_POST['enable_parrainage'] ),
+                'enable_coupon_hiding' => isset( $_POST['enable_coupon_hiding'] ),
                 'log_retention_days' => absint( $_POST['log_retention_days'] )
             );
             
@@ -193,6 +201,16 @@ class Plugin {
                             <input type="checkbox" name="enable_parrainage" value="1" <?php checked( ! empty( $settings['enable_parrainage'] ) ); ?>>
                             <?php esc_html_e( 'Ajouter le champ code parrain au checkout', 'wc-tb-web-parrainage' ); ?>
                         </label>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Masquer les codes promo', 'wc-tb-web-parrainage' ); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_coupon_hiding" value="1" <?php checked( ! empty( $settings['enable_coupon_hiding'] ) ); ?>>
+                            <?php esc_html_e( 'Masquer automatiquement les champs code promo pour les produits configurés', 'wc-tb-web-parrainage' ); ?>
+                        </label>
+                        <p class="description"><?php esc_html_e( 'Les codes promo seront masqués au panier et checkout pour les produits configurés dans l\'onglet "Configuration Produits"', 'wc-tb-web-parrainage' ); ?></p>
                     </td>
                 </tr>
                 <tr>
