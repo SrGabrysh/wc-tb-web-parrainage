@@ -1,16 +1,17 @@
 # WC TB-Web Parrainage
 
-**Version:** 1.2.0  
+**Version:** 1.1.1  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
 ## Description
 
-Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine trois fonctionnalités principales :
+Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine quatre fonctionnalités principales :
 
 1. **Système de code parrain au checkout** - Permet aux clients de saisir un code parrain lors de la commande avec validation en temps réel
-2. **Masquage conditionnel des codes promo** - Masque automatiquement les champs de codes promo pour les produits configurés
-3. **Webhooks enrichis** - Ajoute automatiquement les métadonnées d'abonnement WooCommerce Subscriptions dans les webhooks
+2. **Calcul automatique des dates de fin de remise** - Calcule et stocke automatiquement les dates de fin de période de remise parrainage (12 mois + marge de sécurité)
+3. **Masquage conditionnel des codes promo** - Masque automatiquement les champs de codes promo pour les produits configurés
+4. **Webhooks enrichis** - Ajoute automatiquement les métadonnées d'abonnement et de tarification parrainage dans les webhooks
 
 ## Fonctionnalités
 
@@ -23,6 +24,13 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine trois
 - Stockage complet des informations dans les commandes
 - Affichage enrichi dans l'administration des commandes
 
+### 📅 Calcul Automatique des Dates de Fin de Remise
+
+- Calcul automatique de la date de fin de période de remise parrainage (12 mois + 2 jours de marge)
+- Stockage des dates dans les métadonnées des commandes et abonnements
+- Intégration aux webhooks avec la clé `parrainage_pricing`
+- Logs de traçabilité pour toutes les opérations de calcul
+
 ### 🚫 Masquage Conditionnel des Codes Promo
 
 - Masquage automatique des champs codes promo au panier et checkout
@@ -33,6 +41,7 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine trois
 ### 🔗 Webhooks Enrichis
 
 - Ajout automatique des métadonnées d'abonnement dans les webhooks
+- **Nouvelles données de tarification parrainage** via la clé `parrainage_pricing`
 - Informations complètes : ID, statut, dates, articles, facturation
 - Support WooCommerce Subscriptions
 - Logs détaillés de tous les traitements
@@ -119,9 +128,28 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
       "subscription_currency": "EUR",
       "subscription_items": [...]
     }
-  ]
+  ],
+  "parrainage_pricing": {
+    "date_fin_remise_parrainage": "2025-07-24",
+    "date_debut_parrainage": "2024-07-22",
+    "date_fin_remise_parrainage_formatted": "24-07-2025",
+    "date_debut_parrainage_formatted": "22-07-2024",
+    "jours_marge_parrainage": 2,
+    "periode_remise_mois": 12
+  }
 }
 ```
+
+#### Clé `parrainage_pricing`
+
+Cette nouvelle clé n'apparaît que si la commande contient un code parrain valide :
+
+- **`date_fin_remise_parrainage`** : Date calculée de fin de période de remise au format YYYY-MM-DD
+- **`date_debut_parrainage`** : Date de début de l'abonnement avec parrainage au format YYYY-MM-DD
+- **`date_fin_remise_parrainage_formatted`** : Date de fin de remise au format DD-MM-YYYY
+- **`date_debut_parrainage_formatted`** : Date de début au format DD-MM-YYYY
+- **`jours_marge_parrainage`** : Nombre de jours de marge ajoutés (défaut : 2)
+- **`periode_remise_mois`** : Durée de la période de remise en mois (12)
 
 ## Développement
 
@@ -129,16 +157,18 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
 
 ```
 wc-tb-web-parrainage/
-├── wc-tb-web-parrainage.php    # Fichier principal
-├── composer.json               # Autoload PSR-4
+├── wc-tb-web-parrainage.php              # Fichier principal
+├── composer.json                         # Autoload PSR-4
 ├── src/
-│   ├── Plugin.php             # Classe principale
-│   ├── Logger.php             # Système de logs
-│   ├── WebhookManager.php     # Gestion webhooks
-│   └── ParrainageManager.php  # Système parrainage
+│   ├── Plugin.php                       # Classe principale
+│   ├── Logger.php                       # Système de logs
+│   ├── WebhookManager.php               # Gestion webhooks
+│   ├── ParrainageManager.php            # Système parrainage
+│   ├── CouponManager.php                # Masquage codes promo
+│   └── SubscriptionPricingManager.php   # Calcul dates tarification
 ├── assets/
-│   ├── admin.css              # Styles administration
-│   └── admin.js               # Scripts administration
+│   ├── admin.css                        # Styles administration
+│   └── admin.js                         # Scripts administration
 └── README.md
 ```
 
@@ -175,6 +205,14 @@ Gestion des webhooks WooCommerce enrichis.
 #### `TBWeb\WCParrainage\ParrainageManager`
 
 Système complet de gestion des codes parrain.
+
+#### `TBWeb\WCParrainage\SubscriptionPricingManager`
+
+Calcul et gestion des dates de modification tarifaire pour les abonnements avec parrainage.
+
+#### `TBWeb\WCParrainage\CouponManager`
+
+Gestion du masquage conditionnel des codes promo.
 
 ## Logs et Debugging
 
@@ -240,6 +278,15 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 1.1.1 (2024-07-25)
+
+- **Nouveau** : Calcul automatique des dates de fin de remise parrainage
+- **Nouveau** : Classe `SubscriptionPricingManager` pour la gestion des dates tarifaires
+- **Nouveau** : Intégration des données de tarification aux webhooks via la clé `parrainage_pricing`
+- **Amélioration** : Logs enrichis pour le suivi des calculs de tarification
+- **Amélioration** : Stockage des métadonnées dans les commandes et abonnements
+- **Amélioration** : Documentation mise à jour avec exemples de webhooks
 
 ### Version 1.2.0 (2024-07-22)
 

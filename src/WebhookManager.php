@@ -9,9 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WebhookManager {
     
     private $logger;
+    private $subscription_pricing_manager;
     
-    public function __construct( $logger ) {
+    public function __construct( $logger, $subscription_pricing_manager = null ) {
         $this->logger = $logger;
+        $this->subscription_pricing_manager = $subscription_pricing_manager;
     }
     
     public function init() {
@@ -105,6 +107,25 @@ class WebhookManager {
             $payload['has_subscriptions'] = true;
             $payload['subscriptions_count'] = count( $subscriptions );
             
+            // Ajouter les informations de tarification parrainage si disponibles
+            if ( $this->subscription_pricing_manager ) {
+                $infos_tarification = $this->subscription_pricing_manager->obtenir_infos_tarification_parrainage( $resource_id );
+                if ( $infos_tarification ) {
+                    $payload['parrainage_pricing'] = $infos_tarification;
+                    
+                    // Log spécifique pour les données de tarification
+                    $this->logger->info( 
+                        sprintf( 'Webhook ordre %d : données de tarification parrainage ajoutées (avec abonnements)', $resource_id ),
+                        array( 
+                            'webhook_id' => $webhook_id,
+                            'order_id' => $resource_id,
+                            'pricing_data' => $infos_tarification
+                        ),
+                        'webhook-subscriptions'
+                    );
+                }
+            }
+            
             // Log pour debugging
             $this->logger->info( 
                 sprintf( 
@@ -132,6 +153,26 @@ class WebhookManager {
                 array( 'webhook_id' => $webhook_id, 'order_id' => $resource_id ),
                 'webhook-subscriptions'
             );
+        }
+        
+        // Ajouter les informations de tarification parrainage même sans abonnements
+        // (car l'abonnement peut être créé après le webhook de commande)
+        if ( $this->subscription_pricing_manager ) {
+            $infos_tarification = $this->subscription_pricing_manager->obtenir_infos_tarification_parrainage( $resource_id );
+            if ( $infos_tarification ) {
+                $payload['parrainage_pricing'] = $infos_tarification;
+                
+                // Log spécifique pour les données de tarification
+                $this->logger->info( 
+                    sprintf( 'Webhook ordre %d : données de tarification parrainage ajoutées (sans abonnements)', $resource_id ),
+                    array( 
+                        'webhook_id' => $webhook_id,
+                        'order_id' => $resource_id,
+                        'pricing_data' => $infos_tarification
+                    ),
+                    'webhook-subscriptions'
+                );
+            }
         }
         
         return $payload;

@@ -12,6 +12,7 @@ class Plugin {
     private $webhook_manager;
     private $parrainage_manager;
     private $coupon_manager;
+    private $subscription_pricing_manager;
     
     public function __construct() {
         $this->logger = new Logger();
@@ -20,7 +21,9 @@ class Plugin {
     }
     
     private function init_managers() {
-        $this->webhook_manager = new WebhookManager( $this->logger );
+        // Version minimaliste pour test progressif
+        $this->subscription_pricing_manager = new SubscriptionPricingManager( $this->logger );
+        $this->webhook_manager = new WebhookManager( $this->logger, $this->subscription_pricing_manager );
         $this->parrainage_manager = new ParrainageManager( $this->logger );
         $this->coupon_manager = new CouponManager( $this->logger );
     }
@@ -43,6 +46,11 @@ class Plugin {
         // Initialiser le gestionnaire de coupons si activé
         if ( ! empty( $settings['enable_coupon_hiding'] ) ) {
             $this->coupon_manager->init();
+        }
+        
+        // Initialiser le gestionnaire de tarification d'abonnements si le parrainage est activé (version simple)
+        if ( ! empty( $settings['enable_parrainage'] ) ) {
+            $this->subscription_pricing_manager->init();
         }
         
         // Nettoyage automatique des logs
