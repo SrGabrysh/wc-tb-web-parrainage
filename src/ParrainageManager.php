@@ -97,6 +97,23 @@ class ParrainageManager {
     }
     
     /**
+     * Vérifier si le panier contient des produits nécessitant un code parrain
+     */
+    public function panier_necessite_code_parrain() {
+        $config = $this->obtenir_configuration_messages_parrainage();
+        $product_ids = $this->obtenir_produits_panier_checkout();
+        
+        // Chercher si au moins un produit du panier est configuré (hors default)
+        foreach ( $product_ids as $product_id ) {
+            if ( isset( $config[ $product_id ] ) ) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
      * Obtenir le message de parrainage selon le produit
      */
     public function obtenir_message_parrainage( $type = 'description' ) {
@@ -166,16 +183,22 @@ class ParrainageManager {
     }
     
     /**
-     * 1) Création du champ au checkout avec message dynamique
+     * 1) Création du champ au checkout avec message dynamique (conditionnel)
      */
     public function ajouter_champ_parrain_checkout( $fields ) {
+        // Vérifier si le panier contient des produits nécessitant un code parrain
+        if ( ! $this->panier_necessite_code_parrain() ) {
+            // Ne pas ajouter le champ si aucun produit configuré dans le panier
+            return $fields;
+        }
+        
         // Obtenir le message dynamique selon le produit
         $description_dynamique = $this->obtenir_message_parrainage( 'description' );
         
         $fields['billing']['billing_parrain_code'] = array(
             'label'       => __( 'Code parrain', 'wc-tb-web-parrainage' ),
             'placeholder' => 'Ex : 4896',
-            'required'    => false,
+            'required'    => true, // Obligatoire si affiché pour un produit configuré
             'class'       => array( 'form-row-wide' ),
             'clear'       => true,
             'priority'    => 131,
@@ -459,9 +482,22 @@ class ParrainageManager {
     }
     
     /**
-     * 2) Validation PHP côté serveur robuste avec vérification BDD
+     * 2) Validation PHP côté serveur robuste avec vérification BDD (conditionnel)
      */
     public function valider_champ_parrain_checkout() {
+        // Vérifier si le panier nécessite un code parrain
+        $necessite_code_parrain = $this->panier_necessite_code_parrain();
+        
+        // Si le panier nécessite un code parrain mais qu'aucun n'est fourni
+        if ( $necessite_code_parrain && ( ! isset($_POST['billing_parrain_code']) || $_POST['billing_parrain_code'] === '' ) ) {
+            wc_add_notice(
+                __( 'Le code parrain est obligatoire pour ce produit.', 'wc-tb-web-parrainage' ),
+                'error'
+            );
+            return;
+        }
+        
+        // Si un code parrain est fourni, le valider
         if ( isset($_POST['billing_parrain_code']) && $_POST['billing_parrain_code'] !== '' ) {
             
             $code = preg_replace( '/\s+/', '', sanitize_text_field( $_POST['billing_parrain_code'] ) );
