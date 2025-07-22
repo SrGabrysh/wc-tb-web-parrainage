@@ -1,0 +1,46 @@
+# WordPress Plugin .gitignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+error_log
+debug.log
+
+# Backup files
+*.bak
+*.tmp
+*.temp
+
+# Node modules (si vous utilisez npm/webpack)
+node_modules/
+dist/
+build/
+
+# Composer dependencies (garder vendor/ car il est commité)
+# vendor/
+
+# WordPress specific
+wp-config.php
+.htaccess
+
+# Version files (on ne commit pas les .zip)
+*.zip
+*.tar.gz
+
+# Cache files
+*.cache 

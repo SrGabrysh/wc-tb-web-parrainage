@@ -1,0 +1,21 @@
+{
+    "name": "tb-web/wc-parrainage",
+    "type": "wordpress-plugin",
+    "description": "Plugin de parrainage WooCommerce avec webhooks enrichis",
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.7",
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "TBWeb\\WCParrainage\\": "src/"
+        }
+    },
+    "scripts": {
+        "lint": "phpcs src/ --standard=WordPress",
+        "test": "phpunit"
+    }
+} 

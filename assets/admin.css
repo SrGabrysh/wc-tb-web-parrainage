@@ -1,0 +1,464 @@
+/* ==========================================================================
+   TB-Web Parrainage - Interface d'administration
+   ========================================================================== */
+
+/* Interface principale */
+.wrap .nav-tab-wrapper {
+  margin-bottom: 20px;
+}
+
+/* Conteneur des logs */
+.logs-container {
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.logs-container .tablenav {
+  margin-bottom: 15px;
+}
+
+/* Table des logs */
+.logs-container table {
+  margin-top: 0;
+}
+
+.logs-container th,
+.logs-container td {
+  padding: 12px 8px;
+  vertical-align: top;
+}
+
+/* Niveaux de logs */
+.log-level {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.log-level-info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.log-level-warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.log-level-error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.log-level-debug {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/* Lignes de logs */
+.log-level-info td:first-child {
+  border-left: 3px solid #17a2b8;
+}
+
+.log-level-warning td:first-child {
+  border-left: 3px solid #ffc107;
+}
+
+.log-level-error td:first-child {
+  border-left: 3px solid #dc3545;
+}
+
+.log-level-debug td:first-child {
+  border-left: 3px solid #6c757d;
+}
+
+/* Détails contexte */
+details {
+  margin-top: 5px;
+}
+
+details summary {
+  cursor: pointer;
+  color: #0073aa;
+  font-size: 12px;
+}
+
+details pre {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 3px;
+  font-size: 11px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 5px;
+}
+
+/* Statistiques */
+.stats-container {
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 25px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-card h3 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.stat-number {
+  font-size: 36px;
+  font-weight: bold;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Formulaire paramètres */
+.form-table th {
+  font-weight: 600;
+}
+
+.form-table .description {
+  font-style: italic;
+  color: #666;
+}
+
+/* Boutons */
+.button-refresh {
+  background: #00a0d2;
+  border-color: #00a0d2;
+  color: white;
+}
+
+.button-refresh:hover {
+  background: #0085a3;
+  border-color: #0085a3;
+  color: white;
+}
+
+.button-clear {
+  background: #dc3232;
+  border-color: #dc3232;
+  color: white;
+}
+
+.button-clear:hover {
+  background: #c32323;
+  border-color: #c32323;
+  color: white;
+}
+
+/* Messages de notice */
+.notice {
+  margin: 15px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .logs-container th:nth-child(5),
+  .logs-container td:nth-child(5) {
+    display: none;
+  }
+
+  .logs-container th:nth-child(3),
+  .logs-container td:nth-child(3) {
+    display: none;
+  }
+}
+
+/* Animation de chargement */
+.loading {
+  position: relative;
+}
+
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0073aa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Informations parrainage dans l'admin commande */
+.parrain-info {
+  margin-top: 10px;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-left: 4px solid #00a0d2;
+  border-radius: 0 4px 4px 0;
+}
+
+.parrain-info h4 {
+  margin: 0 0 10px 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.parrain-info p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.parrain-info strong {
+  color: #495057;
+}
+
+.parrain-info a {
+  color: #0073aa;
+  text-decoration: none;
+}
+
+.parrain-info a:hover {
+  text-decoration: underline;
+}
+
+/* Configuration des produits */
+.products-config-container {
+  background: #fff;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.products-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.products-header h3 {
+  margin: 0;
+  color: #23282d;
+}
+
+.products-list {
+  margin-bottom: 30px;
+}
+
+.product-config-row {
+  background: #f9f9f9;
+  border: 1px solid #e1e1e1;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  padding: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.product-config-row:hover {
+  border-color: #0073aa;
+  box-shadow: 0 2px 8px rgba(0, 115, 170, 0.1);
+}
+
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.product-header h4 {
+  margin: 0;
+  color: #0073aa;
+  font-size: 16px;
+}
+
+.product-number {
+  color: #666;
+  font-weight: normal;
+}
+
+.remove-product {
+  color: #a00;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.remove-product:hover {
+  background: #a00;
+  color: white;
+  text-decoration: none;
+}
+
+.product-config-row .form-table {
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.product-config-row .form-table th {
+  background: #f1f1f1;
+  font-weight: 600;
+  padding: 12px 15px;
+  width: 200px;
+}
+
+.product-config-row .form-table td {
+  padding: 12px 15px;
+}
+
+.no-products {
+  text-align: center;
+  padding: 40px 20px;
+  background: #f9f9f9;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  color: #666;
+  font-style: italic;
+}
+
+.default-config-section {
+  background: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 6px;
+  padding: 20px;
+  margin-top: 30px;
+}
+
+.default-config-section h3 {
+  margin-top: 0;
+  color: #0073aa;
+}
+
+.default-config-section .form-table {
+  background: white;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 15px;
+}
+
+.default-config-section .form-table th {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e1e1e1;
+}
+
+/* Animations */
+.product-config-row.removing {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition: all 0.3s ease;
+}
+
+.product-config-row.adding {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .products-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .product-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .product-config-row .form-table th {
+    width: auto;
+    display: block;
+    padding: 8px 15px 4px 15px;
+    border-bottom: none;
+  }
+
+  .product-config-row .form-table td {
+    display: block;
+    padding: 4px 15px 12px 15px;
+    border-bottom: 1px solid #e1e1e1;
+  }
+}
+
+/* Validation des champs */
+.product-id-input:invalid {
+  border-color: #dc3232;
+  box-shadow: 0 0 2px rgba(220, 50, 50, 0.5);
+}
+
+.product-config-row textarea:focus,
+.product-config-row input:focus {
+  border-color: #0073aa;
+  box-shadow: 0 0 0 1px #0073aa;
+  outline: none;
+}
+
+/* Messages d'aide */
+.help-message {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 15px 0;
+  color: #856404;
+}
+
+.help-message strong {
+  color: #533f03;
+}
