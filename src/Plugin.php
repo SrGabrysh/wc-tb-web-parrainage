@@ -14,6 +14,7 @@ class Plugin {
     private $coupon_manager;
     private $subscription_pricing_manager;
     private $parrainage_stats_manager;
+    private $my_account_parrainage_manager;
     
     public function __construct() {
         $this->logger = new Logger();
@@ -28,6 +29,7 @@ class Plugin {
         $this->parrainage_manager = new ParrainageManager( $this->logger );
         $this->coupon_manager = new CouponManager( $this->logger );
         $this->parrainage_stats_manager = new ParrainageStatsManager( $this->logger );
+        $this->my_account_parrainage_manager = new MyAccountParrainageManager( $this->logger );
     }
     
     private function init_hooks() {
@@ -58,6 +60,11 @@ class Plugin {
         // Initialiser le gestionnaire des statistiques de parrainage
         if ( ! empty( $settings['enable_parrainage'] ) ) {
             $this->parrainage_stats_manager->init();
+        }
+        
+        // Initialiser le gestionnaire de l'onglet "Mes parrainages" côté client
+        if ( ! empty( $settings['enable_parrainage'] ) ) {
+            $this->my_account_parrainage_manager->init();
         }
         
         // Nettoyage automatique des logs

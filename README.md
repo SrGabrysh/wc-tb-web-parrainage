@@ -1,17 +1,18 @@
 # WC TB-Web Parrainage
 
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
 ## Description
 
-Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine quatre fonctionnalités principales :
+Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine cinq fonctionnalités principales :
 
 1. **Système de code parrain au checkout** - Permet aux clients de saisir un code parrain lors de la commande avec validation en temps réel
 2. **Calcul automatique des dates de fin de remise** - Calcule et stocke automatiquement les dates de fin de période de remise parrainage (12 mois + marge de sécurité)
 3. **Masquage conditionnel des codes promo** - Masque automatiquement les champs de codes promo pour les produits configurés
 4. **Webhooks enrichis** - Ajoute automatiquement les métadonnées d'abonnement et de tarification parrainage dans les webhooks
+5. **Onglet "Mes parrainages" côté client** - Interface utilisateur dédiée dans Mon Compte pour consulter ses parrainages
 
 ## Fonctionnalités
 
@@ -55,7 +56,7 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine quatr
 - Configuration des produits par interface graphique
 - Nettoyage automatique des anciens logs
 
-### 📊 Interface de Parrainage (Nouveau)
+### 📊 Interface de Parrainage (Admin)
 
 - **Tableau groupé par parrain** - Visualisation claire des parrains et leurs filleuls
 - **Système de filtres avancé** - Filtrage par date, parrain, produit, statut d'abonnement
@@ -64,6 +65,17 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine quatr
 - **Pagination optimisée** - Gestion performante de gros volumes de données
 - **Interface responsive** - Adaptée mobile et tablette
 - **Liens directs** - Accès rapide aux profils utilisateurs, commandes et abonnements
+
+### 👤 Onglet "Mes parrainages" côté client (Nouveau v1.3.0)
+
+- **Onglet dédié dans Mon Compte** - Interface utilisateur intuitive et sécurisée
+- **Contrôle d'accès strict** - Visible uniquement pour les abonnés actifs WooCommerce Subscriptions
+- **Tableau des filleuls** - Affichage des parrainages avec email masqué pour confidentialité
+- **Message d'invitation personnalisé** - Code parrain et lien de parrainage si aucun filleul
+- **Interface responsive** - Design adaptatif mobile/tablette avec masquage intelligent des colonnes
+- **Badges de statut colorés** - Statuts d'abonnement visuellement distincts
+- **Limite de performance** - Affichage des 10 derniers parrainages pour un chargement rapide
+- **CSS natif WooCommerce** - Intégration parfaite avec tous les thèmes compatibles
 
 ## Installation
 
@@ -86,7 +98,7 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine quatr
 - **WordPress** 6.0 ou supérieur
 - **PHP** 8.1 ou supérieur
 - **WooCommerce** installé et activé
-- **WooCommerce Subscriptions** (optionnel, pour le système de parrainage)
+- **WooCommerce Subscriptions** (requis pour le système de parrainage et l'onglet "Mes parrainages")
 
 ### Paramètres
 
@@ -188,15 +200,19 @@ wc-tb-web-parrainage/
 │   ├── ParrainageManager.php            # Système parrainage
 │   ├── CouponManager.php                # Masquage codes promo
 │   ├── SubscriptionPricingManager.php   # Calcul dates tarification
-│   ├── ParrainageStatsManager.php       # Interface parrainage (Nouveau)
-│   ├── ParrainageDataProvider.php       # Fournisseur données (Nouveau)
-│   ├── ParrainageExporter.php           # Export données (Nouveau)
-│   └── ParrainageValidator.php          # Validation données (Nouveau)
+│   ├── ParrainageStatsManager.php       # Interface parrainage admin
+│   ├── ParrainageDataProvider.php       # Fournisseur données admin
+│   ├── ParrainageExporter.php           # Export données
+│   ├── ParrainageValidator.php          # Validation données
+│   ├── MyAccountParrainageManager.php   # Gestionnaire onglet client (Nouveau v1.3.0)
+│   ├── MyAccountDataProvider.php        # Fournisseur données client (Nouveau v1.3.0)
+│   └── MyAccountAccessValidator.php     # Validateur accès client (Nouveau v1.3.0)
 ├── assets/
 │   ├── admin.css                        # Styles administration
 │   ├── admin.js                         # Scripts administration
-│   ├── parrainage-admin.css             # Styles interface parrainage (Nouveau)
-│   └── parrainage-admin.js              # Scripts interface parrainage (Nouveau)
+│   ├── parrainage-admin.css             # Styles interface parrainage admin
+│   ├── parrainage-admin.js              # Scripts interface parrainage admin
+│   └── my-account-parrainage.css        # Styles onglet client (Nouveau v1.3.0)
 └── README.md
 ```
 
@@ -257,6 +273,18 @@ Export des données de parrainage vers différents formats (CSV, Excel).
 #### `TBWeb\WCParrainage\ParrainageValidator` (Nouveau)
 
 Validation des données d'entrée et paramètres de l'interface de parrainage.
+
+#### `TBWeb\WCParrainage\MyAccountParrainageManager` (Nouveau v1.3.0)
+
+Gestionnaire principal de l'onglet "Mes parrainages" côté client avec endpoint WooCommerce.
+
+#### `TBWeb\WCParrainage\MyAccountDataProvider` (Nouveau v1.3.0)
+
+Récupération et formatage des données de parrainage pour l'affichage côté client.
+
+#### `TBWeb\WCParrainage\MyAccountAccessValidator` (Nouveau v1.3.0)
+
+Validation de l'accès aux fonctionnalités de parrainage pour les utilisateurs connectés.
 
 ## Logs et Debugging
 
@@ -322,6 +350,24 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 1.3.0 (2025-07-25)
+
+- **Nouveau** : Onglet "Mes parrainages" côté client dans Mon Compte WooCommerce
+- **Nouveau** : Classe `MyAccountParrainageManager` pour la gestion de l'endpoint client
+- **Nouveau** : Classe `MyAccountDataProvider` pour la récupération des données côté client  
+- **Nouveau** : Classe `MyAccountAccessValidator` pour la validation d'accès aux abonnements
+- **Nouveau** : Interface utilisateur dédiée avec tableau des filleuls et emails masqués
+- **Nouveau** : Message d'invitation personnalisé avec code parrain et lien de parrainage
+- **Nouveau** : CSS `my-account-parrainage.css` responsive avec compatibilité thèmes WooCommerce
+- **Nouveau** : Contrôle d'accès strict pour les abonnés WooCommerce Subscriptions actifs
+- **Nouveau** : Badges de statut colorés pour les abonnements des filleuls
+- **Nouveau** : Système de cache pour optimiser les performances côté client
+- **Nouveau** : 6 nouvelles constantes pour l'onglet client (éviter magic numbers)
+- **Amélioration** : Fonction d'activation mise à jour avec endpoint "mes-parrainages"
+- **Amélioration** : Architecture SOLID avec séparation admin/client
+- **Amélioration** : Documentation complète de la nouvelle fonctionnalité
+- **Amélioration** : Respect de l'ordre critique d'activation des endpoints
 
 ### Version 1.2.0 (2025-07-25)
 

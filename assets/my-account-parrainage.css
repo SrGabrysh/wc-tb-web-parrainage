@@ -1,0 +1,366 @@
+/**
+ * CSS pour l'onglet "Mes parrainages" côté client
+ * 
+ * Utilise les classes WooCommerce natives pour une compatibilité maximale
+ * et ajoute des styles personnalisés pour l'interface de parrainage
+ * 
+ * @package TBWeb\WCParrainage
+ * @since 1.3.0
+ */
+
+/* ===============================
+   TABLEAU DES PARRAINAGES
+   =============================== */
+
+.parrainages-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.parrainages-table th,
+.parrainages-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  vertical-align: top;
+}
+
+.parrainages-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333333;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 14px;
+}
+
+.parrainages-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.parrainages-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===============================
+   BADGES DE STATUT
+   =============================== */
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.status-active {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-badge.status-on-hold {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-badge.status-cancelled {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-badge.status-expired {
+  background-color: #e2e3e5;
+  color: #383d41;
+  border: 1px solid #d6d8db;
+}
+
+.status-badge.status-pending-cancel {
+  background-color: #ffeaa7;
+  color: #d63031;
+  border: 1px solid #fdcb6e;
+}
+
+.status-badge.status-switched {
+  background-color: #ddd6fe;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
+}
+
+/* ===============================
+   MESSAGE D'INVITATION
+   =============================== */
+
+.parrainage-invitation {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 1px solid #90caf9;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+}
+
+.parrainage-invitation h3 {
+  color: #1976d2;
+  margin-bottom: 15px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.parrainage-invitation p {
+  color: #555555;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.parrainage-details {
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.parrainage-details p {
+  margin-bottom: 10px;
+}
+
+.parrainage-details strong {
+  color: #333333;
+}
+
+.parrain-code {
+  background: #2196f3;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 18px;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+  display: inline-block;
+  margin-left: 5px;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.parrainage-details a {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.parrainage-details a:hover {
+  text-decoration: underline;
+}
+
+/* ===============================
+   EMAIL MASQUÉ
+   =============================== */
+
+.email-masked {
+  font-style: italic;
+  color: #666666;
+  font-size: 13px;
+}
+
+/* ===============================
+   NOTICE DE LIMITE
+   =============================== */
+
+.parrainages-limit-notice {
+  background-color: #e9ecef;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 10px 15px;
+  margin-top: 15px;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+/* ===============================
+   RESPONSIVE - MOBILE
+   =============================== */
+
+@media (max-width: 768px) {
+  .parrainages-table {
+    font-size: 14px;
+    margin: 15px 0;
+  }
+
+  .parrainages-table th,
+  .parrainages-table td {
+    padding: 8px 10px;
+  }
+
+  /* Masquer certaines colonnes sur mobile */
+  .parrainages-table th:nth-child(3),
+  .parrainages-table td:nth-child(3) {
+    display: none; /* Masquer colonne produit */
+  }
+
+  .parrainages-table th:nth-child(6),
+  .parrainages-table td:nth-child(6) {
+    display: none; /* Masquer colonne montant */
+  }
+
+  .parrainage-invitation {
+    padding: 20px 15px;
+    margin: 15px 0;
+  }
+
+  .parrainage-invitation h3 {
+    font-size: 16px;
+  }
+
+  .parrainage-details {
+    padding: 15px;
+    margin: 15px 0;
+  }
+
+  .parrain-code {
+    font-size: 16px;
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .parrainages-table {
+    font-size: 13px;
+  }
+
+  /* Sur très petit écran, masquer aussi la colonne avantage */
+  .parrainages-table th:nth-child(5),
+  .parrainages-table td:nth-child(5) {
+    display: none;
+  }
+
+  .parrainage-invitation {
+    padding: 15px 10px;
+  }
+
+  .parrainage-details {
+    padding: 12px;
+  }
+
+  .parrain-code {
+    font-size: 14px;
+    padding: 5px 10px;
+    display: block;
+    margin: 10px auto 0;
+    width: fit-content;
+  }
+}
+
+/* ===============================
+   COMPATIBILITÉ THÈMES WOOCOMMERCE
+   =============================== */
+
+/* Reset pour assurer la compatibilité */
+.woocommerce-MyAccount-content .parrainages-table {
+  margin-top: 0;
+}
+
+.woocommerce-MyAccount-content .parrainage-invitation {
+  margin-top: 0;
+}
+
+/* Intégration avec les styles WooCommerce existants */
+.parrainages-table.woocommerce-table {
+  border: 1px solid #e0e0e0;
+}
+
+.parrainages-table.woocommerce-table th {
+  background-color: #f7f7f7;
+}
+
+/* Compatibilité avec les thèmes sombres */
+@media (prefers-color-scheme: dark) {
+  .parrainages-table {
+    background: #2d3748;
+    color: #e2e8f0;
+  }
+
+  .parrainages-table th {
+    background-color: #4a5568;
+    color: #e2e8f0;
+    border-bottom-color: #4a5568;
+  }
+
+  .parrainages-table td {
+    border-bottom-color: #4a5568;
+  }
+
+  .parrainages-table tbody tr:hover {
+    background-color: #4a5568;
+  }
+
+  .parrainage-details {
+    background: #2d3748;
+    border-color: #4a5568;
+    color: #e2e8f0;
+  }
+}
+
+/* ===============================
+   ANIMATIONS ET TRANSITIONS
+   =============================== */
+
+.parrainages-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.status-badge {
+  transition: all 0.2s ease;
+}
+
+.parrainage-details a {
+  transition: color 0.2s ease;
+}
+
+.parrain-code {
+  transition: all 0.2s ease;
+}
+
+.parrain-code:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.4);
+}
+
+/* ===============================
+   PRINT STYLES
+   =============================== */
+
+@media print {
+  .parrainages-table {
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .status-badge {
+    border: 1px solid #000 !important;
+    background: none !important;
+    color: #000 !important;
+  }
+
+  .parrainage-invitation {
+    background: none !important;
+    border: 1px solid #000;
+  }
+
+  .parrain-code {
+    background: none !important;
+    color: #000 !important;
+    border: 1px solid #000;
+  }
+}

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WC TB-Web Parrainage
  * Description: Plugin de parrainage WooCommerce avec webhooks enrichis - Gestion des codes parrain au checkout, calcul automatique des dates de fin de remise parrainage, masquage conditionnel des codes promo et ajout des métadonnées d'abonnement dans les webhooks.
- * Version: 1.2.0
+ * Version: 1.3.0
  * Author: TB-Web
  * Text Domain: wc-tb-web-parrainage
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Constantes
-define( 'WC_TB_PARRAINAGE_VERSION', '1.2.0' );
+define( 'WC_TB_PARRAINAGE_VERSION', '1.3.0' );
 define( 'WC_TB_PARRAINAGE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WC_TB_PARRAINAGE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -29,6 +29,14 @@ define( 'WC_TB_PARRAINAGE_MAX_EXPORT', 10000 );
 define( 'WC_TB_PARRAINAGE_CACHE_TIME', 300 );
 define( 'WC_TB_PARRAINAGE_DATE_FORMAT', 'Y-m-d' );
 define( 'WC_TB_PARRAINAGE_MAX_SEARCH_LENGTH', 100 );
+
+// Nouvelles constantes pour l'onglet "Mes parrainages" côté client
+define( 'WC_TB_PARRAINAGE_ENDPOINT_KEY', 'mes-parrainages' );
+define( 'WC_TB_PARRAINAGE_ENDPOINT_LABEL', 'Mes parrainages' );
+define( 'WC_TB_PARRAINAGE_LIMIT_DISPLAY', 10 );
+define( 'WC_TB_PARRAINAGE_INVITATION_URL', 'https://tb-web.fr/parrainage/' );
+define( 'WC_TB_PARRAINAGE_CACHE_USER_DATA', 300 );
+define( 'WC_TB_PARRAINAGE_EMAIL_MASK_CHAR', '*' );
 
 // Autoload Composer
 require_once WC_TB_PARRAINAGE_PATH . 'vendor/autoload.php';
@@ -62,6 +70,10 @@ function wc_tb_parrainage_activate() {
         'log_retention_days' => 30
     ) );
     
+    // NOUVEAU : Ajouter l'endpoint "Mes parrainages" AVANT le flush (ORDRE CRITIQUE)
+    add_rewrite_endpoint( WC_TB_PARRAINAGE_ENDPOINT_KEY, EP_ROOT | EP_PAGES );
+    
+    // Flush les permaliens APRÈS l'ajout de l'endpoint
     flush_rewrite_rules();
 }
 
