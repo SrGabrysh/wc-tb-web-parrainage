@@ -13,6 +13,7 @@ class Plugin {
     private $parrainage_manager;
     private $coupon_manager;
     private $subscription_pricing_manager;
+    private $parrainage_stats_manager;
     
     public function __construct() {
         $this->logger = new Logger();
@@ -26,6 +27,7 @@ class Plugin {
         $this->webhook_manager = new WebhookManager( $this->logger, $this->subscription_pricing_manager );
         $this->parrainage_manager = new ParrainageManager( $this->logger );
         $this->coupon_manager = new CouponManager( $this->logger );
+        $this->parrainage_stats_manager = new ParrainageStatsManager( $this->logger );
     }
     
     private function init_hooks() {
@@ -51,6 +53,11 @@ class Plugin {
         // Initialiser le gestionnaire de tarification d'abonnements si le parrainage est activé (version simple)
         if ( ! empty( $settings['enable_parrainage'] ) ) {
             $this->subscription_pricing_manager->init();
+        }
+        
+        // Initialiser le gestionnaire des statistiques de parrainage
+        if ( ! empty( $settings['enable_parrainage'] ) ) {
+            $this->parrainage_stats_manager->init();
         }
         
         // Nettoyage automatique des logs
@@ -91,6 +98,9 @@ class Plugin {
                 <a href="?page=wc-tb-parrainage&tab=stats" class="nav-tab <?php echo $current_tab === 'stats' ? 'nav-tab-active' : ''; ?>">
                     <?php esc_html_e( 'Statistiques', 'wc-tb-web-parrainage' ); ?>
                 </a>
+                <a href="?page=wc-tb-parrainage&tab=parrainage" class="nav-tab <?php echo $current_tab === 'parrainage' ? 'nav-tab-active' : ''; ?>">
+                    <?php esc_html_e( 'Parrainage', 'wc-tb-web-parrainage' ); ?>
+                </a>
             </nav>
             
             <div class="tab-content">
@@ -104,6 +114,9 @@ class Plugin {
                         break;
                     case 'stats':
                         $this->render_stats_tab();
+                        break;
+                    case 'parrainage':
+                        $this->parrainage_stats_manager->render_parrainage_interface();
                         break;
                     case 'logs':
                     default:
@@ -307,6 +320,25 @@ class Plugin {
             WC_TB_PARRAINAGE_VERSION,
             true
         );
+        
+        // Charger les assets spécifiques à l'onglet parrainage
+        $current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'logs';
+        if ( $current_tab === 'parrainage' ) {
+            wp_enqueue_style(
+                'wc-tb-parrainage-admin-parrainage',
+                WC_TB_PARRAINAGE_URL . 'assets/parrainage-admin.css',
+                array( 'wc-tb-parrainage-admin' ),
+                WC_TB_PARRAINAGE_VERSION
+            );
+            
+            wp_enqueue_script(
+                'wc-tb-parrainage-admin-parrainage',
+                WC_TB_PARRAINAGE_URL . 'assets/parrainage-admin.js',
+                array( 'jquery', 'wc-tb-parrainage-admin' ),
+                WC_TB_PARRAINAGE_VERSION,
+                true
+            );
+        }
         
         wp_localize_script( 'wc-tb-parrainage-admin', 'tbParrainageAjax', array(
             'ajaxurl' => admin_url( 'admin-ajax.php' ),

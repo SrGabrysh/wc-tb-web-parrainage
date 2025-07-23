@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 1.1.1  
+**Version:** 1.2.0  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -48,10 +48,22 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine quatr
 
 ### 🎛️ Interface d'Administration
 
+- **Nouvel onglet "Parrainage"** - Interface complète de consultation des données de parrainage
 - Consultation en temps réel des logs (avec filtres et recherche)
 - Statistiques de parrainage
 - Paramètres configurables
+- Configuration des produits par interface graphique
 - Nettoyage automatique des anciens logs
+
+### 📊 Interface de Parrainage (Nouveau)
+
+- **Tableau groupé par parrain** - Visualisation claire des parrains et leurs filleuls
+- **Système de filtres avancé** - Filtrage par date, parrain, produit, statut d'abonnement
+- **Export CSV et Excel** - Export complet des données avec statistiques
+- **Édition inline** - Modification des avantages directement dans le tableau
+- **Pagination optimisée** - Gestion performante de gros volumes de données
+- **Interface responsive** - Adaptée mobile et tablette
+- **Liens directs** - Accès rapide aux profils utilisateurs, commandes et abonnements
 
 ## Installation
 
@@ -84,6 +96,16 @@ Rendez-vous dans **Réglages > TB-Web Parrainage** pour configurer :
 - ✅ **Activer le système de parrainage** - Affiche le champ code parrain au checkout (conditionnel)
 - ✅ **Masquer les codes promo** - Masque automatiquement les codes promo pour les produits configurés
 - 🕐 **Rétention des logs** - Durée de conservation (1-365 jours)
+
+### Interface de Parrainage
+
+Accédez à l'onglet **"Parrainage"** pour :
+
+- **Consulter les données** - Tableau groupé par parrain avec leurs filleuls
+- **Filtrer les résultats** - Par période, parrain, produit ou statut d'abonnement
+- **Exporter les données** - Format CSV ou Excel avec statistiques intégrées
+- **Modifier les avantages** - Édition inline directement dans le tableau
+- **Naviguer rapidement** - Liens directs vers les profils et commandes
 
 ## Utilisation
 
@@ -165,10 +187,16 @@ wc-tb-web-parrainage/
 │   ├── WebhookManager.php               # Gestion webhooks
 │   ├── ParrainageManager.php            # Système parrainage
 │   ├── CouponManager.php                # Masquage codes promo
-│   └── SubscriptionPricingManager.php   # Calcul dates tarification
+│   ├── SubscriptionPricingManager.php   # Calcul dates tarification
+│   ├── ParrainageStatsManager.php       # Interface parrainage (Nouveau)
+│   ├── ParrainageDataProvider.php       # Fournisseur données (Nouveau)
+│   ├── ParrainageExporter.php           # Export données (Nouveau)
+│   └── ParrainageValidator.php          # Validation données (Nouveau)
 ├── assets/
 │   ├── admin.css                        # Styles administration
-│   └── admin.js                         # Scripts administration
+│   ├── admin.js                         # Scripts administration
+│   ├── parrainage-admin.css             # Styles interface parrainage (Nouveau)
+│   └── parrainage-admin.js              # Scripts interface parrainage (Nouveau)
 └── README.md
 ```
 
@@ -213,6 +241,22 @@ Calcul et gestion des dates de modification tarifaire pour les abonnements avec 
 #### `TBWeb\WCParrainage\CouponManager`
 
 Gestion du masquage conditionnel des codes promo.
+
+#### `TBWeb\WCParrainage\ParrainageStatsManager` (Nouveau)
+
+Orchestration de l'interface d'administration des données de parrainage.
+
+#### `TBWeb\WCParrainage\ParrainageDataProvider` (Nouveau)
+
+Récupération et traitement des données de parrainage depuis la base de données.
+
+#### `TBWeb\WCParrainage\ParrainageExporter` (Nouveau)
+
+Export des données de parrainage vers différents formats (CSV, Excel).
+
+#### `TBWeb\WCParrainage\ParrainageValidator` (Nouveau)
+
+Validation des données d'entrée et paramètres de l'interface de parrainage.
 
 ## Logs et Debugging
 
@@ -278,6 +322,27 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 1.2.0 (2025-07-25)
+
+- **Nouveau** : Onglet "Parrainage" complet dans l'interface d'administration
+- **Nouveau** : Classe `ParrainageStatsManager` pour l'orchestration de l'interface parrainage
+- **Nouveau** : Classe `ParrainageDataProvider` pour la récupération optimisée des données
+- **Nouveau** : Classe `ParrainageExporter` pour l'export CSV et Excel avec statistiques
+- **Nouveau** : Classe `ParrainageValidator` pour la validation sécurisée des données
+- **Nouveau** : Interface de consultation des données groupées par parrain
+- **Nouveau** : Système de filtres avancé (date, parrain, produit, statut)
+- **Nouveau** : Export des données avec feuille de statistiques (Excel)
+- **Nouveau** : Édition inline des avantages de parrainage
+- **Nouveau** : Pagination optimisée pour gros volumes
+- **Nouveau** : Assets CSS/JS dédiés à l'interface parrainage
+- **Nouveau** : Interface responsive adaptée mobile/tablette
+- **Nouveau** : Liens directs vers profils, commandes et abonnements
+- **Amélioration** : Architecture SOLID avec séparation des responsabilités
+- **Amélioration** : Cache des requêtes pour meilleures performances
+- **Amélioration** : Constantes pour éviter les "magic numbers"
+- **Amélioration** : Sécurité renforcée avec validation complète des entrées
+- **Amélioration** : Documentation technique enrichie
 
 ### Version 1.1.1 (2024-07-25)
 
