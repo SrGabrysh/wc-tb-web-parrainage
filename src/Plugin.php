@@ -15,10 +15,6 @@ class Plugin {
     private $subscription_pricing_manager;
     private $parrainage_stats_manager;
     private $my_account_parrainage_manager;
-    // NOUVEAU v2.0.0 - Système de réduction automatique du parrain
-    private $parrain_pricing_manager;
-    // NOUVEAU v2.0.0 - Gestionnaire de suppression des parrainages
-    private $parrainage_deletion_manager;
     
     public function __construct() {
         $this->logger = new Logger();
@@ -34,20 +30,11 @@ class Plugin {
         $this->coupon_manager = new CouponManager( $this->logger );
         $this->parrainage_stats_manager = new ParrainageStatsManager( $this->logger );
         $this->my_account_parrainage_manager = new MyAccountParrainageManager( $this->logger );
-        
-        // NOUVEAU v2.0.0 - Initialiser le gestionnaire de réduction automatique
-        $this->parrain_pricing_manager = new ParrainPricing\ParrainPricingManager( $this->logger );
-        
-        // NOUVEAU v2.0.0 - Initialiser le gestionnaire de suppression des parrainages
-        $this->parrainage_deletion_manager = new ParrainageDeletionManager( $this->logger );
     }
     
     private function init_hooks() {
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'admin_assets' ) );
-        
-        // NOUVEAU v2.0.0 - Initialiser le gestionnaire de suppression
-        $this->parrainage_deletion_manager->init();
         
         // Initialiser les modules si activés
         $settings = get_option( 'wc_tb_parrainage_settings', array() );
@@ -78,11 +65,6 @@ class Plugin {
         // Initialiser le gestionnaire de l'onglet "Mes parrainages" côté client
         if ( ! empty( $settings['enable_parrainage'] ) ) {
             $this->my_account_parrainage_manager->init();
-        }
-        
-        // NOUVEAU v2.0.0 - Initialiser le système de réduction automatique
-        if ( ! empty( $settings['enable_automatic_pricing'] ) ) {
-            $this->parrain_pricing_manager->init();
         }
         
         // Nettoyage automatique des logs
@@ -126,9 +108,6 @@ class Plugin {
                 <a href="?page=wc-tb-parrainage&tab=parrainage" class="nav-tab <?php echo $current_tab === 'parrainage' ? 'nav-tab-active' : ''; ?>">
                     <?php esc_html_e( 'Parrainage', 'wc-tb-web-parrainage' ); ?>
                 </a>
-                <a href="?page=wc-tb-parrainage&tab=pricing" class="nav-tab <?php echo $current_tab === 'pricing' ? 'nav-tab-active' : ''; ?>">
-                    <?php esc_html_e( 'Réductions Auto', 'wc-tb-web-parrainage' ); ?>
-                </a>
             </nav>
             
             <div class="tab-content">
@@ -144,10 +123,7 @@ class Plugin {
                         $this->render_stats_tab();
                         break;
                     case 'parrainage':
-                        $this->parrainage_stats_manager->render_parrainage_interface( $this->parrainage_deletion_manager );
-                        break;
-                    case 'pricing':
-                        $this->render_pricing_tab();
+                        $this->parrainage_stats_manager->render_parrainage_interface();
                         break;
                     case 'logs':
                     default:
@@ -224,9 +200,6 @@ class Plugin {
                 'enable_webhooks' => isset( $_POST['enable_webhooks'] ),
                 'enable_parrainage' => isset( $_POST['enable_parrainage'] ),
                 'enable_coupon_hiding' => isset( $_POST['enable_coupon_hiding'] ),
-                'enable_automatic_pricing' => isset( $_POST['enable_automatic_pricing'] ), // NOUVEAU v2.0.0
-                'pricing_debug_mode' => isset( $_POST['pricing_debug_mode'] ), // NOUVEAU v2.0.0
-                'pricing_notification_enabled' => isset( $_POST['pricing_notification_enabled'] ), // NOUVEAU v2.0.0
                 'log_retention_days' => absint( $_POST['log_retention_days'] )
             );
             
@@ -266,35 +239,6 @@ class Plugin {
                             <?php esc_html_e( 'Masquer automatiquement les champs code promo pour les produits configurés', 'wc-tb-web-parrainage' ); ?>
                         </label>
                         <p class="description"><?php esc_html_e( 'Les codes promo seront masqués au panier et checkout pour les produits configurés dans l\'onglet "Configuration Produits"', 'wc-tb-web-parrainage' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Réduction automatique du parrain', 'wc-tb-web-parrainage' ); ?></th>
-                    <td>
-                        <label>
-                            <input type="checkbox" name="enable_automatic_pricing" value="1" <?php checked( ! empty( $settings['enable_automatic_pricing'] ) ); ?>>
-                            <?php esc_html_e( 'Activer la réduction automatique du parrain', 'wc-tb-web-parrainage' ); ?>
-                            <span style="color: #d63384; font-weight: bold;">[NOUVEAU v2.0.0]</span>
-                        </label>
-                        <p class="description"><?php esc_html_e( 'Réduit automatiquement le prix d\'abonnement du parrain de 25% du prix du filleul lors du prochain prélèvement.', 'wc-tb-web-parrainage' ); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Notifications email réductions', 'wc-tb-web-parrainage' ); ?></th>
-                    <td>
-                        <label>
-                            <input type="checkbox" name="pricing_notification_enabled" value="1" <?php checked( ! empty( $settings['pricing_notification_enabled'] ) ); ?>>
-                            <?php esc_html_e( 'Envoyer un email au parrain quand une réduction est appliquée', 'wc-tb-web-parrainage' ); ?>
-                        </label>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php esc_html_e( 'Mode debug réductions', 'wc-tb-web-parrainage' ); ?></th>
-                    <td>
-                        <label>
-                            <input type="checkbox" name="pricing_debug_mode" value="1" <?php checked( ! empty( $settings['pricing_debug_mode'] ) ); ?>>
-                            <?php esc_html_e( 'Activer les logs détaillés pour le débogage du système de réduction automatique', 'wc-tb-web-parrainage' ); ?>
-                        </label>
                     </td>
                 </tr>
                 <tr>
@@ -630,65 +574,5 @@ class Plugin {
                 'avantage' => 'Avantage parrainage'
             )
         );
-    }
-    
-    /**
-     * Affiche l'onglet de gestion des réductions automatiques v2.0.0
-     */
-    private function render_pricing_tab() {
-        ?>
-        <div class="wrap">
-            <h2><?php esc_html_e( 'Système de Réduction Automatique du Parrain', 'wc-tb-web-parrainage' ); ?></h2>
-            
-            <?php
-            // Vérifier si le système est activé
-            $settings = get_option( 'wc_tb_parrainage_settings', [] );
-            if ( empty( $settings['enable_automatic_pricing'] ) ) {
-                ?>
-                <div class="notice notice-warning">
-                    <p>
-                        <strong><?php esc_html_e( 'Système désactivé', 'wc-tb-web-parrainage' ); ?></strong><br>
-                        <?php esc_html_e( 'Le système de réduction automatique est désactivé. Activez-le dans l\'onglet Paramètres.', 'wc-tb-web-parrainage' ); ?>
-                    </p>
-                </div>
-                <?php
-            } else {
-                ?>
-                <div class="notice notice-success">
-                    <p>
-                        <strong><?php esc_html_e( 'Système activé', 'wc-tb-web-parrainage' ); ?></strong><br>
-                        <?php esc_html_e( 'Le système de réduction automatique est en cours d\'exécution.', 'wc-tb-web-parrainage' ); ?>
-                    </p>
-                </div>
-                <?php
-            }
-            ?>
-            
-            <p><strong>Version :</strong> 2.0.0 | <strong>Statut :</strong> 
-            <?php echo empty( $settings['enable_automatic_pricing'] ) ? '<span style="color:red;">Désactivé</span>' : '<span style="color:green;">Activé</span>'; ?>
-            </p>
-            
-            <?php if ( ! empty( $settings['enable_automatic_pricing'] ) ) : ?>
-            <!-- Statistiques du système -->
-            <div class="pricing-stats-section">
-                <h3><?php esc_html_e( 'Statistiques du Système', 'wc-tb-web-parrainage' ); ?></h3>
-                <p><em>Fonctionnalité disponible - les statistiques s'afficheront une fois que des réductions seront programmées.</em></p>
-            </div>
-            
-            <!-- Modifications programmées -->
-            <div class="pricing-scheduled-section">
-                <h3><?php esc_html_e( 'Modifications Programmées', 'wc-tb-web-parrainage' ); ?></h3>
-                <p><em>Les réductions programmées s'afficheront ici une fois qu'un parrainage avec code valide sera effectué.</em></p>
-            </div>
-            
-            <!-- Historique récent -->
-            <div class="pricing-history-section">
-                <h3><?php esc_html_e( 'Historique Récent', 'wc-tb-web-parrainage' ); ?></h3>
-                <p><em>L'historique des réductions appliquées s'affichera ici.</em></p>
-            </div>
-            <?php endif; ?>
-            
-        </div>
-        <?php
     }
 } 

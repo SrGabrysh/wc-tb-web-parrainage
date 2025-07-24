@@ -1,19 +1,18 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.0.1  
+**Version:** 2.0.2  
 **Auteur:** TB-Web  
-**Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+, WooCommerce Subscriptions (requis v2.0.0+)
+**Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
 ## Description
 
-Plugin de parrainage WooCommerce avec webhooks enrichis et **système de réduction automatique du parrain**. Ce plugin combine six fonctionnalités principales :
+Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine cinq fonctionnalités principales :
 
 1. **Système de code parrain au checkout** - Permet aux clients de saisir un code parrain lors de la commande avec validation en temps réel
 2. **Calcul automatique des dates de fin de remise** - Calcule et stocke automatiquement les dates de fin de période de remise parrainage (12 mois + marge de sécurité)
 3. **Masquage conditionnel des codes promo** - Masque automatiquement les champs de codes promo pour les produits configurés
 4. **Webhooks enrichis** - Ajoute automatiquement les métadonnées d'abonnement et de tarification parrainage dans les webhooks
 5. **Onglet "Mes parrainages" côté client** - Interface utilisateur dédiée dans Mon Compte pour consulter ses parrainages
-6. **🎉 Système de réduction automatique du parrain (v2.0.0)** - Réduit automatiquement le prix d'abonnement du parrain de 25% du prix du filleul au prochain prélèvement
 
 ## Fonctionnalités
 
@@ -67,7 +66,7 @@ Plugin de parrainage WooCommerce avec webhooks enrichis et **système de réduct
 - **Interface responsive** - Adaptée mobile et tablette
 - **Liens directs** - Accès rapide aux profils utilisateurs, commandes et abonnements
 
-### 👤 Onglet "Mes parrainages" côté client (v1.3.0)
+### 👤 Onglet "Mes parrainages" côté client (Nouveau v1.3.0)
 
 - **Onglet dédié dans Mon Compte** - Interface utilisateur intuitive et sécurisée
 - **Contrôle d'accès strict** - Visible uniquement pour les abonnés actifs WooCommerce Subscriptions
@@ -77,19 +76,6 @@ Plugin de parrainage WooCommerce avec webhooks enrichis et **système de réduct
 - **Badges de statut colorés** - Statuts d'abonnement visuellement distincts
 - **Limite de performance** - Affichage des 10 derniers parrainages pour un chargement rapide
 - **CSS natif WooCommerce** - Intégration parfaite avec tous les thèmes compatibles
-
-### 🎉 Système de Réduction Automatique du Parrain (Nouveau v2.0.0)
-
-- **Réduction automatique intelligente** - 25% du prix HT du filleul déduit du prix HT du parrain
-- **Application différée** - La réduction s'applique au prochain prélèvement du parrain (respecte les cycles de facturation)
-- **Formule métier simple** : `Nouveau prix HT = MAX(0, Prix HT actuel - (Prix HT filleul × 25%))`
-- **Gestion des annulations** - Suppression automatique de la réduction si l'abonnement filleul est annulé/expiré
-- **Interface d'administration dédiée** - Onglet "Réductions Auto" avec statistiques temps réel et gestion des modifications
-- **Système de retry intelligent** - 3 tentatives automatiques avec backoff exponentiel en cas d'échec
-- **Notifications email automatiques** - Templates HTML professionnels envoyés aux parrains
-- **Audit trail complet** - Historique immuable de toutes les modifications pour traçabilité
-- **Architecture SOLID** - Code maintenable respectant les principes de développement SOLID
-- **Tables dédiées** - Base de données SSOT avec `pricing_schedule` et `pricing_history`
 
 ## Installation
 
@@ -112,7 +98,7 @@ Plugin de parrainage WooCommerce avec webhooks enrichis et **système de réduct
 - **WordPress** 6.0 ou supérieur
 - **PHP** 8.1 ou supérieur
 - **WooCommerce** installé et activé
-- **WooCommerce Subscriptions** (requis pour le système de parrainage, l'onglet "Mes parrainages" et le système de réduction automatique v2.0.0)
+- **WooCommerce Subscriptions** (requis pour le système de parrainage et l'onglet "Mes parrainages")
 
 ### Paramètres
 
@@ -121,9 +107,6 @@ Rendez-vous dans **Réglages > TB-Web Parrainage** pour configurer :
 - ✅ **Activer les webhooks enrichis** - Ajoute les métadonnées d'abonnement
 - ✅ **Activer le système de parrainage** - Affiche le champ code parrain au checkout (conditionnel)
 - ✅ **Masquer les codes promo** - Masque automatiquement les codes promo pour les produits configurés
-- 🎉 **Activer la réduction automatique du parrain** - **[NOUVEAU v2.0.0]** Système de réduction automatique (désactivé par défaut)
-- 📧 **Notifications email réductions** - Envoi d'emails aux parrains lors d'application de réductions
-- 🐛 **Mode debug réductions** - Logs détaillés pour débogage du système de réduction automatique
 - 🕐 **Rétention des logs** - Durée de conservation (1-365 jours)
 
 ### Interface de Parrainage
@@ -135,16 +118,6 @@ Accédez à l'onglet **"Parrainage"** pour :
 - **Exporter les données** - Format CSV ou Excel avec statistiques intégrées
 - **Modifier les avantages** - Édition inline directement dans le tableau
 - **Naviguer rapidement** - Liens directs vers les profils et commandes
-
-### Interface de Réduction Automatique (Nouveau v2.0.0)
-
-Accédez à l'onglet **"Réductions Auto"** pour :
-
-- **Voir les statistiques** - Total programmées, en attente, appliquées, taux de succès, économies totales
-- **Gérer les modifications programmées** - Visualisation des réductions en attente avec statuts et tentatives
-- **Consulter l'historique** - Audit trail complet des modifications appliquées avec détails d'exécution
-- **Surveiller la performance** - Taux de succès, retry automatiques, alertes en cas de problème
-- **Accès direct aux abonnements** - Liens vers les abonnements parrain concernés
 
 ## Utilisation
 
@@ -220,7 +193,6 @@ Cette nouvelle clé n'apparaît que si la commande contient un code parrain vali
 wc-tb-web-parrainage/
 ├── wc-tb-web-parrainage.php              # Fichier principal
 ├── composer.json                         # Autoload PSR-4
-├── CHANGELOG.md                          # Historique des versions (Nouveau v2.0.0)
 ├── src/
 │   ├── Plugin.php                       # Classe principale
 │   ├── Logger.php                       # Système de logs
@@ -232,29 +204,15 @@ wc-tb-web-parrainage/
 │   ├── ParrainageDataProvider.php       # Fournisseur données admin
 │   ├── ParrainageExporter.php           # Export données
 │   ├── ParrainageValidator.php          # Validation données
-│   ├── MyAccountParrainageManager.php   # Gestionnaire onglet client (v1.3.0)
-│   ├── MyAccountDataProvider.php        # Fournisseur données client (v1.3.0)
-│   ├── MyAccountAccessValidator.php     # Validateur accès client (v1.3.0)
-│   └── ParrainPricing/                  # Nouveau v2.0.0 - Système réduction automatique
-│       ├── ParrainPricingManager.php    # Orchestrateur principal (composition SOLID)
-│       ├── Constants/
-│       │   └── ParrainPricingConstants.php # Constantes métier centralisées
-│       ├── Calculator/
-│       │   └── ParrainPricingCalculator.php # Calculs de réduction (KISS)
-│       ├── Scheduler/
-│       │   └── ParrainPricingScheduler.php # Planification via hooks WCS
-│       ├── Storage/
-│       │   └── ParrainPricingStorage.php # Persistance DB (SSOT)
-│       ├── Notifier/
-│       │   └── ParrainPricingEmailNotifier.php # Notifications email
-│       └── Migration/
-│           └── ParrainPricingMigration.php # Migration DB sécurisée
+│   ├── MyAccountParrainageManager.php   # Gestionnaire onglet client (Nouveau v1.3.0)
+│   ├── MyAccountDataProvider.php        # Fournisseur données client (Nouveau v1.3.0)
+│   └── MyAccountAccessValidator.php     # Validateur accès client (Nouveau v1.3.0)
 ├── assets/
 │   ├── admin.css                        # Styles administration
 │   ├── admin.js                         # Scripts administration
 │   ├── parrainage-admin.css             # Styles interface parrainage admin
 │   ├── parrainage-admin.js              # Scripts interface parrainage admin
-│   └── my-account-parrainage.css        # Styles onglet client (v1.3.0)
+│   └── my-account-parrainage.css        # Styles onglet client (Nouveau v1.3.0)
 └── README.md
 ```
 
@@ -324,33 +282,9 @@ Gestionnaire principal de l'onglet "Mes parrainages" côté client avec endpoint
 
 Récupération et formatage des données de parrainage pour l'affichage côté client.
 
-#### `TBWeb\WCParrainage\MyAccountAccessValidator` (v1.3.0)
+#### `TBWeb\WCParrainage\MyAccountAccessValidator` (Nouveau v1.3.0)
 
 Validation de l'accès aux fonctionnalités de parrainage pour les utilisateurs connectés.
-
-#### `TBWeb\WCParrainage\ParrainPricing\ParrainPricingManager` (Nouveau v2.0.0)
-
-Orchestrateur principal du système de réduction automatique utilisant la composition SOLID.
-
-#### `TBWeb\WCParrainage\ParrainPricing\Calculator\ParrainPricingCalculator` (Nouveau v2.0.0)
-
-Calculateur de réductions appliquant la formule métier simple (principe KISS).
-
-#### `TBWeb\WCParrainage\ParrainPricing\Scheduler\ParrainPricingScheduler` (Nouveau v2.0.0)
-
-Planificateur utilisant les hooks WooCommerce Subscriptions natifs pour l'application différée.
-
-#### `TBWeb\WCParrainage\ParrainPricing\Storage\ParrainPricingStorage` (Nouveau v2.0.0)
-
-Gestionnaire de persistance avec tables dédiées servant de Single Source of Truth (SSOT).
-
-#### `TBWeb\WCParrainage\ParrainPricing\Notifier\ParrainPricingEmailNotifier` (Nouveau v2.0.0)
-
-Système de notifications email avec templates HTML professionnels pour les parrains.
-
-#### `TBWeb\WCParrainage\ParrainPricing\Migration\ParrainPricingMigration` (Nouveau v2.0.0)
-
-Gestionnaire de migrations de base de données avec rollback automatique sécurisé.
 
 ## Logs et Debugging
 
@@ -417,32 +351,17 @@ GPL v2 or later
 
 ## Changelog
 
-### Version 2.0.1 (2025-07-24 à 11h09) - MINEURE
+### Version 2.0.2 (24-07-25 à 16h38) - PATCH
 
-- **Amélioration** : Interface "Mes parrainages" côté client avec nouveaux labels plus explicites
-- **Nouveau** : Colonne "Votre remise\*" dans le tableau des parrainages pour afficher la remise du parrain
-- **Amélioration** : Labels de colonnes plus clairs ("Abonnement de votre filleul", "Statut de son abonnement", etc.)
-- **Amélioration** : Statuts d'abonnement améliorés ("En cours" au lieu de "Actif", "Suspendu" au lieu de "En attente")
-- **Nouveau** : Section d'explications sous le tableau détaillant le fonctionnement des remises
-- **Amélioration** : Intégration avec la table `tb_parrainage_pricing_schedule` pour afficher les remises réelles
-- **Amélioration** : Gestion intelligente de l'affichage des remises selon le statut d'abonnement du filleul
-- **Documentation** : Explications détaillées sur l'application des remises HT et conditions d'activation
-
-### Version 2.0.0 (2025-07-25) - MAJEURE
-
-- **🎉 Nouveau** : Système de réduction automatique du parrain (25% du prix filleul déduit du prix parrain)
-- **Nouveau** : Architecture SOLID avec composition et injection de dépendances
-- **Nouveau** : Tables de base de données dédiées (`pricing_schedule`, `pricing_history`)
-- **Nouveau** : Interface d'administration "Réductions Auto" avec statistiques temps réel
-- **Nouveau** : Système de retry intelligent avec backoff exponentiel (3 tentatives)
-- **Nouveau** : Notifications email automatiques aux parrains avec templates HTML
-- **Nouveau** : Audit trail complet pour traçabilité des modifications
-- **Nouveau** : Migration de base de données automatique avec rollback sécurisé
-- **Nouveau** : 7 nouvelles constantes métier centralisées (éviter magic numbers)
-- **Nouveau** : Gestion intelligente des hooks WooCommerce Subscriptions
-- **Amélioration** : Prérequis WooCommerce Subscriptions obligatoire
-- **Amélioration** : Versioning de base de données avec `WC_TB_PARRAINAGE_DB_VERSION`
-- **Breaking Change** : Nouvelles tables créées automatiquement à l'activation
+- **Amélioration** : Interface "Mes parrainages" avec libellés plus explicites
+- **Nouveau** : Colonne "Votre remise\*" affichant la remise du parrain (25% du prix HT filleul)
+- **Amélioration** : Statuts d'abonnement humanisés ("En cours" au lieu de "Actif")
+- **Nouveau** : Section explicative détaillant le fonctionnement des remises HT
+- **Amélioration** : Distinction claire entre prix HT et TTC dans l'affichage
+- **Correction** : Gestion d'erreur renforcée pour la récupération des prix HT
+- **Amélioration** : Utilisation de `$subscription->get_subtotal()` pour le prix HT officiel
+- **Nouveau** : Méthodes `format_montant_ht()` et `get_parrain_reduction()` dans MyAccountDataProvider
+- **Amélioration** : Tableau restructuré avec 6 colonnes exactement selon spécifications
 
 ### Version 1.3.0 (2025-07-25)
 

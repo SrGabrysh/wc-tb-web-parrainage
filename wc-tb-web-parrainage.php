@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: WC TB-Web Parrainage
- * Description: Plugin de parrainage WooCommerce avec webhooks enrichis et système de réduction automatique du parrain - Gestion des codes parrain au checkout, calcul automatique des dates de fin de remise parrainage, masquage conditionnel des codes promo, ajout des métadonnées d'abonnement dans les webhooks et réduction automatique du prix d'abonnement du parrain.
- * Version: 1.0.8
+ * Description: Plugin de parrainage WooCommerce avec webhooks enrichis - Gestion des codes parrain au checkout, calcul automatique des dates de fin de remise parrainage, masquage conditionnel des codes promo et ajout des métadonnées d'abonnement dans les webhooks.
+ * Version: 1.0.9
  * Author: TB-Web
  * Text Domain: wc-tb-web-parrainage
  * Domain Path: /languages
@@ -18,35 +18,28 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Constantes principales
-define( 'WC_TB_PARRAINAGE_VERSION', '2.0.1' );
-define( 'WC_TB_PARRAINAGE_DB_VERSION', '2.0.0' );
+// Constantes
+define( 'WC_TB_PARRAINAGE_VERSION', '2.0.2' );
 define( 'WC_TB_PARRAINAGE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WC_TB_PARRAINAGE_URL', plugin_dir_url( __FILE__ ) );
 
-// Constantes existantes pour l'onglet Parrainage
+// Constante pour le pourcentage de réduction du parrain
+define( 'WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE', 25 ); // 25% du prix du filleul
+
+// Nouvelles constantes pour l'onglet Parrainage
 define( 'WC_TB_PARRAINAGE_ADMIN_PER_PAGE', 50 );
 define( 'WC_TB_PARRAINAGE_MAX_EXPORT', 10000 );
 define( 'WC_TB_PARRAINAGE_CACHE_TIME', 300 );
 define( 'WC_TB_PARRAINAGE_DATE_FORMAT', 'Y-m-d' );
 define( 'WC_TB_PARRAINAGE_MAX_SEARCH_LENGTH', 100 );
 
-// Constantes existantes pour l'onglet "Mes parrainages" côté client
+// Nouvelles constantes pour l'onglet "Mes parrainages" côté client
 define( 'WC_TB_PARRAINAGE_ENDPOINT_KEY', 'mes-parrainages' );
 define( 'WC_TB_PARRAINAGE_ENDPOINT_LABEL', 'Mes parrainages' );
 define( 'WC_TB_PARRAINAGE_LIMIT_DISPLAY', 10 );
 define( 'WC_TB_PARRAINAGE_INVITATION_URL', 'https://tb-web.fr/parrainage/' );
 define( 'WC_TB_PARRAINAGE_CACHE_USER_DATA', 300 );
 define( 'WC_TB_PARRAINAGE_EMAIL_MASK_CHAR', '*' );
-
-// NOUVELLES CONSTANTES v2.0.0 - Système de réduction automatique du parrain
-define( 'WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE', 25 ); // 25% du prix du filleul
-define( 'WC_TB_PARRAINAGE_MIN_PARRAIN_PRICE', 0.00 ); // Prix minimum (gratuit possible)
-define( 'WC_TB_PARRAINAGE_CALCULATION_PRECISION', 2 ); // Décimales monétaires
-define( 'WC_TB_PARRAINAGE_RETRY_MAX_ATTEMPTS', 3 ); // Tentatives max en cas d'échec
-define( 'WC_TB_PARRAINAGE_RETRY_DELAY_SECONDS', '60,300,900' ); // Délais entre tentatives (1min, 5min, 15min)
-define( 'WC_TB_PARRAINAGE_PRICING_CACHE_DURATION', 300 ); // 5 minutes de cache
-define( 'WC_TB_PARRAINAGE_PRICING_DEBUG', false ); // Mode debug pricing
 
 // Autoload Composer
 require_once WC_TB_PARRAINAGE_PATH . 'vendor/autoload.php';
@@ -71,34 +64,16 @@ function wc_tb_parrainage_activate() {
         wp_die( 'WooCommerce est requis pour ce plugin' );
     }
     
-    // Vérifier WooCommerce Subscriptions pour les nouvelles fonctionnalités v2.0.0
-    if ( ! class_exists( 'WC_Subscriptions' ) ) {
-        deactivate_plugins( plugin_basename( __FILE__ ) );
-        wp_die( 'WooCommerce Subscriptions est requis pour le système de réduction automatique' );
-    }
-    
-    // Créer/mettre à jour options
+    // Créer options par défaut
     add_option( 'wc_tb_parrainage_version', WC_TB_PARRAINAGE_VERSION );
-    add_option( 'wc_tb_parrainage_db_version', WC_TB_PARRAINAGE_DB_VERSION );
-    
-    $default_settings = array(
+    add_option( 'wc_tb_parrainage_settings', array(
         'enable_webhooks' => true,
         'enable_parrainage' => true,
         'enable_coupon_hiding' => true,
-        'enable_automatic_pricing' => false, // NOUVEAU v2.0.0 - Désactivé par défaut
-        'log_retention_days' => 30,
-        'pricing_debug_mode' => false, // NOUVEAU v2.0.0
-        'pricing_notification_enabled' => true // NOUVEAU v2.0.0
-    );
+        'log_retention_days' => 30
+    ) );
     
-    add_option( 'wc_tb_parrainage_settings', $default_settings );
-    
-    // NOUVEAU v2.0.0 : Exécuter les migrations de base de données
-    require_once WC_TB_PARRAINAGE_PATH . 'src/ParrainPricing/Migration/ParrainPricingMigration.php';
-    $migration = new TBWeb\WCParrainage\ParrainPricing\Migration\ParrainPricingMigration();
-    $migration->migrate();
-    
-    // Ajouter l'endpoint "Mes parrainages" AVANT le flush (ORDRE CRITIQUE)
+    // NOUVEAU : Ajouter l'endpoint "Mes parrainages" AVANT le flush (ORDRE CRITIQUE)
     add_rewrite_endpoint( WC_TB_PARRAINAGE_ENDPOINT_KEY, EP_ROOT | EP_PAGES );
     
     // Flush les permaliens APRÈS l'ajout de l'endpoint
@@ -108,10 +83,6 @@ function wc_tb_parrainage_activate() {
 // Désactivation
 function wc_tb_parrainage_deactivate() {
     flush_rewrite_rules();
-    
-    // Nettoyer les crons de pricing v2.0.0
-    wp_clear_scheduled_hook( 'wc_tb_parrainage_pricing_retry' );
-    wp_clear_scheduled_hook( 'wc_tb_parrainage_pricing_cleanup' );
 }
 
 // Initialisation

@@ -47,7 +47,7 @@ class ParrainageStatsManager {
     /**
      * Rendre l'interface de parrainage
      */
-    public function render_parrainage_interface( $deletion_manager = null ) {
+    public function render_parrainage_interface() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( __( 'Accès non autorisé', 'wc-tb-web-parrainage' ) );
         }
@@ -78,65 +78,6 @@ class ParrainageStatsManager {
             <p class="description">
                 <?php esc_html_e( 'Consultation des parrainages regroupés par parrain avec leurs filleuls.', 'wc-tb-web-parrainage' ); ?>
             </p>
-            
-            <!-- Actions de suppression -->
-            <?php if ( $deletion_manager ) : ?>
-            <div class="parrainage-bulk-actions" style="background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%); padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 2px solid #fc8181; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                    <div>
-                        <h2 style="margin: 0; color: #c53030; font-size: 18px; display: flex; align-items: center;">
-                            🛡️ Gestion Anti-Fraude des Parrainages
-                        </h2>
-                        <p style="margin: 5px 0 0 0; color: #744210; font-size: 14px;">
-                            <strong>⚠️ ATTENTION :</strong> Supprimez les parrainages frauduleux ou de test. Les réductions automatiques seront annulées.
-                        </p>
-                    </div>
-                    <div id="selection-summary" style="background: white; padding: 10px 15px; border-radius: 6px; border: 2px solid #fc8181; text-align: center; min-width: 140px;">
-                        <div id="selection-count" style="font-size: 16px; font-weight: bold; color: #c53030;">0 sélectionné(s)</div>
-                        <div style="font-size: 12px; color: #744210;">sur <span id="total-count">0</span> parrainages</div>
-                    </div>
-                </div>
-                
-                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button type="button" id="select-all-parrainages" class="button" style="background: #3182ce; color: white; border-color: #3182ce; font-weight: 600; padding: 8px 16px;">
-                            ☑️ Tout Sélectionner
-                        </button>
-                        <button type="button" id="unselect-all-parrainages" class="button" style="background: #718096; color: white; border-color: #718096; font-weight: 600; padding: 8px 16px;">
-                            ☐ Tout Désélectionner
-                        </button>
-                        <button type="button" id="select-visible-parrainages" class="button" style="background: #38a169; color: white; border-color: #38a169; font-weight: 600; padding: 8px 16px;">
-                            👁️ Sélectionner Page Actuelle
-                        </button>
-                    </div>
-                    
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <button type="button" id="delete-selected-parrainages" class="button" style="background: #e53e3e; color: white; border-color: #e53e3e; font-weight: bold; font-size: 14px; padding: 10px 20px; box-shadow: 0 2px 4px rgba(229,62,62,0.3);" disabled>
-                            🗑️ SUPPRIMER LA SÉLECTION
-                        </button>
-                        <div id="delete-help" style="font-size: 11px; color: #744210; max-width: 200px; line-height: 1.3;">
-                            💡 Cochez les cases puis cliquez sur "Supprimer"
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="deletion-status" style="margin-top: 15px;"></div>
-                
-                <!-- Zone d'aide rapide -->
-                <details style="margin-top: 15px; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 4px;">
-                    <summary style="cursor: pointer; font-weight: 600; color: #744210;">📖 Comment utiliser cette fonction ?</summary>
-                    <div style="margin-top: 10px; font-size: 13px; line-height: 1.5; color: #744210;">
-                        <ol style="margin: 5px 0; padding-left: 20px;">
-                            <li><strong>Cochez</strong> les parrainages à supprimer (cases à gauche du tableau)</li>
-                            <li><strong>Vérifiez</strong> le nombre sélectionné dans l'encadré rouge</li>
-                            <li><strong>Cliquez</strong> sur "SUPPRIMER LA SÉLECTION"</li>
-                            <li><strong>Confirmez</strong> la suppression dans la popup</li>
-                        </ol>
-                        <p style="margin: 10px 0 0 0;"><strong>🛡️ Sécurité :</strong> Les réductions automatiques appliquées aux parrains seront automatiquement annulées.</p>
-                    </div>
-                </details>
-            </div>
-            <?php endif; ?>
             
             <!-- Barre de filtres -->
             <div class="parrainage-filters">
@@ -261,7 +202,7 @@ class ParrainageStatsManager {
             
             <!-- Tableau principal -->
             <div class="parrainage-table-container">
-                <?php $this->render_parrainage_table( $parrainage_data, $deletion_manager ); ?>
+                <?php $this->render_parrainage_table( $parrainage_data ); ?>
             </div>
             
             <!-- Pagination -->
@@ -273,299 +214,9 @@ class ParrainageStatsManager {
             var tbParrainageData = {
                 ajaxurl: '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
                 nonce: '<?php echo wp_create_nonce( 'tb_parrainage_admin_action' ); ?>',
-                delete_nonce: '<?php echo wp_create_nonce( 'tb_parrainage_delete_action' ); ?>',
                 current_filters: <?php echo wp_json_encode( $validated_filters ); ?>,
-                current_pagination: <?php echo wp_json_encode( $validated_pagination ); ?>,
-                has_deletion_manager: <?php echo $deletion_manager ? 'true' : 'false'; ?>
+                current_pagination: <?php echo wp_json_encode( $validated_pagination ); ?>
             };
-            
-            <?php if ( $deletion_manager ) : ?>
-            // JavaScript pour la gestion des suppressions
-            jQuery(document).ready(function($) {
-                let selectedCount = 0;
-                let totalCount = $('.parrainage-checkbox').length;
-                
-                // Initialisation
-                updateTotalCount();
-                updateSelectionCount();
-                updateDeleteButton();
-                
-                // Gestion de la sélection
-                $(document).on('change', '.parrainage-checkbox', function() {
-                    updateSelectionCount();
-                    updateDeleteButton();
-                    updateHeaderCheckbox();
-                });
-                
-                // Checkbox du header
-                $('#select-all-header').on('change', function() {
-                    let isChecked = $(this).is(':checked');
-                    $('.parrainage-checkbox').prop('checked', isChecked);
-                    updateSelectionCount();
-                    updateDeleteButton();
-                });
-                
-                // Tout sélectionner
-                $('#select-all-parrainages').on('click', function() {
-                    $('.parrainage-checkbox').prop('checked', true);
-                    $('#select-all-header').prop('checked', true);
-                    updateSelectionCount();
-                    updateDeleteButton();
-                    highlightSelection();
-                });
-                
-                // Tout désélectionner
-                $('#unselect-all-parrainages').on('click', function() {
-                    $('.parrainage-checkbox').prop('checked', false);
-                    $('#select-all-header').prop('checked', false);
-                    updateSelectionCount();
-                    updateDeleteButton();
-                    removeHighlight();
-                });
-                
-                // Sélectionner page actuelle
-                $('#select-visible-parrainages').on('click', function() {
-                    $('.parrainage-checkbox:visible').prop('checked', true);
-                    updateSelectionCount();
-                    updateDeleteButton();
-                    updateHeaderCheckbox();
-                    highlightSelection();
-                });
-                
-                // Suppression de la sélection
-                $('#delete-selected-parrainages').on('click', function() {
-                    let selectedIds = getSelectedIds();
-                    if (selectedIds.length === 0) {
-                        alert('❌ Aucun parrainage sélectionné !\n\n💡 Cochez d\'abord les cases à gauche du tableau.');
-                        return;
-                    }
-                    
-                    // Dialogue de confirmation amélioré - avec détails filleuls
-                    let selectedDetails = [];
-                    $('.parrainage-checkbox:checked').each(function() {
-                        selectedDetails.push({
-                            parrainName: $(this).data('parrain-name'),
-                            filleulName: $(this).data('filleul-name'),
-                            orderId: $(this).val()
-                        });
-                    });
-                    
-                    let parrainagesList = selectedDetails.slice(0, 5).map(d => 
-                        '• ' + d.filleulName + ' (parrainé par ' + d.parrainName + ')'
-                    ).join('\n');
-                    
-                    if (selectedDetails.length > 5) {
-                        parrainagesList += '\n• ... et ' + (selectedDetails.length - 5) + ' autres parrainages';
-                    }
-                    
-                    let confirmMessage = '🛡️ SUPPRESSION ANTI-FRAUDE DE PARRAINAGES INDIVIDUELS\n\n' +
-                                       'Vous allez supprimer ' + selectedIds.length + ' parrainage(s) :\n\n' +
-                                       parrainagesList + '\n\n' +
-                                       '⚠️ CONSÉQUENCES :\n' +
-                                       '✓ Suppression définitive de ces parrainages\n' +
-                                       '✓ Annulation automatique des réductions appliquées\n' +
-                                       '✓ Restauration des prix originaux programmée\n\n' +
-                                       '🔒 Cette action est irréversible !\n\n' +
-                                       'Confirmez-vous la suppression ?';
-                    
-                    if (!confirm(confirmMessage)) {
-                        return;
-                    }
-                    
-                    deleteSelectedParrainages(selectedIds);
-                });
-                
-                // Suppression individuelle
-                $(document).on('click', '.delete-single-parrainage', function() {
-                    let orderId = $(this).data('order-id');
-                    let parrainName = $(this).data('parrain-name') || 'Parrain inconnu';
-                    let filleulName = $(this).data('filleul-name') || 'Filleul inconnu';
-                    
-                    let confirmMessage = '🛡️ SUPPRESSION IMMÉDIATE DU PARRAINAGE\n\n' +
-                                       'Supprimer le parrainage :\n' +
-                                       '• Filleul : ' + filleulName + '\n' +
-                                       '• Parrain : ' + parrainName + '\n' +
-                                       '• Commande #' + orderId + '\n\n' +
-                                       '⚠️ CONSÉQUENCES :\n' +
-                                       '✓ Suppression immédiate de ce parrainage\n' +
-                                       '✓ Annulation automatique des réductions\n' +
-                                       '✓ Action irréversible\n\n' +
-                                       'Confirmer la suppression ?';
-                    
-                    if (!confirm(confirmMessage)) {
-                        return;
-                    }
-                    
-                    deleteSingleParrainage(orderId, $(this));
-                });
-                
-                function updateTotalCount() {
-                    totalCount = $('.parrainage-checkbox').length;
-                    $('#total-count').text(totalCount);
-                }
-                
-                function updateSelectionCount() {
-                    selectedCount = $('.parrainage-checkbox:checked').length;
-                    $('#selection-count').html(selectedCount + ' sélectionné(s)');
-                    
-                    // Coloration selon la sélection
-                    if (selectedCount === 0) {
-                        $('#selection-summary').css({
-                            'background': 'white',
-                            'border-color': '#fc8181'
-                        });
-                    } else {
-                        $('#selection-summary').css({
-                            'background': '#fed7d7',
-                            'border-color': '#e53e3e'
-                        });
-                    }
-                }
-                
-                function updateDeleteButton() {
-                    let button = $('#delete-selected-parrainages');
-                    if (selectedCount === 0) {
-                        button.prop('disabled', true);
-                        button.html('🗑️ SUPPRIMER LA SÉLECTION');
-                        $('#delete-help').html('💡 Cochez les cases puis cliquez sur "Supprimer"');
-                    } else {
-                        button.prop('disabled', false);
-                        button.html('🗑️ SUPPRIMER ' + selectedCount + ' PARRAINAGE(S)');
-                        $('#delete-help').html('⚠️ Attention : suppression définitive !');
-                    }
-                }
-                
-                function updateHeaderCheckbox() {
-                    let totalVisible = $('.parrainage-checkbox:visible').length;
-                    let selectedVisible = $('.parrainage-checkbox:visible:checked').length;
-                    
-                    if (selectedVisible === 0) {
-                        $('#select-all-header').prop('indeterminate', false).prop('checked', false);
-                    } else if (selectedVisible === totalVisible) {
-                        $('#select-all-header').prop('indeterminate', false).prop('checked', true);
-                    } else {
-                        $('#select-all-header').prop('indeterminate', true);
-                    }
-                }
-                
-                function highlightSelection() {
-                    $('.parrainage-checkbox:checked').closest('tr').css({
-                        'background-color': '#fed7d7',
-                        'border-left': '4px solid #e53e3e'
-                    });
-                    setTimeout(removeHighlight, 2000);
-                }
-                
-                function removeHighlight() {
-                    $('.parrainage-checkbox').closest('tr').css({
-                        'background-color': '',
-                        'border-left': ''
-                    });
-                }
-                
-                function getSelectedIds() {
-                    let ids = [];
-                    $('.parrainage-checkbox:checked').each(function() {
-                        ids.push($(this).val());
-                    });
-                    return ids;
-                }
-                
-                function deleteSelectedParrainages(orderIds) {
-                    // Récupérer les détails des parrainages sélectionnés
-                    let selectedDetails = [];
-                    $('.parrainage-checkbox:checked').each(function() {
-                        selectedDetails.push({
-                            orderId: $(this).val(),
-                            parrainName: $(this).data('parrain-name'),
-                            filleulName: $(this).data('filleul-name')
-                        });
-                    });
-                    
-                    // Interface de progression
-                    $('#deletion-status').html('<div style="background: #fff3cd; padding: 15px; border-radius: 6px; color: #856404; border: 2px solid #faca15; font-weight: bold; text-align: center;">' +
-                                             '<div style="font-size: 14px;">🔄 SUPPRESSION EN COURS...</div>' +
-                                             '<div style="margin-top: 8px; font-size: 12px;">Suppression de ' + orderIds.length + ' parrainage(s) individuels et annulation des réductions</div>' +
-                                             '<div style="margin-top: 5px; font-size: 11px;">Parrainages : ' + selectedDetails.slice(0,3).map(d => d.filleulName).join(', ') + (selectedDetails.length > 3 ? '...' : '') + '</div>' +
-                                             '<div style="background: #e2e8f0; height: 6px; border-radius: 3px; margin-top: 8px; overflow: hidden;">' +
-                                             '<div id="progress-bar" style="background: #3182ce; height: 100%; width: 0%; transition: width 0.3s;"></div></div>' +
-                                             '</div>');
-                    
-                    $('#delete-selected-parrainages').prop('disabled', true).html('🔄 Suppression...');
-                    
-                    // Animation de la barre de progression
-                    $('#progress-bar').css('width', '30%');
-                    
-                    $.ajax({
-                        url: tbParrainageData.ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'tb_parrainage_delete_selected',
-                            order_ids: orderIds,
-                            nonce: tbParrainageData.delete_nonce
-                        },
-                        success: function(response) {
-                            $('#progress-bar').css('width', '100%');
-                            
-                            if (response.success) {
-                                $('#deletion-status').html('<div style="background: #d4edda; padding: 20px; border-radius: 8px; color: #155724; border: 2px solid #38a169; text-align: center; font-weight: bold;">' +
-                                                         '<div style="font-size: 16px;">✅ SUPPRESSION RÉUSSIE !</div>' +
-                                                         '<div style="margin-top: 10px; font-size: 13px;">' + response.data.message + '</div>' +
-                                                         '<div style="margin-top: 15px; font-size: 12px; color: #2d3748;">🔄 Rechargement de la page dans 3 secondes...</div>' +
-                                                         '</div>');
-                                setTimeout(() => {
-                                    location.reload();
-                                }, 3000);
-                            } else {
-                                $('#deletion-status').html('<div style="background: #fed7d7; padding: 15px; border-radius: 6px; color: #c53030; border: 2px solid #e53e3e; text-align: center; font-weight: bold;">' +
-                                                         '<div style="font-size: 14px;">❌ ÉCHEC DE LA SUPPRESSION</div>' +
-                                                         '<div style="margin-top: 8px; font-size: 12px;">' + response.data.message + '</div>' +
-                                                         '</div>');
-                                $('#delete-selected-parrainages').prop('disabled', false).html('🗑️ SUPPRIMER LA SÉLECTION');
-                            }
-                        },
-                        error: function() {
-                            $('#deletion-status').html('<div style="background: #fed7d7; padding: 15px; border-radius: 6px; color: #c53030; border: 2px solid #e53e3e; text-align: center; font-weight: bold;">' +
-                                                     '<div style="font-size: 14px;">❌ ERREUR DE COMMUNICATION</div>' +
-                                                     '<div style="margin-top: 8px; font-size: 12px;">Impossible de contacter le serveur. Veuillez réessayer.</div>' +
-                                                     '</div>');
-                            $('#delete-selected-parrainages').prop('disabled', false).html('🗑️ SUPPRIMER LA SÉLECTION');
-                        }
-                    });
-                }
-                
-                function deleteSingleParrainage(orderId, button) {
-                    let originalText = button.html();
-                    button.html('🔄').prop('disabled', true);
-                    
-                    $.ajax({
-                        url: tbParrainageData.ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'tb_parrainage_delete_single',
-                            order_id: orderId,
-                            nonce: tbParrainageData.delete_nonce
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                button.closest('tr').fadeOut(500, function() {
-                                    $(this).remove();
-                                    updateSelectionCount();
-                                    updateDeleteButton();
-                                });
-                            } else {
-                                alert('❌ ' + response.data.message);
-                                button.html(originalText).prop('disabled', false);
-                            }
-                        },
-                        error: function() {
-                            alert('❌ Erreur de communication');
-                            button.html(originalText).prop('disabled', false);
-                        }
-                    });
-                }
-            });
-            <?php endif; ?>
         </script>
         <?php
     }
@@ -573,7 +224,7 @@ class ParrainageStatsManager {
     /**
      * Rendre le tableau de parrainage
      */
-    private function render_parrainage_table( $data, $deletion_manager = null ) {
+    private function render_parrainage_table( $data ) {
         if ( empty( $data['parrains'] ) ) {
             ?>
             <div class="no-parrainage-data">
@@ -587,14 +238,6 @@ class ParrainageStatsManager {
         <table class="wp-list-table widefat fixed striped parrainage-table">
             <thead>
                 <tr>
-                    <?php if ( $deletion_manager ) : ?>
-                    <th class="column-checkbox" style="width: 60px; background: #fed7d7; text-align: center;">
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                            <input type="checkbox" id="select-all-header" style="margin: 0; transform: scale(1.2);" title="Sélectionner/Désélectionner tout">
-                            <small style="font-size: 10px; color: #c53030; font-weight: bold;">SÉLECTION</small>
-                        </div>
-                    </th>
-                    <?php endif; ?>
                     <th class="column-parrain"><?php esc_html_e( 'Parrain', 'wc-tb-web-parrainage' ); ?></th>
                     <th class="column-filleuls"><?php esc_html_e( 'Filleul(s)', 'wc-tb-web-parrainage' ); ?></th>
                     <th class="column-date"><?php esc_html_e( 'Date', 'wc-tb-web-parrainage' ); ?></th>
@@ -602,16 +245,11 @@ class ParrainageStatsManager {
                     <th class="column-avantage"><?php esc_html_e( 'Avantage', 'wc-tb-web-parrainage' ); ?></th>
                     <th class="column-statut"><?php esc_html_e( 'Statut Abonnement', 'wc-tb-web-parrainage' ); ?></th>
                     <th class="column-montant"><?php esc_html_e( 'Montant', 'wc-tb-web-parrainage' ); ?></th>
-                    <?php if ( $deletion_manager ) : ?>
-                    <th class="column-actions" style="width: 110px; background: #fed7d7; text-align: center;">
-                        <small style="font-size: 10px; color: #c53030; font-weight: bold;">ACTIONS</small>
-                    </th>
-                    <?php endif; ?>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ( $data['parrains'] as $parrain_data ) : ?>
-                    <?php $this->render_parrain_row( $parrain_data, $deletion_manager ); ?>
+                    <?php $this->render_parrain_row( $parrain_data ); ?>
                 <?php endforeach; ?>
             </tbody>
         </table>
@@ -621,26 +259,14 @@ class ParrainageStatsManager {
     /**
      * Rendre une ligne de parrain avec ses filleuls
      */
-    private function render_parrain_row( $parrain_data, $deletion_manager = null ) {
+    private function render_parrain_row( $parrain_data ) {
         $parrain = $parrain_data['parrain'];
         $filleuls = $parrain_data['filleuls'];
         $filleuls_count = count( $filleuls );
         
         foreach ( $filleuls as $index => $filleul ) {
             ?>
-            <tr class="<?php echo $index === 0 ? 'parrain-row' : 'filleul-row'; ?>" data-order-id="<?php echo esc_attr( $filleul['order_id'] ); ?>">
-                
-                <!-- Colonne Checkbox (si gestionnaire de suppression) - UNE PAR FILLEUL -->
-                <?php if ( $deletion_manager ) : ?>
-                <td class="column-checkbox" style="text-align: center; vertical-align: middle; background: #fff5f5; border-left: 3px solid #fc8181;">
-                    <div style="padding: 8px;">
-                        <input type="checkbox" class="parrainage-checkbox" value="<?php echo esc_attr( $filleul['order_id'] ); ?>" data-parrain-name="<?php echo esc_attr( $parrain['nom'] ); ?>" data-filleul-name="<?php echo esc_attr( $filleul['nom'] ); ?>" style="transform: scale(1.3); cursor: pointer;" title="Sélectionner ce parrainage (<?php echo esc_attr( $filleul['nom'] ); ?>) pour suppression">
-                        <br>
-                        <small style="color: #c53030; font-size: 9px; font-weight: bold; margin-top: 3px; display: block;">À SUPPR</small>
-                    </div>
-                </td>
-                <?php endif; ?>
-                
+            <tr class="<?php echo $index === 0 ? 'parrain-row' : 'filleul-row'; ?>">
                 <?php if ( $index === 0 ) : ?>
                     <!-- Cellule parrain avec rowspan -->
                     <td class="column-parrain" rowspan="<?php echo esc_attr( $filleuls_count ); ?>">
@@ -761,39 +387,6 @@ class ParrainageStatsManager {
                 <td class="column-montant">
                     <?php echo wp_kses_post( $filleul['montant_formatted'] ); ?>
                 </td>
-                
-                <!-- Colonne Actions (si gestionnaire de suppression) -->
-                <?php if ( $deletion_manager ) : ?>
-                <td class="column-actions" style="text-align: center; background: #fff5f5; border-right: 3px solid #fc8181;">
-                    <?php 
-                    $can_delete = $deletion_manager->can_delete_parrainage( $filleul['order_id'] );
-                    if ( $can_delete['can_delete'] ) :
-                        $has_reduction = $can_delete['has_automatic_reduction'] ?? false;
-                        $button_title = $has_reduction ? 'Suppression immédiate + annulation réductions automatiques' : 'Suppression immédiate de ce parrainage';
-                    ?>
-                    <div style="padding: 5px;">
-                                            <button type="button" 
-                            class="button delete-single-parrainage" 
-                            data-order-id="<?php echo esc_attr( $filleul['order_id'] ); ?>"
-                            data-parrain-name="<?php echo esc_attr( $parrain['nom'] ); ?>"
-                            data-filleul-name="<?php echo esc_attr( $filleul['nom'] ); ?>"
-                            title="<?php echo esc_attr( $button_title ); ?>"
-                            style="background: #e53e3e; color: white; border-color: #e53e3e; font-size: 10px; padding: 4px 8px; line-height: 1.2; font-weight: bold; border-radius: 4px; box-shadow: 0 1px 3px rgba(229,62,62,0.3);">
-                        🗑️ SUPPR
-                    </button>
-                        <?php if ( $has_reduction ) : ?>
-                        <br><small style="color: #e53e3e; font-size: 9px; font-weight: bold; margin-top: 2px; display: block;">⚠️ Réduction active</small>
-                        <?php endif; ?>
-                        <small style="color: #744210; font-size: 8px; display: block; margin-top: 2px;">Suppression immédiate</small>
-                    </div>
-                    <?php else : ?>
-                    <div style="padding: 5px;">
-                        <span style="color: #718096; font-size: 10px; display: block; text-align: center;"><?php echo esc_html( $can_delete['reason'] ); ?></span>
-                    </div>
-                    <?php endif; ?>
-                </td>
-                <?php endif; ?>
-                
             </tr>
             <?php
         }

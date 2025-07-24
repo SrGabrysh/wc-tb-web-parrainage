@@ -168,7 +168,7 @@ class MyAccountParrainageManager {
     }
     
     /**
-     * Rend le tableau des parrainages
+     * Rend le tableau des parrainages avec les nouvelles colonnes v2.0.2
      * 
      * @param array $parrainages Données des parrainages
      * @return void
@@ -191,7 +191,7 @@ class MyAccountParrainageManager {
                     <tr>
                         <td>
                             <?php echo esc_html( $parrainage['filleul_nom'] ); ?>
-                            <?php if ( ! empty( $parrainage['filleul_email'] ) ) : ?>
+                            <?php if ( !empty( $parrainage['filleul_email'] ) ) : ?>
                                 <br><small class="email-masked"><?php echo esc_html( $parrainage['filleul_email'] ); ?></small>
                             <?php endif; ?>
                         </td>
@@ -209,6 +209,7 @@ class MyAccountParrainageManager {
             </tbody>
         </table>
         
+        <!-- Explications pédagogiques v2.0.2 -->
         <div class="tb-parrainage-explanations" style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #0073aa;">
             <p><strong>* À propos de votre remise :</strong></p>
             <ul style="margin-left: 20px;">
