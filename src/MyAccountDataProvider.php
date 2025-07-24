@@ -206,9 +206,7 @@ class MyAccountDataProvider {
                 pm_email.meta_value as filleul_email,
                 pm_avantage.meta_value as avantage,
                 wci.order_item_name as produit_nom,
-                sub.post_status as subscription_status,
-                sub_meta_total.meta_value as subscription_total,
-                sub_meta_tax.meta_value as subscription_tax
+                sub.post_status as subscription_status
             FROM {$wpdb->posts} p
             INNER JOIN {$wpdb->postmeta} pm_code ON p.ID = pm_code.post_id 
                 AND pm_code.meta_key = '_billing_parrain_code'
@@ -224,10 +222,6 @@ class MyAccountDataProvider {
                 AND wci.order_item_type = 'line_item'
             LEFT JOIN {$wpdb->posts} sub ON sub.post_parent = p.ID 
                 AND sub.post_type = 'shop_subscription'
-            LEFT JOIN {$wpdb->postmeta} sub_meta_total ON sub.ID = sub_meta_total.post_id 
-                AND sub_meta_total.meta_key = '_order_total'
-            LEFT JOIN {$wpdb->postmeta} sub_meta_tax ON sub.ID = sub_meta_tax.post_id 
-                AND sub_meta_tax.meta_key = '_order_tax'
             WHERE pm_code.meta_value = %s
                 AND p.post_type = 'shop_order'
                 AND p.post_status IN ('wc-completed', 'wc-processing')
@@ -293,10 +287,15 @@ class MyAccountDataProvider {
      * @return array Données formatées pour l'affichage
      */
     private function process_parrainage_row( $row ) {
-        // Calculer le montant HT en soustrayant les taxes du total TTC
-        $total_ttc = floatval( $row->subscription_total );
-        $taxes = floatval( $row->subscription_tax );
-        $montant_ht = $total_ttc - $taxes;
+        // Récupérer l'abonnement du filleul pour obtenir le vrai prix HT
+        $montant_ht = 0;
+        if ( !empty( $row->order_id ) && function_exists( 'wcs_get_subscriptions_for_order' ) ) {
+            $subscriptions = wcs_get_subscriptions_for_order( $row->order_id );
+            if ( !empty( $subscriptions ) ) {
+                $subscription = reset( $subscriptions ); // Premier abonnement
+                $montant_ht = (float) $subscription->get_subtotal(); // ✅ PRIX HT RÉEL
+            }
+        }
         
         return array(
             'order_id' => intval( $row->order_id ),
