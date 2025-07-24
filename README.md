@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.0.0  
+**Version:** 2.0.1  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+, WooCommerce Subscriptions (requis v2.0.0+)
 
@@ -417,11 +417,22 @@ GPL v2 or later
 
 ## Changelog
 
+### Version 2.0.1 (2025-07-24 à 11h09) - MINEURE
+
+- **Amélioration** : Interface "Mes parrainages" côté client avec nouveaux labels plus explicites
+- **Nouveau** : Colonne "Votre remise\*" dans le tableau des parrainages pour afficher la remise du parrain
+- **Amélioration** : Labels de colonnes plus clairs ("Abonnement de votre filleul", "Statut de son abonnement", etc.)
+- **Amélioration** : Statuts d'abonnement améliorés ("En cours" au lieu de "Actif", "Suspendu" au lieu de "En attente")
+- **Nouveau** : Section d'explications sous le tableau détaillant le fonctionnement des remises
+- **Amélioration** : Intégration avec la table `tb_parrainage_pricing_schedule` pour afficher les remises réelles
+- **Amélioration** : Gestion intelligente de l'affichage des remises selon le statut d'abonnement du filleul
+- **Documentation** : Explications détaillées sur l'application des remises HT et conditions d'activation
+
 ### Version 2.0.0 (2025-07-25) - MAJEURE
 
 - **🎉 Nouveau** : Système de réduction automatique du parrain (25% du prix filleul déduit du prix parrain)
 - **Nouveau** : Architecture SOLID avec composition et injection de dépendances
-- **Nouveau** : Tables de base de données dédiées (`pricing_schedule`, `pricing_history`) 
+- **Nouveau** : Tables de base de données dédiées (`pricing_schedule`, `pricing_history`)
 - **Nouveau** : Interface d'administration "Réductions Auto" avec statistiques temps réel
 - **Nouveau** : Système de retry intelligent avec backoff exponentiel (3 tentatives)
 - **Nouveau** : Notifications email automatiques aux parrains avec templates HTML

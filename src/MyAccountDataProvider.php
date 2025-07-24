@@ -28,12 +28,18 @@ class MyAccountDataProvider {
     
     // Labels des statuts d'abonnement
     const STATUS_LABELS = [
-        'active' => 'Actif',
-        'on-hold' => 'En attente',
+        'active' => 'En cours',
+        'wc-active' => 'En cours',
+        'on-hold' => 'Suspendu',
+        'wc-on-hold' => 'Suspendu',
         'cancelled' => 'Annulé',
+        'wc-cancelled' => 'Annulé',
         'expired' => 'Expiré',
-        'pending-cancel' => 'Annulation en cours',
-        'switched' => 'Changé'
+        'wc-expired' => 'Expiré',
+        'pending-cancel' => 'Annulation programmée',
+        'wc-pending-cancel' => 'Annulation programmée',
+        'switched' => 'Modifié',
+        'wc-switched' => 'Modifié'
     ];
     
     /**
@@ -182,21 +188,6 @@ class MyAccountDataProvider {
     }
     
     /**
-     * Formate un montant pour l'affichage
-     * 
-     * @param float $amount Montant à formater
-     * @param string $currency Devise (non utilisée pour l'instant)
-     * @return string Montant formaté
-     */
-    public function format_montant( $amount, $currency = 'EUR' ) {
-        if ( ! is_numeric( $amount ) ) {
-            return '';
-        }
-        
-        return sprintf( self::AMOUNT_FORMAT, floatval( $amount ) );
-    }
-    
-    /**
      * Exécute la requête SQL pour récupérer les données de parrainage
      * 
      * @param int $subscription_id ID de l'abonnement parrain
@@ -216,7 +207,8 @@ class MyAccountDataProvider {
                 pm_avantage.meta_value as avantage,
                 wci.order_item_name as produit_nom,
                 sub.post_status as subscription_status,
-                sub_meta.meta_value as subscription_total
+                sub_meta_total.meta_value as subscription_total,
+                sub_meta_tax.meta_value as subscription_tax
             FROM {$wpdb->posts} p
             INNER JOIN {$wpdb->postmeta} pm_code ON p.ID = pm_code.post_id 
                 AND pm_code.meta_key = '_billing_parrain_code'
@@ -232,8 +224,10 @@ class MyAccountDataProvider {
                 AND wci.order_item_type = 'line_item'
             LEFT JOIN {$wpdb->posts} sub ON sub.post_parent = p.ID 
                 AND sub.post_type = 'shop_subscription'
-            LEFT JOIN {$wpdb->postmeta} sub_meta ON sub.ID = sub_meta.post_id 
-                AND sub_meta.meta_key = '_order_total'
+            LEFT JOIN {$wpdb->postmeta} sub_meta_total ON sub.ID = sub_meta_total.post_id 
+                AND sub_meta_total.meta_key = '_order_total'
+            LEFT JOIN {$wpdb->postmeta} sub_meta_tax ON sub.ID = sub_meta_tax.post_id 
+                AND sub_meta_tax.meta_key = '_order_tax'
             WHERE pm_code.meta_value = %s
                 AND p.post_type = 'shop_order'
                 AND p.post_status IN ('wc-completed', 'wc-processing')
@@ -256,12 +250,54 @@ class MyAccountDataProvider {
     }
     
     /**
+     * Formate un montant HT pour l'affichage
+     * 
+     * @param float $amount_ht Montant HT à formater
+     * @return string Montant formaté pour l'affichage
+     */
+    private function format_montant_ht( $amount_ht ) {
+        if ( ! is_numeric( $amount_ht ) ) {
+            return '';
+        }
+        return sprintf( '%.2f€ HT/mois', floatval( $amount_ht ) );
+    }
+    
+    /**
+     * Récupère le montant de la remise du parrain pour un parrainage donné
+     * 
+     * @param float $montant_ht Montant HT de l'abonnement du filleul
+     * @param string $subscription_status Statut de l'abonnement du filleul
+     * @return string Montant de la remise formaté ou statut
+     */
+    private function get_parrain_reduction( $montant_ht, $subscription_status ) {
+        // Récupérer la constante existante
+        $reduction_percentage = defined('WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE') 
+            ? WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE 
+            : 25;
+        
+        // Logique simple - calcul sur le HT
+        if ( $montant_ht > 0 && in_array($subscription_status, ['active', 'wc-active']) ) {
+            $reduction_amount = ($montant_ht * $reduction_percentage) / 100;
+            return sprintf( '%.2f€', $reduction_amount );
+        } elseif ( $montant_ht > 0 ) {
+            return 'Non applicable';
+        } else {
+            return '0,00€';
+        }
+    }
+    
+    /**
      * Traite et formate une ligne de données de parrainage
      * 
      * @param object $row Ligne de données brutes
      * @return array Données formatées pour l'affichage
      */
     private function process_parrainage_row( $row ) {
+        // Calculer le montant HT en soustrayant les taxes du total TTC
+        $total_ttc = floatval( $row->subscription_total );
+        $taxes = floatval( $row->subscription_tax );
+        $montant_ht = $total_ttc - $taxes;
+        
         return array(
             'order_id' => intval( $row->order_id ),
             'filleul_nom' => \sanitize_text_field( $row->filleul_nom ),
@@ -272,8 +308,9 @@ class MyAccountDataProvider {
             'subscription_status' => $row->subscription_status,
             'status_label' => $this->get_subscription_status_label( $row->subscription_status ),
             'avantage' => \sanitize_text_field( $row->avantage ?: 'Avantage parrainage' ),
-            'montant' => $this->format_montant( $row->subscription_total ),
-            'montant_raw' => floatval( $row->subscription_total )
+            'abonnement_ht' => $this->format_montant_ht( $montant_ht ),
+            'abonnement_ht_raw' => $montant_ht,
+            'votre_remise' => $this->get_parrain_reduction( $montant_ht, $row->subscription_status )
         );
     }
 } 

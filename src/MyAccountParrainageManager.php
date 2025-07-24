@@ -180,10 +180,10 @@ class MyAccountParrainageManager {
                 <tr>
                     <th><?php esc_html_e( 'Filleul', 'wc-tb-web-parrainage' ); ?></th>
                     <th><?php esc_html_e( 'Date parrainage', 'wc-tb-web-parrainage' ); ?></th>
-                    <th><?php esc_html_e( 'Produit', 'wc-tb-web-parrainage' ); ?></th>
-                    <th><?php esc_html_e( 'Statut', 'wc-tb-web-parrainage' ); ?></th>
-                    <th><?php esc_html_e( 'Avantage reçu', 'wc-tb-web-parrainage' ); ?></th>
-                    <th><?php esc_html_e( 'Montant', 'wc-tb-web-parrainage' ); ?></th>
+                    <th><?php esc_html_e( 'Abonnement HT de votre filleul', 'wc-tb-web-parrainage' ); ?></th>
+                    <th><?php esc_html_e( 'Statut de son abonnement', 'wc-tb-web-parrainage' ); ?></th>
+                    <th><?php esc_html_e( 'Avantage reçu par votre filleul', 'wc-tb-web-parrainage' ); ?></th>
+                    <th><?php esc_html_e( 'Votre remise*', 'wc-tb-web-parrainage' ); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -196,18 +196,28 @@ class MyAccountParrainageManager {
                             <?php endif; ?>
                         </td>
                         <td><?php echo esc_html( $parrainage['date_parrainage'] ); ?></td>
-                        <td><?php echo esc_html( $parrainage['produit_nom'] ); ?></td>
+                        <td><?php echo esc_html( $parrainage['abonnement_ht'] ); ?></td>
                         <td>
                             <span class="status-badge status-<?php echo esc_attr( $parrainage['subscription_status'] ); ?>">
                                 <?php echo esc_html( $parrainage['status_label'] ); ?>
                             </span>
                         </td>
                         <td><?php echo esc_html( $parrainage['avantage'] ); ?></td>
-                        <td><?php echo esc_html( $parrainage['montant'] ); ?></td>
+                        <td><strong><?php echo esc_html( $parrainage['votre_remise'] ); ?></strong></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+        
+        <div class="tb-parrainage-explanations" style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #0073aa;">
+            <p><strong>* À propos de votre remise :</strong></p>
+            <ul style="margin-left: 20px;">
+                <li>La remise de <strong>25% s'applique sur le montant hors taxes (HT)</strong> de l'abonnement de votre filleul</li>
+                <li>Elle est automatiquement déduite de vos mensualités <strong>après la souscription</strong> de votre filleul</li>
+                <li>La remise n'est active que si <strong>l'abonnement de votre filleul reste en cours</strong></li>
+                <li>En cas d'annulation de l'abonnement du filleul, votre remise sera automatiquement supprimée</li>
+            </ul>
+        </div>
         
         <?php if ( count( $parrainages ) >= self::PARRAINAGES_LIMIT ) : ?>
             <p class="parrainages-limit-notice">
