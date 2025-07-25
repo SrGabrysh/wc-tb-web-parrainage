@@ -374,28 +374,52 @@ class Plugin {
                     $avantage = sanitize_text_field( $_POST['avantage'][$i] ?? '' );
                     $remise_parrain = sanitize_text_field( $_POST['remise_parrain'][$i] ?? '' );
                     $remise_parrain = str_replace( ',', '.', $remise_parrain ); // Conversion virgule -> point
+                    $prix_standard = sanitize_text_field( $_POST['prix_standard'][$i] ?? '' );
+                    $prix_standard = str_replace( ',', '.', $prix_standard ); // Conversion virgule -> point
+                    $frequence_paiement = sanitize_text_field( $_POST['frequence_paiement'][$i] ?? '' );
+                    
+                    // Validation prix standard
+                    $prix_standard_float = floatval( $prix_standard );
+                    if ( $prix_standard_float <= 0 ) {
+                        echo '<div class="notice notice-error"><p>' . esc_html__( 'Le prix standard doit être un montant positif.', 'wc-tb-web-parrainage' ) . '</p></div>';
+                        return;
+                    }
+                    
+                    // Validation fréquence paiement
+                    $frequences_valides = array( 'unique', 'mensuel', 'annuel' );
+                    if ( ! in_array( $frequence_paiement, $frequences_valides, true ) ) {
+                        echo '<div class="notice notice-error"><p>' . esc_html__( 'Fréquence de paiement invalide.', 'wc-tb-web-parrainage' ) . '</p></div>';
+                        return;
+                    }
                     
                     if ( $product_id > 0 && ! empty( $description ) ) {
                         $products_config[$product_id] = array(
                             'description' => $description,
                             'message_validation' => $message_validation,
                             'avantage' => $avantage,
-                            'remise_parrain' => floatval( $remise_parrain )
+                            'remise_parrain' => floatval( $remise_parrain ),
+                            'prix_standard' => $prix_standard_float,
+                            'frequence_paiement' => $frequence_paiement
                         );
                     }
                 }
             }
             
-            // Ajouter la configuration par défaut
+                            // Ajouter la configuration par défaut
             if ( isset( $_POST['default_description'] ) ) {
                 $default_remise_parrain = sanitize_text_field( $_POST['default_remise_parrain'] ?? '' );
                 $default_remise_parrain = str_replace( ',', '.', $default_remise_parrain );
+                $default_prix_standard = sanitize_text_field( $_POST['default_prix_standard'] ?? '' );
+                $default_prix_standard = str_replace( ',', '.', $default_prix_standard );
+                $default_frequence_paiement = sanitize_text_field( $_POST['default_frequence_paiement'] ?? '' );
                 
                 $products_config['default'] = array(
                     'description' => sanitize_textarea_field( $_POST['default_description'] ),
                     'message_validation' => sanitize_textarea_field( $_POST['default_message_validation'] ?? '' ),
                     'avantage' => sanitize_text_field( $_POST['default_avantage'] ?? '' ),
-                    'remise_parrain' => floatval( $default_remise_parrain )
+                    'remise_parrain' => floatval( $default_remise_parrain ),
+                    'prix_standard' => floatval( $default_prix_standard ),
+                    'frequence_paiement' => $default_frequence_paiement ?: 'mensuel'
                 );
             }
             
@@ -464,7 +488,9 @@ class Plugin {
                         'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                         'message_validation' => 'Code parrain valide ✓',
                         'avantage' => 'Avantage parrainage',
-                        'remise_parrain' => 0.00
+                        'remise_parrain' => 0.00,
+                        'prix_standard' => 0.00,
+                        'frequence_paiement' => 'mensuel'
                     );
                     ?>
                     
@@ -497,6 +523,33 @@ class Plugin {
                                 <p class="description"><?php esc_html_e( 'Montant de la remise parrain (ex: 10.50)', 'wc-tb-web-parrainage' ); ?></p>
                             </td>
                         </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e( 'Prix standard (€) avant remise parrainage', 'wc-tb-web-parrainage' ); ?></th>
+                            <td>
+                                <input type="text" 
+                                       name="default_prix_standard" 
+                                       value="<?php echo esc_attr( wp_unslash( $default_config['prix_standard'] ?? '' ) ); ?>" 
+                                       class="regular-text prix-standard-input" 
+                                       placeholder="89,99">
+                                <p class="description"><?php esc_html_e( 'Prix standard par défaut avant remise parrainage', 'wc-tb-web-parrainage' ); ?></p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e( 'Fréquence de paiement par défaut', 'wc-tb-web-parrainage' ); ?></th>
+                            <td>
+                                <select name="default_frequence_paiement" class="regular-text">
+                                    <option value="unique" <?php selected( $default_config['frequence_paiement'] ?? 'mensuel', 'unique' ); ?>>
+                                        <?php esc_html_e( 'Paiement unique', 'wc-tb-web-parrainage' ); ?>
+                                    </option>
+                                    <option value="mensuel" <?php selected( $default_config['frequence_paiement'] ?? 'mensuel', 'mensuel' ); ?>>
+                                        <?php esc_html_e( 'Mensuel', 'wc-tb-web-parrainage' ); ?>
+                                    </option>
+                                    <option value="annuel" <?php selected( $default_config['frequence_paiement'] ?? 'mensuel', 'annuel' ); ?>>
+                                        <?php esc_html_e( 'Annuel', 'wc-tb-web-parrainage' ); ?>
+                                    </option>
+                                </select>
+                            </td>
+                        </tr>
                     </table>
                 </div>
                 
@@ -516,7 +569,9 @@ class Plugin {
             'description' => '',
             'message_validation' => '',
             'avantage' => '',
-            'remise_parrain' => ''
+            'remise_parrain' => '',
+            'prix_standard' => '',
+            'frequence_paiement' => ''
         ) );
         ?>
         <div class="product-config-row" data-index="<?php echo esc_attr( $index ); ?>">
@@ -563,6 +618,36 @@ class Plugin {
                         <p class="description"><?php esc_html_e( 'Montant de la remise parrain (ex: 10.50)', 'wc-tb-web-parrainage' ); ?></p>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Prix standard (€) avant remise parrainage', 'wc-tb-web-parrainage' ); ?></th>
+                    <td>
+                        <input type="text" 
+                               name="prix_standard[]" 
+                               value="<?php echo esc_attr( wp_unslash( $config['prix_standard'] ?? '' ) ); ?>" 
+                               class="regular-text prix-standard-input" 
+                               placeholder="89,99"
+                               required>
+                        <p class="description"><?php esc_html_e( 'Prix affiché avant application de la remise parrainage (format : 89,99)', 'wc-tb-web-parrainage' ); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Fréquence de paiement', 'wc-tb-web-parrainage' ); ?></th>
+                    <td>
+                        <select name="frequence_paiement[]" class="regular-text" required>
+                            <option value=""><?php esc_html_e( 'Choisir une fréquence...', 'wc-tb-web-parrainage' ); ?></option>
+                            <option value="unique" <?php selected( $config['frequence_paiement'] ?? '', 'unique' ); ?>>
+                                <?php esc_html_e( 'Paiement unique', 'wc-tb-web-parrainage' ); ?>
+                            </option>
+                            <option value="mensuel" <?php selected( $config['frequence_paiement'] ?? '', 'mensuel' ); ?>>
+                                <?php esc_html_e( 'Mensuel', 'wc-tb-web-parrainage' ); ?>
+                            </option>
+                            <option value="annuel" <?php selected( $config['frequence_paiement'] ?? '', 'annuel' ); ?>>
+                                <?php esc_html_e( 'Annuel', 'wc-tb-web-parrainage' ); ?>
+                            </option>
+                        </select>
+                        <p class="description"><?php esc_html_e( 'Fréquence de facturation du produit', 'wc-tb-web-parrainage' ); ?></p>
+                    </td>
+                </tr>
             </table>
         </div>
         <?php
@@ -575,31 +660,41 @@ class Plugin {
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez d\'un mois gratuit supplémentaire',
                 'avantage' => '1 mois gratuit supplémentaire',
-                'remise_parrain' => 0.00
+                'remise_parrain' => 0.00,
+                'prix_standard' => 0.00,
+                'frequence_paiement' => 'mensuel'
             ),
             6524 => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez d\'un mois gratuit supplémentaire',
                 'avantage' => '1 mois gratuit supplémentaire',
-                'remise_parrain' => 0.00
+                'remise_parrain' => 0.00,
+                'prix_standard' => 0.00,
+                'frequence_paiement' => 'mensuel'
             ),
             6519 => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez d\'un mois gratuit supplémentaire',
                 'avantage' => '1 mois gratuit supplémentaire',
-                'remise_parrain' => 0.00
+                'remise_parrain' => 0.00,
+                'prix_standard' => 0.00,
+                'frequence_paiement' => 'mensuel'
             ),
             6354 => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez de 10% de remise',
                 'avantage' => '10% de remise',
-                'remise_parrain' => 0.00
+                'remise_parrain' => 0.00,
+                'prix_standard' => 0.00,
+                'frequence_paiement' => 'mensuel'
             ),
             'default' => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓',
                 'avantage' => 'Avantage parrainage',
-                'remise_parrain' => 0.00
+                'remise_parrain' => 0.00,
+                'prix_standard' => 0.00,
+                'frequence_paiement' => 'mensuel'
             )
         );
     }

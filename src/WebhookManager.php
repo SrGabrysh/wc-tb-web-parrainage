@@ -138,29 +138,34 @@ class WebhookManager {
                         // Récupérer le montant HT du premier article de l'abonnement
                         $montant_ht = floatval( $subscription_data['subscription_items'][0]['subtotal'] );
                         
-                        // Récupérer la remise parrain configurée
-                        $remise_info = $this->get_remise_parrain_configuree( $resource_id );
+                        // Récupérer les informations tarifaires complètes
+                        $tarification_info = $this->get_infos_tarification_configuree( $resource_id );
                         
-                        // Ajouter ces informations au payload dans la section parrainage_pricing
-                        $payload['parrainage_pricing']['remise_parrain_montant'] = $remise_info['montant'];
-                        $payload['parrainage_pricing']['remise_parrain_unite'] = $remise_info['unite'];
+                        // Enrichissement du payload
+                        $payload['parrainage_pricing']['remise_parrain_montant'] = $tarification_info['remise_parrain_montant'];
+                        $payload['parrainage_pricing']['remise_parrain_unite'] = $tarification_info['remise_parrain_unite'];
+                        $payload['parrainage_pricing']['prix_avant_remise'] = $tarification_info['prix_avant_remise'];
+                        $payload['parrainage_pricing']['frequence_paiement'] = $tarification_info['frequence_paiement'];
                         
                         // Si plusieurs abonnements, préciser l'ID de l'abonnement concerné
                         if ( count( $payload['subscription_metadata'] ) > 1 ) {
                             $payload['parrainage_pricing']['remise_parrain_subscription_id'] = $subscription_data['subscription_id'];
                         }
                         
-                        // Log spécifique pour cette nouvelle fonctionnalité
+                        // Mise à jour des logs
                         $this->logger->info( 
-                            sprintf( 'Webhook ordre %d : remise parrain configurée (%.2f€)', $resource_id, $remise_info['montant'] ),
+                            sprintf( 'Webhook ordre %d : tarification complète ajoutée (prix: %.2f€, fréquence: %s, remise: %.2f€)', 
+                                $resource_id, 
+                                $tarification_info['prix_avant_remise'],
+                                $tarification_info['frequence_paiement'],
+                                $tarification_info['remise_parrain_montant']
+                            ),
                             array( 
                                 'webhook_id' => $webhook_id,
                                 'order_id' => $resource_id,
-                                'subscription_id' => $subscription_data['subscription_id'],
-                                'reduction_amount' => $remise_info['montant'],
-                                'reduction_unit' => $remise_info['unite']
+                                'tarification_complete' => $tarification_info
                             ),
-                            'webhook-parrain-remise'
+                            'webhook-tarification-complete'
                         );
                         
                         // On sort de la boucle après avoir traité le premier abonnement actif
@@ -312,7 +317,15 @@ class WebhookManager {
             'periode_remise_mois' => 12
         );
         
-        // Section REMISE PARRAIN (côté configuration) - depuis parrainage_pricing si disponible
+        // Section PRODUIT (côté tarification générale)
+        if ( isset( $payload['parrainage_pricing']['prix_avant_remise'] ) ) {
+            $parrainage['produit'] = array(
+                'prix_avant_remise' => $payload['parrainage_pricing']['prix_avant_remise'],
+                'frequence_paiement' => $payload['parrainage_pricing']['frequence_paiement']
+            );
+        }
+        
+        // Section REMISE PARRAIN (côté remise spécifique)
         if ( isset( $payload['parrainage_pricing']['remise_parrain_montant'] ) ) {
             $parrainage['remise_parrain'] = array(
                 'montant' => $payload['parrainage_pricing']['remise_parrain_montant'],
@@ -330,42 +343,55 @@ class WebhookManager {
     }
 
     /**
-     * Récupère la remise parrain configurée pour un produit donné
+     * Récupère les informations tarifaires complètes pour un produit donné
      * 
      * @param int $order_id ID de la commande
-     * @return array Informations de remise configurée
+     * @return array Informations tarifaires enrichies
      */
-    private function get_remise_parrain_configuree( $order_id ) {
+    private function get_infos_tarification_configuree( $order_id ) {
         $order = wc_get_order( $order_id );
         if ( ! $order ) {
             return array(
-                'montant' => 0.00,
-                'unite' => 'EUR'
+                'remise_parrain_montant' => 0.00,
+                'remise_parrain_unite' => 'EUR',
+                'prix_avant_remise' => 0.00,
+                'frequence_paiement' => 'mensuel'
             );
         }
         
         // Récupérer les produits de la commande
         $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
-        $remise_montant = 0.00;
+        $config_trouvee = null;
         
         foreach ( $order->get_items() as $item ) {
             $product_id = $item->get_product_id();
             
-            // Vérifier si le produit a une remise configurée
-            if ( isset( $products_config[ $product_id ]['remise_parrain'] ) ) {
-                $remise_montant = floatval( $products_config[ $product_id ]['remise_parrain'] );
-                break; // Prendre la première remise trouvée
+            // Vérifier si le produit a une configuration spécifique
+            if ( isset( $products_config[ $product_id ] ) ) {
+                $config_trouvee = $products_config[ $product_id ];
+                break;
             }
         }
         
-        // Si aucune remise spécifique, vérifier la config par défaut
-        if ( $remise_montant == 0.00 && isset( $products_config['default']['remise_parrain'] ) ) {
-            $remise_montant = floatval( $products_config['default']['remise_parrain'] );
+        // Si aucune config spécifique, utiliser la config par défaut
+        if ( ! $config_trouvee && isset( $products_config['default'] ) ) {
+            $config_trouvee = $products_config['default'];
+        }
+        
+        // Valeurs par défaut si aucune configuration
+        if ( ! $config_trouvee ) {
+            $config_trouvee = array(
+                'remise_parrain' => 0.00,
+                'prix_standard' => 0.00,
+                'frequence_paiement' => 'mensuel'
+            );
         }
         
         return array(
-            'montant' => round( $remise_montant, 2 ),
-            'unite' => 'EUR'
+            'remise_parrain_montant' => round( floatval( $config_trouvee['remise_parrain'] ?? 0.00 ), 2 ),
+            'remise_parrain_unite' => 'EUR',
+            'prix_avant_remise' => round( floatval( $config_trouvee['prix_standard'] ?? 0.00 ), 2 ),
+            'frequence_paiement' => sanitize_text_field( $config_trouvee['frequence_paiement'] ?? 'mensuel' )
         );
     }
 

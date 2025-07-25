@@ -462,3 +462,31 @@ details pre {
 .help-message strong {
   color: #533f03;
 }
+
+/* Styles pour les champs de tarification */
+.prix-standard-input.valid {
+  border-color: #46b450;
+  box-shadow: 0 0 2px rgba(70, 180, 80, 0.5);
+}
+
+.prix-standard-input.invalid {
+  border-color: #dc3232;
+  box-shadow: 0 0 2px rgba(220, 50, 50, 0.5);
+}
+
+.product-config-row select {
+  min-width: 200px;
+}
+
+.product-config-row select.invalid {
+  border-color: #dc3232;
+  box-shadow: 0 0 2px rgba(220, 50, 50, 0.5);
+}
+
+/* Responsive pour les nouveaux champs */
+@media (max-width: 768px) {
+  .product-config-row select {
+    min-width: auto;
+    width: 100%;
+  }
+}

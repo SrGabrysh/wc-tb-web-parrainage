@@ -447,6 +447,33 @@ jQuery(document).ready(function ($) {
   );
 
   /**
+   * Validation du champ prix standard en temps réel
+   */
+  $(document).on("input", ".prix-standard-input", function () {
+    var $input = $(this);
+    var value = $input.val();
+
+    // Permettre virgule et point pour la saisie
+    var numericValue = parseFloat(value.replace(",", "."));
+
+    if (value === "") {
+      $input.removeClass("valid invalid");
+    } else if (
+      isNaN(numericValue) ||
+      numericValue <= 0 ||
+      numericValue > 99999.99
+    ) {
+      $input.addClass("invalid").removeClass("valid");
+      showMessage(
+        "Le prix standard doit être un montant positif inférieur à 99999,99€",
+        "error"
+      );
+    } else {
+      $input.addClass("valid").removeClass("invalid");
+    }
+  });
+
+  /**
    * Validation avant soumission
    */
   $("#products-config-form").on("submit", function (e) {
@@ -521,6 +548,37 @@ jQuery(document).ready(function ($) {
       }
 
       $input.removeClass("invalid");
+    });
+
+    // Vérifier que tous les prix standards sont valides
+    $(".prix-standard-input").each(function () {
+      var value = $(this).val();
+      var numericValue = parseFloat(value.replace(",", "."));
+
+      if (!value || isNaN(numericValue) || numericValue <= 0) {
+        isValid = false;
+        $(this).addClass("invalid");
+        showNotice(
+          "Tous les prix standards doivent être des montants positifs.",
+          "error"
+        );
+        return false;
+      }
+    });
+
+    // Vérifier que toutes les fréquences de paiement sont sélectionnées
+    $('select[name="frequence_paiement[]"]').each(function () {
+      var value = $(this).val();
+
+      if (!value) {
+        isValid = false;
+        $(this).addClass("invalid");
+        showNotice(
+          "Toutes les fréquences de paiement doivent être sélectionnées.",
+          "error"
+        );
+        return false;
+      }
     });
 
     if (!isValid) {

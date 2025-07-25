@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.1.0  
+**Version:** 2.2.0  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -171,7 +171,9 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
     "jours_marge_parrainage": 2,
     "periode_remise_mois": 12,
     "remise_parrain_montant": 7.50,
-    "remise_parrain_unite": "EUR"
+    "remise_parrain_unite": "EUR",
+    "prix_avant_remise": 89.99,
+    "frequence_paiement": "mensuel"
   },
   "parrainage": {
     "actif": true,
@@ -194,6 +196,10 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
       "jours_marge": 2,
       "periode_remise_mois": 12
     },
+    "produit": {
+      "prix_avant_remise": 89.99,
+      "frequence_paiement": "mensuel"
+    },
     "remise_parrain": {
       "montant": 7.50,
       "unite": "EUR"
@@ -213,16 +219,18 @@ Cette nouvelle clé n'apparaît que si la commande contient un code parrain vali
 - **`jours_marge_parrainage`** : Nombre de jours de marge ajoutés (défaut : 2)
 - **`periode_remise_mois`** : Durée de la période de remise en mois (12)
 
-#### Remise parrain configurée (v2.1.0)
+#### Tarification enrichie (v2.2.0)
 
-La section `parrainage_pricing` inclut désormais des informations sur la remise du parrain basées sur la configuration produit :
+La section `parrainage_pricing` inclut désormais des informations complètes sur la tarification parrainage :
 
 - **`remise_parrain_montant`** : Montant fixe configuré de la remise en euros (selon configuration produit)
 - **`remise_parrain_unite`** : Unité monétaire ('EUR')
+- **`prix_avant_remise`** : Prix standard avant application de la remise parrainage en euros
+- **`frequence_paiement`** : Fréquence de facturation ('unique', 'mensuel', 'annuel')
 
-**Note :** Ces clés ne sont présentes que si le produit a une remise configurée. Dans le cas contraire, les clés `remise_parrain_status: 'pending'` et `remise_parrain_message` indiquent que la remise sera appliquée selon la configuration produit.
+**Note :** Ces clés ne sont présentes que si le produit a une configuration complète. Dans le cas contraire, les clés `remise_parrain_status: 'pending'` et `remise_parrain_message` indiquent que la remise sera appliquée selon la configuration produit.
 
-#### Nouvel objet parrainage unifié (v2.0.5)
+#### Objet parrainage unifié restructuré (v2.2.0)
 
 La section `parrainage` regroupe toutes les données de parrainage dans une structure logique et hiérarchisée :
 
@@ -232,7 +240,8 @@ La section `parrainage` regroupe toutes les données de parrainage dans une stru
 - **`filleul`** : Informations côté réception du parrainage
 - **`parrain`** : Informations d'identification du parrain
 - **`dates`** : Données temporelles du système de parrainage
-- **`remise_parrain`** : Calculs de remise pour le parrain
+- **`produit`** : Informations tarifaires générales du produit
+- **`remise_parrain`** : Calculs de remise spécifiques pour le parrain
 
 **Section `filleul` :**
 
@@ -256,17 +265,22 @@ La section `parrainage` regroupe toutes les données de parrainage dans une stru
 - **`jours_marge`** : Jours de marge ajoutés (défaut: 2)
 - **`periode_remise_mois`** : Durée de remise en mois (défaut: 12)
 
+**Section `produit` :**
+
+- **`prix_avant_remise`** : Prix standard du produit avant application de remises en euros
+- **`frequence_paiement`** : Fréquence de facturation ('unique', 'mensuel', 'annuel')
+
 **Section `remise_parrain` :**
 
 - **`montant`** : Montant fixe de la remise en euros (selon configuration produit)
 - **`unite`** : Unité monétaire ('EUR')
 
-Ou si le produit n'a pas de remise configurée :
+Ou si le produit n'a pas de configuration complète :
 
 - **`status`** : 'pending'
 - **`message`** : 'La remise sera appliquée selon la configuration produit'
 
-**Avantages :** Cette nouvelle structure améliore la lisibilité, facilite l'intégration et centralise toutes les données de parrainage en un seul endroit.
+**Avantages v2.2.0 :** Cette structure restructurée améliore la séparation des responsabilités avec une distinction claire entre les informations produit (tarification générale) et les informations de remise parrain (bénéfice spécifique). Cela facilite l'évolutivité et la maintenance du code.
 
 ## Développement
 
@@ -433,6 +447,37 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.2.0 (24-07-25 à 18h30) - ENRICHISSEMENT TARIFICATION
+
+- **📊 NOUVEAU CHAMP** : Ajout du champ "Prix standard (€) avant remise parrainage" dans l'interface de configuration des produits
+- **🔄 NOUVEAU MENU** : Ajout du menu déroulant "Fréquence de paiement" avec 3 options (Paiement unique/Mensuel/Annuel)
+- **🔗 WEBHOOKS ENRICHIS** : Ajout de `prix_avant_remise` et `frequence_paiement` dans la section `parrainage_pricing`
+- **🌍 FORMAT FRANÇAIS** : Support du format virgule française pour la saisie du prix standard (89,99)
+- **🔒 VALIDATION RENFORCÉE** : Validation JavaScript et PHP pour les nouveaux champs avec plages de valeurs
+- **📱 INTERFACE COMPLÈTE** : 6 champs de configuration par produit pour une tarification complète
+- **⚡ PERFORMANCE** : Méthode `get_infos_tarification_configuree()` optimisée pour récupération unifiée
+- **🎨 STYLES ADAPTÉS** : CSS responsive pour les nouveaux champs avec classes de validation visuelle
+- **📝 LOGS ENRICHIS** : Canal `webhook-tarification-complete` pour traçabilité des nouvelles données
+- **🔄 RÉTROCOMPATIBILITÉ** : Migration transparente avec valeurs par défaut (0,00€, "mensuel")
+- **🏗️ OBJET PARRAINAGE RESTRUCTURÉ** : Séparation logique `produit` (tarification) et `remise_parrain` (bénéfice)
+- **🛡️ SÉCURITÉ** : Validation stricte des fréquences de paiement avec liste blanche
+
+**NOUVEAUX CHAMPS INTERFACE :**
+
+- Prix standard (€) : Champ obligatoire avec validation 0-99999,99€
+- Fréquence de paiement : Menu déroulant obligatoire avec 3 options fixes
+
+**STRUCTURE WEBHOOK ENRICHIE :**
+
+- `parrainage_pricing.prix_avant_remise` : Prix affiché avant remise
+- `parrainage_pricing.frequence_paiement` : Fréquence de facturation
+- `parrainage.produit.prix_avant_remise` : Prix standard dans la section produit
+- `parrainage.produit.frequence_paiement` : Fréquence dans la section produit
+- `parrainage.remise_parrain.montant` : Montant de la remise dans la section dédiée
+
+**MIGRATION :**
+Les configurations existantes sont automatiquement enrichies avec les valeurs par défaut : prix standard à 0,00€ et fréquence "mensuel". Les administrateurs peuvent ensuite configurer les vraies valeurs via l'interface.
 
 ### Version 2.1.0 (24-07-25 à 17h19) - FEATURE MAJEURE
 
