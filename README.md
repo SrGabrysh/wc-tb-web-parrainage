@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.0.5  
+**Version:** 2.0.6  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -181,12 +181,13 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
       "code_parrain_saisi": "6894",
       "avantage": "10% de remise sur la 1ère année d'adhésion"
     },
-    "parrain": {
-      "user_id": 17,
-      "subscription_id": "6894",
-      "email": "ga.du@outlook.com",
-      "nom_complet": "Charlotte Letest"
-    },
+         "parrain": {
+       "user_id": 17,
+       "subscription_id": "6894",
+       "email": "ga.du@outlook.com",
+       "nom_complet": "Charlotte Letest",
+       "prenom": "Charlotte"
+     },
     "dates": {
       "debut_parrainage": "2024-07-22",
       "fin_remise_parrainage": "2025-07-24",
@@ -232,6 +233,7 @@ La section `parrainage_pricing` inclut désormais des informations sur la remise
 La section `parrainage` regroupe toutes les données de parrainage dans une structure logique et hiérarchisée :
 
 **Structure générale :**
+
 - **`actif`** : Boolean indiquant si un parrainage est actif pour cette commande
 - **`filleul`** : Informations côté réception du parrainage
 - **`parrain`** : Informations d'identification du parrain
@@ -239,16 +241,20 @@ La section `parrainage` regroupe toutes les données de parrainage dans une stru
 - **`remise_parrain`** : Calculs de remise pour le parrain
 
 **Section `filleul` :**
+
 - **`code_parrain_saisi`** : Code parrain tapé par le filleul au checkout
 - **`avantage`** : Avantage que reçoit le filleul grâce au parrainage
 
 **Section `parrain` :**
+
 - **`user_id`** : ID utilisateur WordPress du parrain
-- **`subscription_id`** : ID de l'abonnement du parrain 
+- **`subscription_id`** : ID de l'abonnement du parrain
 - **`email`** : Email du parrain
 - **`nom_complet`** : Nom complet du parrain
+- **`prenom`** : Prénom du parrain (v2.0.6+)
 
 **Section `dates` :**
+
 - **`debut_parrainage`** : Date de début du parrainage (YYYY-MM-DD)
 - **`fin_remise_parrainage`** : Date de fin de période de remise (YYYY-MM-DD)
 - **`debut_parrainage_formatted`** : Date début au format DD-MM-YYYY
@@ -257,12 +263,14 @@ La section `parrainage` regroupe toutes les données de parrainage dans une stru
 - **`periode_remise_mois`** : Durée de remise en mois (défaut: 12)
 
 **Section `remise_parrain` :**
+
 - **`montant`** : Montant de la remise en euros (25% du HT filleul)
 - **`pourcentage`** : Pourcentage de remise appliqué (25%)
 - **`base_ht`** : Montant HT de l'abonnement du filleul
 - **`unite`** : Unité monétaire ('EUR')
 
 Ou si l'abonnement n'est pas encore actif :
+
 - **`status`** : 'pending'
 - **`message`** : Message explicatif
 
@@ -433,6 +441,15 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.0.6 (24-07-25 à 12h15) - FEATURE
+
+- **🆕 NOUVEAU** : Champ `prenom` dans la section `parrainage.parrain` du payload webhook
+- **💾 Stockage amélioré** : Sauvegarde séparée du prénom et nom dans les métadonnées (`_parrain_prenom`, `_parrain_nom`)
+- **🎯 Données précises** : Récupération directe du `first_name` WordPress (support prénoms composés)
+- **🔄 Rétrocompatibilité** : Conservation du champ `nom_complet` existant
+- **📚 Documentation** : Mise à jour de l'exemple JSON et des spécifications
+- **✅ Fiabilité** : Plus d'extraction par espaces, données directes depuis la base utilisateur WordPress
 
 ### Version 2.0.5 (24-07-25 à 11h45) - FEATURE
 

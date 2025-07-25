@@ -570,6 +570,9 @@ class ParrainageManager {
                 update_post_meta( $order_id, '_parrain_user_id', $infos_parrain['user_id'] );
                 update_post_meta( $order_id, '_parrain_email', $infos_parrain['email'] );
                 update_post_meta( $order_id, '_parrain_nom_complet', trim( $infos_parrain['prenom'] . ' ' . $infos_parrain['nom'] ) );
+                // NOUVEAU v2.0.6 : Stocker le prénom séparément pour les webhooks
+                update_post_meta( $order_id, '_parrain_prenom', $infos_parrain['prenom'] );
+                update_post_meta( $order_id, '_parrain_nom', $infos_parrain['nom'] );
             }
             
             // Log pour tracking

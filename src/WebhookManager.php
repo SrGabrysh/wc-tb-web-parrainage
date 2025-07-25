@@ -297,7 +297,8 @@ class WebhookManager {
             'user_id' => intval( $order->get_meta( '_parrain_user_id' ) ?: 0 ),
             'subscription_id' => \sanitize_text_field( $order->get_meta( '_parrain_subscription_id' ) ?: '' ),
             'email' => \sanitize_email( $order->get_meta( '_parrain_email' ) ?: '' ),
-            'nom_complet' => \sanitize_text_field( $order->get_meta( '_parrain_nom_complet' ) ?: '' )
+            'nom_complet' => \sanitize_text_field( $order->get_meta( '_parrain_nom_complet' ) ?: '' ),
+            'prenom' => \sanitize_text_field( $order->get_meta( '_parrain_prenom' ) ?: '' )
         );
         
         // Section DATES (côté temporalité)
