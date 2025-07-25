@@ -126,6 +126,52 @@ class WebhookManager {
                 }
             }
             
+            // NOUVEAU : Ajouter les informations de remise parrain si abonnements actifs
+            if ( isset( $payload['parrainage_pricing'] ) && isset( $payload['subscription_metadata'] ) && !empty( $payload['subscription_metadata'] ) ) {
+                // Traiter tous les abonnements présents dans la commande
+                foreach ( $payload['subscription_metadata'] as $subscription_index => $subscription_data ) {
+                    // Vérifier si l'abonnement est actif et possède un montant HT
+                    if ( isset( $subscription_data['subscription_status'] ) && 
+                         in_array( $subscription_data['subscription_status'], array( 'active', 'wc-active' ) ) && 
+                         isset( $subscription_data['subscription_items'][0]['subtotal'] ) ) {
+                        
+                        // Récupérer le montant HT du premier article de l'abonnement
+                        $montant_ht = floatval( $subscription_data['subscription_items'][0]['subtotal'] );
+                        
+                        // Calculer la remise parrain
+                        $remise_info = $this->calculer_remise_parrain( $montant_ht );
+                        
+                        // Ajouter ces informations au payload dans la section parrainage_pricing
+                        $payload['parrainage_pricing']['remise_parrain_montant'] = $remise_info['montant'];
+                        $payload['parrainage_pricing']['remise_parrain_pourcentage'] = $remise_info['pourcentage'];
+                        $payload['parrainage_pricing']['remise_parrain_base_ht'] = $remise_info['base_ht'];
+                        $payload['parrainage_pricing']['remise_parrain_unite'] = $remise_info['unite'];
+                        
+                        // Si plusieurs abonnements, préciser l'ID de l'abonnement concerné
+                        if ( count( $payload['subscription_metadata'] ) > 1 ) {
+                            $payload['parrainage_pricing']['remise_parrain_subscription_id'] = $subscription_data['subscription_id'];
+                        }
+                        
+                        // Log spécifique pour cette nouvelle fonctionnalité
+                        $this->logger->info( 
+                            sprintf( 'Webhook ordre %d : remise parrain calculée (%.2f€)', $resource_id, $remise_info['montant'] ),
+                            array( 
+                                'webhook_id' => $webhook_id,
+                                'order_id' => $resource_id,
+                                'subscription_id' => $subscription_data['subscription_id'],
+                                'reduction_amount' => $remise_info['montant'],
+                                'reduction_percentage' => $remise_info['pourcentage'],
+                                'montant_ht' => $remise_info['base_ht']
+                            ),
+                            'webhook-parrain-remise'
+                        );
+                        
+                        // On sort de la boucle après avoir traité le premier abonnement actif
+                        break;
+                    }
+                }
+            }
+            
             // Log pour debugging
             $this->logger->info( 
                 sprintf( 
@@ -160,7 +206,29 @@ class WebhookManager {
         if ( $this->subscription_pricing_manager ) {
             $infos_tarification = $this->subscription_pricing_manager->obtenir_infos_tarification_parrainage( $resource_id );
             if ( $infos_tarification ) {
-                $payload['parrainage_pricing'] = $infos_tarification;
+                // ✅ CORRECTION : Merge au lieu d'écrasement pour conserver les enrichissements de remise parrain
+                if ( !isset( $payload['parrainage_pricing'] ) ) {
+                    $payload['parrainage_pricing'] = $infos_tarification;
+                } else {
+                    $payload['parrainage_pricing'] = array_merge( $infos_tarification, $payload['parrainage_pricing'] );
+                }
+                
+                // NOUVEAU : Ajouter l'indication que la remise sera calculée ultérieurement
+                if ( !isset( $payload['subscription_metadata'] ) || empty( $payload['subscription_metadata'] ) ) {
+                    // Indiquer que la remise sera calculée ultérieurement quand l'abonnement sera actif
+                    $payload['parrainage_pricing']['remise_parrain_status'] = 'pending';
+                    $payload['parrainage_pricing']['remise_parrain_message'] = 'La remise sera calculée lorsque l\'abonnement du filleul sera actif';
+                    
+                    // Log pour traçabilité
+                    $this->logger->info( 
+                        sprintf( 'Webhook ordre %d : remise parrain en attente (abonnement non encore actif)', $resource_id ),
+                        array( 
+                            'webhook_id' => $webhook_id,
+                            'order_id' => $resource_id,
+                        ),
+                        'webhook-parrain-remise'
+                    );
+                }
                 
                 // Log spécifique pour les données de tarification
                 $this->logger->info( 
@@ -178,6 +246,33 @@ class WebhookManager {
         return $payload;
     }
     
+    /**
+     * Calcule le montant de la remise parrain pour un abonnement donné
+     * 
+     * @param float $montant_ht Montant HT de l'abonnement du filleul
+     * @return array Informations de remise (montant, pourcentage, base HT)
+     */
+    private function calculer_remise_parrain( $montant_ht ) {
+        // Utiliser la constante définie pour le pourcentage de remise
+        $reduction_percentage = defined( 'WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE' ) 
+            ? WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE 
+            : 25; // Valeur par défaut si la constante n'est pas définie
+        
+        // Calculer le montant de la remise (25% du montant HT)
+        $reduction_amount = ( $montant_ht * $reduction_percentage ) / 100;
+        
+        // Arrondir à 2 décimales pour une précision monétaire standard
+        $reduction_amount = round( $reduction_amount, 2 );
+        $montant_ht = round( $montant_ht, 2 );
+        
+        return array(
+            'montant' => $reduction_amount,
+            'pourcentage' => $reduction_percentage,
+            'base_ht' => $montant_ht,
+            'unite' => 'EUR'
+        );
+    }
+
     /**
      * Hook pour stocker les informations d'abonnement dans les métadonnées de la commande
      * (stockage pour référence future)

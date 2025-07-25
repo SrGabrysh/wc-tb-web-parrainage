@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.0.2  
+**Version:** 2.0.4  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -169,7 +169,11 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
     "date_fin_remise_parrainage_formatted": "24-07-2025",
     "date_debut_parrainage_formatted": "22-07-2024",
     "jours_marge_parrainage": 2,
-    "periode_remise_mois": 12
+    "periode_remise_mois": 12,
+    "remise_parrain_montant": 7.50,
+    "remise_parrain_pourcentage": 25,
+    "remise_parrain_base_ht": 29.99,
+    "remise_parrain_unite": "EUR"
   }
 }
 ```
@@ -184,6 +188,17 @@ Cette nouvelle clé n'apparaît que si la commande contient un code parrain vali
 - **`date_debut_parrainage_formatted`** : Date de début au format DD-MM-YYYY
 - **`jours_marge_parrainage`** : Nombre de jours de marge ajoutés (défaut : 2)
 - **`periode_remise_mois`** : Durée de la période de remise en mois (12)
+
+#### Nouvelles clés de remise parrain (v2.0.3)
+
+La section `parrainage_pricing` inclut désormais des informations sur la remise du parrain :
+
+- **`remise_parrain_montant`** : Montant calculé de la remise en euros (25% du montant HT)
+- **`remise_parrain_pourcentage`** : Pourcentage utilisé pour le calcul (25% par défaut)
+- **`remise_parrain_base_ht`** : Montant HT de l'abonnement du filleul utilisé pour le calcul
+- **`remise_parrain_unite`** : Unité monétaire ('EUR')
+
+**Note :** Ces clés ne sont présentes que si l'abonnement du filleul est actif. Dans le cas contraire, les clés `remise_parrain_status: 'pending'` et `remise_parrain_message` indiquent que la remise sera calculée ultérieurement.
 
 ## Développement
 
@@ -350,6 +365,27 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.0.4 (24-07-25 à 11h15) - HOTFIX
+
+- **🚨 CORRECTION CRITIQUE** : Fix écrasement de la section `parrainage_pricing` dans les webhooks
+- **Correctif** : Remplacement de l'assignation directe par un merge intelligent pour préserver les enrichissements
+- **Amélioration** : Les nouvelles clés de remise parrain (`remise_parrain_montant`, etc.) sont désormais correctement conservées
+- **Technique** : Modification de `$payload['parrainage_pricing'] = $infos_tarification` vers `array_merge()` conditionnel
+- **Impact** : Les webhooks affichent maintenant correctement toutes les informations de remise parrain
+
+### Version 2.0.3 (24-07-25 à 11h03) - PATCH
+
+- **Nouveau** : Ajout du montant de remise parrain dans le payload webhook
+- **Nouveau** : Nouvelles clés `remise_parrain_montant`, `remise_parrain_pourcentage`, `remise_parrain_base_ht`, `remise_parrain_unite` dans la section `parrainage_pricing`
+- **Nouveau** : Calcul automatique de la remise parrain (25% du montant HT du filleul) pour les abonnements actifs
+- **Nouveau** : Gestion des cas avec abonnements non encore actifs via `remise_parrain_status: 'pending'`
+- **Nouveau** : Méthode `calculer_remise_parrain()` dans WebhookManager pour la logique de calcul
+- **Amélioration** : Logs enrichis spécifiques aux calculs de remise parrain (canal 'webhook-parrain-remise')
+- **Amélioration** : Support des commandes avec plusieurs abonnements via `remise_parrain_subscription_id`
+- **Amélioration** : Documentation webhook enrichie avec exemples de payload complets
+- **Amélioration** : Utilisation de la constante `WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE` existante
+- **Amélioration** : Arrondi monétaire à 2 décimales pour une précision standard
 
 ### Version 2.0.2 (24-07-25 à 16h38) - PATCH
 
