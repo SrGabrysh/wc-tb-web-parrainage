@@ -201,27 +201,43 @@ class MyAccountDataProvider {
     }
     
     /**
-     * Récupère le montant de la remise du parrain (v2.0.2)
+     * Récupère le montant de la remise du parrain selon la configuration produit
      * 
-     * @param float $montant_ht Montant HT de l'abonnement du filleul
+     * @param int $order_id ID de la commande du filleul
      * @param string $subscription_status Statut de l'abonnement du filleul
      * @return string Montant de la remise formaté ou statut
      */
-    private function get_parrain_reduction( $montant_ht, $subscription_status ) {
-        // Utiliser la constante existante
-        $reduction_percentage = defined('WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE') 
-            ? WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE 
-            : 25;
-        
-        // Logique d'affichage selon statut
-        if ( $montant_ht > 0 && in_array($subscription_status, ['active', 'wc-active']) ) {
-            $reduction_amount = ($montant_ht * $reduction_percentage) / 100;
-            return sprintf( '%.2f€', $reduction_amount );
-        } elseif ( $montant_ht > 0 ) {
+    private function get_parrain_reduction( $order_id, $subscription_status ) {
+        // Vérifier si l'abonnement est actif
+        if ( ! in_array( $subscription_status, ['active', 'wc-active'] ) ) {
             return 'Non applicable';
-        } else {
+        }
+        
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
             return '0,00€';
         }
+        
+        // Récupérer la configuration des produits
+        $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
+        $remise_montant = 0.00;
+        
+        foreach ( $order->get_items() as $item ) {
+            $product_id = $item->get_product_id();
+            
+            if ( isset( $products_config[ $product_id ]['remise_parrain'] ) ) {
+                $remise_montant = floatval( $products_config[ $product_id ]['remise_parrain'] );
+                break;
+            }
+        }
+        
+        // Si aucune remise spécifique, vérifier la config par défaut
+        if ( $remise_montant == 0.00 && isset( $products_config['default']['remise_parrain'] ) ) {
+            $remise_montant = floatval( $products_config['default']['remise_parrain'] );
+        }
+        
+        // Formatage avec virgule française
+        return number_format( $remise_montant, 2, ',', '' ) . '€';
     }
     
     /**
@@ -341,7 +357,7 @@ class MyAccountDataProvider {
             // Nouvelles données v2.0.2
             'abonnement_ht' => $this->format_montant_ht( $montant_ht ),
             'abonnement_ht_raw' => $montant_ht,
-            'votre_remise' => $this->get_parrain_reduction( $montant_ht, $row->subscription_status ),
+            'votre_remise' => $this->get_parrain_reduction( $row->order_id, $row->subscription_status ),
             // Anciennes données conservées pour compatibilité
             'montant' => $this->format_montant( $row->subscription_total ),
             'montant_raw' => floatval( $row->subscription_total )

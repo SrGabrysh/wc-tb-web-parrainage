@@ -138,13 +138,11 @@ class WebhookManager {
                         // Récupérer le montant HT du premier article de l'abonnement
                         $montant_ht = floatval( $subscription_data['subscription_items'][0]['subtotal'] );
                         
-                        // Calculer la remise parrain
-                        $remise_info = $this->calculer_remise_parrain( $montant_ht );
+                        // Récupérer la remise parrain configurée
+                        $remise_info = $this->get_remise_parrain_configuree( $resource_id );
                         
                         // Ajouter ces informations au payload dans la section parrainage_pricing
                         $payload['parrainage_pricing']['remise_parrain_montant'] = $remise_info['montant'];
-                        $payload['parrainage_pricing']['remise_parrain_pourcentage'] = $remise_info['pourcentage'];
-                        $payload['parrainage_pricing']['remise_parrain_base_ht'] = $remise_info['base_ht'];
                         $payload['parrainage_pricing']['remise_parrain_unite'] = $remise_info['unite'];
                         
                         // Si plusieurs abonnements, préciser l'ID de l'abonnement concerné
@@ -154,14 +152,13 @@ class WebhookManager {
                         
                         // Log spécifique pour cette nouvelle fonctionnalité
                         $this->logger->info( 
-                            sprintf( 'Webhook ordre %d : remise parrain calculée (%.2f€)', $resource_id, $remise_info['montant'] ),
+                            sprintf( 'Webhook ordre %d : remise parrain configurée (%.2f€)', $resource_id, $remise_info['montant'] ),
                             array( 
                                 'webhook_id' => $webhook_id,
                                 'order_id' => $resource_id,
                                 'subscription_id' => $subscription_data['subscription_id'],
                                 'reduction_amount' => $remise_info['montant'],
-                                'reduction_percentage' => $remise_info['pourcentage'],
-                                'montant_ht' => $remise_info['base_ht']
+                                'reduction_unit' => $remise_info['unite']
                             ),
                             'webhook-parrain-remise'
                         );
@@ -315,23 +312,61 @@ class WebhookManager {
             'periode_remise_mois' => 12
         );
         
-        // Section REMISE PARRAIN (côté calcul) - depuis parrainage_pricing si disponible
+        // Section REMISE PARRAIN (côté configuration) - depuis parrainage_pricing si disponible
         if ( isset( $payload['parrainage_pricing']['remise_parrain_montant'] ) ) {
             $parrainage['remise_parrain'] = array(
                 'montant' => $payload['parrainage_pricing']['remise_parrain_montant'],
-                'pourcentage' => $payload['parrainage_pricing']['remise_parrain_pourcentage'],
-                'base_ht' => $payload['parrainage_pricing']['remise_parrain_base_ht'],
                 'unite' => $payload['parrainage_pricing']['remise_parrain_unite']
             );
         } else {
-            // Si pas encore calculée, indiquer pending
+            // Si pas encore configurée, indiquer pending
             $parrainage['remise_parrain'] = array(
                 'status' => 'pending',
-                'message' => 'La remise sera calculée lorsque l\'abonnement du filleul sera actif'
+                'message' => 'La remise sera appliquée selon la configuration produit'
             );
         }
         
         return $parrainage;
+    }
+
+    /**
+     * Récupère la remise parrain configurée pour un produit donné
+     * 
+     * @param int $order_id ID de la commande
+     * @return array Informations de remise configurée
+     */
+    private function get_remise_parrain_configuree( $order_id ) {
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return array(
+                'montant' => 0.00,
+                'unite' => 'EUR'
+            );
+        }
+        
+        // Récupérer les produits de la commande
+        $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
+        $remise_montant = 0.00;
+        
+        foreach ( $order->get_items() as $item ) {
+            $product_id = $item->get_product_id();
+            
+            // Vérifier si le produit a une remise configurée
+            if ( isset( $products_config[ $product_id ]['remise_parrain'] ) ) {
+                $remise_montant = floatval( $products_config[ $product_id ]['remise_parrain'] );
+                break; // Prendre la première remise trouvée
+            }
+        }
+        
+        // Si aucune remise spécifique, vérifier la config par défaut
+        if ( $remise_montant == 0.00 && isset( $products_config['default']['remise_parrain'] ) ) {
+            $remise_montant = floatval( $products_config['default']['remise_parrain'] );
+        }
+        
+        return array(
+            'montant' => round( $remise_montant, 2 ),
+            'unite' => 'EUR'
+        );
     }
 
     /**

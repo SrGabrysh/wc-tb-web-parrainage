@@ -372,12 +372,15 @@ class Plugin {
                     $description = sanitize_textarea_field( $_POST['description'][$i] ?? '' );
                     $message_validation = sanitize_textarea_field( $_POST['message_validation'][$i] ?? '' );
                     $avantage = sanitize_text_field( $_POST['avantage'][$i] ?? '' );
+                    $remise_parrain = sanitize_text_field( $_POST['remise_parrain'][$i] ?? '' );
+                    $remise_parrain = str_replace( ',', '.', $remise_parrain ); // Conversion virgule -> point
                     
                     if ( $product_id > 0 && ! empty( $description ) ) {
                         $products_config[$product_id] = array(
                             'description' => $description,
                             'message_validation' => $message_validation,
-                            'avantage' => $avantage
+                            'avantage' => $avantage,
+                            'remise_parrain' => floatval( $remise_parrain )
                         );
                     }
                 }
@@ -385,10 +388,14 @@ class Plugin {
             
             // Ajouter la configuration par défaut
             if ( isset( $_POST['default_description'] ) ) {
+                $default_remise_parrain = sanitize_text_field( $_POST['default_remise_parrain'] ?? '' );
+                $default_remise_parrain = str_replace( ',', '.', $default_remise_parrain );
+                
                 $products_config['default'] = array(
                     'description' => sanitize_textarea_field( $_POST['default_description'] ),
                     'message_validation' => sanitize_textarea_field( $_POST['default_message_validation'] ?? '' ),
-                    'avantage' => sanitize_text_field( $_POST['default_avantage'] ?? '' )
+                    'avantage' => sanitize_text_field( $_POST['default_avantage'] ?? '' ),
+                    'remise_parrain' => floatval( $default_remise_parrain )
                 );
             }
             
@@ -456,7 +463,8 @@ class Plugin {
                     $default_config = $products_config['default'] ?? array(
                         'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                         'message_validation' => 'Code parrain valide ✓',
-                        'avantage' => 'Avantage parrainage'
+                        'avantage' => 'Avantage parrainage',
+                        'remise_parrain' => 0.00
                     );
                     ?>
                     
@@ -482,6 +490,13 @@ class Plugin {
                                 <p class="description"><?php esc_html_e( 'Description courte de l\'avantage (affiché dans l\'admin commande)', 'wc-tb-web-parrainage' ); ?></p>
                             </td>
                         </tr>
+                        <tr>
+                            <th scope="row"><?php esc_html_e( 'Remise Parrain (€/mois)', 'wc-tb-web-parrainage' ); ?></th>
+                            <td>
+                                <input type="text" name="default_remise_parrain" value="<?php echo esc_attr( wp_unslash( $default_config['remise_parrain'] ) ); ?>" class="regular-text">
+                                <p class="description"><?php esc_html_e( 'Montant de la remise parrain (ex: 10.50)', 'wc-tb-web-parrainage' ); ?></p>
+                            </td>
+                        </tr>
                     </table>
                 </div>
                 
@@ -500,7 +515,8 @@ class Plugin {
         $config = wp_parse_args( $config, array(
             'description' => '',
             'message_validation' => '',
-            'avantage' => ''
+            'avantage' => '',
+            'remise_parrain' => ''
         ) );
         ?>
         <div class="product-config-row" data-index="<?php echo esc_attr( $index ); ?>">
@@ -540,6 +556,13 @@ class Plugin {
                         <p class="description"><?php esc_html_e( 'Description courte de l\'avantage (affiché dans l\'admin commande)', 'wc-tb-web-parrainage' ); ?></p>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e( 'Remise Parrain (€/mois)', 'wc-tb-web-parrainage' ); ?></th>
+                    <td>
+                        <input type="text" name="remise_parrain[]" value="<?php echo esc_attr( wp_unslash( $config['remise_parrain'] ) ); ?>" class="regular-text">
+                        <p class="description"><?php esc_html_e( 'Montant de la remise parrain (ex: 10.50)', 'wc-tb-web-parrainage' ); ?></p>
+                    </td>
+                </tr>
             </table>
         </div>
         <?php
@@ -551,27 +574,32 @@ class Plugin {
             6713 => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez d\'un mois gratuit supplémentaire',
-                'avantage' => '1 mois gratuit supplémentaire'
+                'avantage' => '1 mois gratuit supplémentaire',
+                'remise_parrain' => 0.00
             ),
             6524 => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez d\'un mois gratuit supplémentaire',
-                'avantage' => '1 mois gratuit supplémentaire'
+                'avantage' => '1 mois gratuit supplémentaire',
+                'remise_parrain' => 0.00
             ),
             6519 => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez d\'un mois gratuit supplémentaire',
-                'avantage' => '1 mois gratuit supplémentaire'
+                'avantage' => '1 mois gratuit supplémentaire',
+                'remise_parrain' => 0.00
             ),
             6354 => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓ - Vous bénéficierez de 10% de remise',
-                'avantage' => '10% de remise'
+                'avantage' => '10% de remise',
+                'remise_parrain' => 0.00
             ),
             'default' => array(
                 'description' => 'Vous êtes parrainé ? Saisissez votre code parrain à 4 chiffres, sans espace ni caractère spécial (exemple : 4896)',
                 'message_validation' => 'Code parrain valide ✓',
-                'avantage' => 'Avantage parrainage'
+                'avantage' => 'Avantage parrainage',
+                'remise_parrain' => 0.00
             )
         );
     }

@@ -319,230 +319,301 @@ jQuery(document).ajaxError(function (event, xhr, settings) {
 /**
  * Gestion de l'interface de configuration des produits
  */
-jQuery(document).ready(function($) {
-    
-    // Variables pour la gestion des produits
-    var productIndex = $('.product-config-row').length;
-    
-    /**
-     * Ajouter un nouveau produit
-     */
-    $('#add-product').on('click', function(e) {
-        e.preventDefault();
-        
-        // Masquer le message "aucun produit" s'il existe
-        $('.no-products').fadeOut();
-        
-        // Récupérer le template
-        var template = $('#product-row-template').html();
-        
-        // Remplacer les placeholders
-        template = template.replace(/\{\{INDEX\}\}/g, productIndex);
-        template = template.replace(/\{\{PRODUCT_ID\}\}/g, '');
-        
-        // Ajouter la nouvelle ligne
-        var $newRow = $(template);
-        $newRow.addClass('adding');
-        $('#products-container').append($newRow);
-        
-        // Animation d'apparition
-        setTimeout(function() {
-            $newRow.removeClass('adding');
-        }, 300);
-        
-        // Focus sur le champ ID produit
-        $newRow.find('.product-id-input').focus();
-        
-        productIndex++;
-        
-        // Mise à jour des numéros de produit affichés
-        updateProductNumbers();
-    });
-    
-    /**
-     * Supprimer un produit
-     */
-    $(document).on('click', '.remove-product', function(e) {
-        e.preventDefault();
-        
-        var $row = $(this).closest('.product-config-row');
-        
-        // Confirmation
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cette configuration produit ?')) {
-            return;
-        }
-        
-        // Animation de suppression
-        $row.addClass('removing');
-        
-        setTimeout(function() {
-            $row.remove();
-            
-            // Vérifier s'il reste des produits
-            if ($('.product-config-row').length === 0) {
-                $('#products-container').html('<div class="no-products"><p>Aucun produit configuré. Cliquez sur "Ajouter un Produit" pour commencer.</p></div>');
-            }
-            
-            // Mise à jour des numéros
-            updateProductNumbers();
-        }, 300);
-    });
-    
-    /**
-     * Mise à jour en temps réel du numéro de produit affiché
-     */
-    $(document).on('input', '.product-id-input', function() {
-        var $input = $(this);
-        var productId = $input.val();
-        var $productNumber = $input.closest('.product-config-row').find('.product-number');
-        
-        if (productId && productId > 0) {
-            $productNumber.text(productId);
-        } else {
-            $productNumber.text('Nouveau');
-        }
-        
-        // Validation visuelle
-        if (productId && productId > 0) {
-            $input.removeClass('invalid').addClass('valid');
-        } else if (productId !== '') {
-            $input.removeClass('valid').addClass('invalid');
-        } else {
-            $input.removeClass('valid invalid');
-        }
-    });
-    
-    /**
-     * Validation avant soumission
-     */
-    $('#products-config-form').on('submit', function(e) {
-        var isValid = true;
-        var productIds = [];
-        var duplicates = [];
-        
-        // Vérifier que tous les ID produits sont valides et uniques
-        $('.product-id-input').each(function() {
-            var $input = $(this);
-            var productId = parseInt($input.val());
-            
-            if (!productId || productId <= 0) {
-                isValid = false;
-                $input.addClass('invalid');
-                showNotice('Tous les ID produits doivent être des nombres positifs.', 'error');
-                return false;
-            }
-            
-            if (productIds.includes(productId)) {
-                duplicates.push(productId);
-                isValid = false;
-            } else {
-                productIds.push(productId);
-            }
-            
-            $input.removeClass('invalid');
-        });
-        
-        if (duplicates.length > 0) {
-            showNotice('Les ID produits suivants sont en double : ' + duplicates.join(', '), 'error');
-            isValid = false;
-        }
-        
-        // Vérifier que toutes les descriptions sont remplies
-        $('.product-config-row textarea[name="description[]"]').each(function() {
-            var $textarea = $(this);
-            if (!$textarea.val().trim()) {
-                isValid = false;
-                $textarea.addClass('invalid');
-                showNotice('Toutes les descriptions sont obligatoires.', 'error');
-                return false;
-            }
-            $textarea.removeClass('invalid');
-        });
-        
-        if (!isValid) {
-            e.preventDefault();
-            
-            // Scroll vers le premier champ en erreur
-            var $firstError = $('.invalid').first();
-            if ($firstError.length) {
-                $('html, body').animate({
-                    scrollTop: $firstError.closest('.product-config-row').offset().top - 100
-                }, 500);
-            }
-        }
-    });
-    
-    /**
-     * Mise à jour des numéros de produits affichés
-     */
-    function updateProductNumbers() {
-        $('.product-config-row').each(function(index) {
-            var $row = $(this);
-            var productId = $row.find('.product-id-input').val();
-            var $productNumber = $row.find('.product-number');
-            
-            if (productId && productId > 0) {
-                $productNumber.text(productId);
-            } else {
-                $productNumber.text('Nouveau');
-            }
-        });
+jQuery(document).ready(function ($) {
+  // Variables pour la gestion des produits
+  var productIndex = $(".product-config-row").length;
+
+  /**
+   * Ajouter un nouveau produit
+   */
+  $("#add-product").on("click", function (e) {
+    e.preventDefault();
+
+    // Masquer le message "aucun produit" s'il existe
+    $(".no-products").fadeOut();
+
+    // Récupérer le template
+    var template = $("#product-row-template").html();
+
+    // Remplacer les placeholders
+    template = template.replace(/\{\{INDEX\}\}/g, productIndex);
+    template = template.replace(/\{\{PRODUCT_ID\}\}/g, "");
+
+    // Ajouter la nouvelle ligne
+    var $newRow = $(template);
+    $newRow.addClass("adding");
+    $("#products-container").append($newRow);
+
+    // Animation d'apparition
+    setTimeout(function () {
+      $newRow.removeClass("adding");
+    }, 300);
+
+    // Focus sur le champ ID produit
+    $newRow.find(".product-id-input").focus();
+
+    productIndex++;
+
+    // Mise à jour des numéros de produit affichés
+    updateProductNumbers();
+  });
+
+  /**
+   * Supprimer un produit
+   */
+  $(document).on("click", ".remove-product", function (e) {
+    e.preventDefault();
+
+    var $row = $(this).closest(".product-config-row");
+
+    // Confirmation
+    if (
+      !confirm(
+        "Êtes-vous sûr de vouloir supprimer cette configuration produit ?"
+      )
+    ) {
+      return;
     }
-    
-    /**
-     * Auto-sauvegarde des données (optionnel)
-     */
-    var autoSaveTimeout;
-    $(document).on('input', '.product-config-row input, .product-config-row textarea', function() {
-        clearTimeout(autoSaveTimeout);
-        
-        // Afficher un indicateur de modification
-        if (!$('.unsaved-changes').length) {
-            $('.products-config-container').prepend(
-                '<div class="unsaved-changes help-message">Des modifications non sauvegardées sont détectées. N\'oubliez pas de sauvegarder.</div>'
-            );
-        }
-    });
-    
-    /**
-     * Masquer l'indicateur de modifications après sauvegarde
-     */
-    $('#products-config-form').on('submit', function() {
-        $('.unsaved-changes').remove();
-    });
-    
-    /**
-     * Raccourcis clavier
-     */
-    $(document).on('keydown', function(e) {
-        // Ctrl+S pour sauvegarder
-        if (e.ctrlKey && e.which === 83) {
-            e.preventDefault();
-            $('#products-config-form').submit();
-        }
-        
-        // Escape pour annuler l'ajout en cours
-        if (e.which === 27) {
-            $('.adding .remove-product').click();
-        }
-    });
-    
-    /**
-     * Initialisation
-     */
-    function initProductsInterface() {
-        // Mise à jour des numéros au chargement
-        updateProductNumbers();
-        
-        // Ajouter des tooltips si nécessaire
-        if (typeof tippy !== 'undefined') {
-            tippy('[data-tippy-content]');
-        }
+
+    // Animation de suppression
+    $row.addClass("removing");
+
+    setTimeout(function () {
+      $row.remove();
+
+      // Vérifier s'il reste des produits
+      if ($(".product-config-row").length === 0) {
+        $("#products-container").html(
+          '<div class="no-products"><p>Aucun produit configuré. Cliquez sur "Ajouter un Produit" pour commencer.</p></div>'
+        );
+      }
+
+      // Mise à jour des numéros
+      updateProductNumbers();
+    }, 300);
+  });
+
+  /**
+   * Mise à jour en temps réel du numéro de produit affiché
+   */
+  $(document).on("input", ".product-id-input", function () {
+    var $input = $(this);
+    var productId = $input.val();
+    var $productNumber = $input
+      .closest(".product-config-row")
+      .find(".product-number");
+
+    if (productId && productId > 0) {
+      $productNumber.text(productId);
+    } else {
+      $productNumber.text("Nouveau");
     }
-    
-    // Lancer l'initialisation si on est sur l'onglet produits
-    if (window.location.href.includes('tab=products')) {
-        initProductsInterface();
+
+    // Validation visuelle
+    if (productId && productId > 0) {
+      $input.removeClass("invalid").addClass("valid");
+    } else if (productId !== "") {
+      $input.removeClass("valid").addClass("invalid");
+    } else {
+      $input.removeClass("valid invalid");
     }
-    
+  });
+
+  /**
+   * Validation du champ remise parrain en temps réel
+   */
+  $(document).on(
+    "input",
+    'input[name="remise_parrain[]"], input[name="default_remise_parrain"]',
+    function () {
+      var $input = $(this);
+      var value = $input.val();
+
+      // Conversion virgule -> point pour validation
+      var numericValue = parseFloat(value.replace(",", "."));
+
+      if (value === "") {
+        $input.removeClass("invalid valid");
+      } else if (
+        isNaN(numericValue) ||
+        numericValue < 0 ||
+        numericValue > 9999.99
+      ) {
+        $input.addClass("invalid").removeClass("valid");
+      } else {
+        $input.addClass("valid").removeClass("invalid");
+      }
+    }
+  );
+
+  /**
+   * Validation avant soumission
+   */
+  $("#products-config-form").on("submit", function (e) {
+    var isValid = true;
+    var productIds = [];
+    var duplicates = [];
+
+    // Vérifier que tous les ID produits sont valides et uniques
+    $(".product-id-input").each(function () {
+      var $input = $(this);
+      var productId = parseInt($input.val());
+
+      if (!productId || productId <= 0) {
+        isValid = false;
+        $input.addClass("invalid");
+        showNotice(
+          "Tous les ID produits doivent être des nombres positifs.",
+          "error"
+        );
+        return false;
+      }
+
+      if (productIds.includes(productId)) {
+        duplicates.push(productId);
+        isValid = false;
+      } else {
+        productIds.push(productId);
+      }
+
+      $input.removeClass("invalid");
+    });
+
+    if (duplicates.length > 0) {
+      showNotice(
+        "Les ID produits suivants sont en double : " + duplicates.join(", "),
+        "error"
+      );
+      isValid = false;
+    }
+
+    // Vérifier que toutes les descriptions sont remplies
+    $('.product-config-row textarea[name="description[]"]').each(function () {
+      var $textarea = $(this);
+      if (!$textarea.val().trim()) {
+        isValid = false;
+        $textarea.addClass("invalid");
+        showNotice("Toutes les descriptions sont obligatoires.", "error");
+        return false;
+      }
+      $textarea.removeClass("invalid");
+    });
+
+    // Vérifier que toutes les remises parrain sont valides
+    $(
+      'input[name="remise_parrain[]"], input[name="default_remise_parrain"]'
+    ).each(function () {
+      var $input = $(this);
+      var value = $input.val();
+
+      if (value !== "") {
+        var numericValue = parseFloat(value.replace(",", "."));
+
+        if (isNaN(numericValue) || numericValue < 0 || numericValue > 9999.99) {
+          isValid = false;
+          $input.addClass("invalid");
+          showNotice(
+            "Toutes les remises parrain doivent être des montants valides entre 0,00 et 9999,99€.",
+            "error"
+          );
+          return false;
+        }
+      }
+
+      $input.removeClass("invalid");
+    });
+
+    if (!isValid) {
+      e.preventDefault();
+
+      // Scroll vers le premier champ en erreur
+      var $firstError = $(".invalid").first();
+      if ($firstError.length) {
+        $("html, body").animate(
+          {
+            scrollTop:
+              $firstError.closest(".product-config-row").offset().top - 100,
+          },
+          500
+        );
+      }
+    }
+  });
+
+  /**
+   * Mise à jour des numéros de produits affichés
+   */
+  function updateProductNumbers() {
+    $(".product-config-row").each(function (index) {
+      var $row = $(this);
+      var productId = $row.find(".product-id-input").val();
+      var $productNumber = $row.find(".product-number");
+
+      if (productId && productId > 0) {
+        $productNumber.text(productId);
+      } else {
+        $productNumber.text("Nouveau");
+      }
+    });
+  }
+
+  /**
+   * Auto-sauvegarde des données (optionnel)
+   */
+  var autoSaveTimeout;
+  $(document).on(
+    "input",
+    ".product-config-row input, .product-config-row textarea",
+    function () {
+      clearTimeout(autoSaveTimeout);
+
+      // Afficher un indicateur de modification
+      if (!$(".unsaved-changes").length) {
+        $(".products-config-container").prepend(
+          '<div class="unsaved-changes help-message">Des modifications non sauvegardées sont détectées. N\'oubliez pas de sauvegarder.</div>'
+        );
+      }
+    }
+  );
+
+  /**
+   * Masquer l'indicateur de modifications après sauvegarde
+   */
+  $("#products-config-form").on("submit", function () {
+    $(".unsaved-changes").remove();
+  });
+
+  /**
+   * Raccourcis clavier
+   */
+  $(document).on("keydown", function (e) {
+    // Ctrl+S pour sauvegarder
+    if (e.ctrlKey && e.which === 83) {
+      e.preventDefault();
+      $("#products-config-form").submit();
+    }
+
+    // Escape pour annuler l'ajout en cours
+    if (e.which === 27) {
+      $(".adding .remove-product").click();
+    }
+  });
+
+  /**
+   * Initialisation
+   */
+  function initProductsInterface() {
+    // Mise à jour des numéros au chargement
+    updateProductNumbers();
+
+    // Ajouter des tooltips si nécessaire
+    if (typeof tippy !== "undefined") {
+      tippy("[data-tippy-content]");
+    }
+  }
+
+  // Lancer l'initialisation si on est sur l'onglet produits
+  if (window.location.href.includes("tab=products")) {
+    initProductsInterface();
+  }
 });

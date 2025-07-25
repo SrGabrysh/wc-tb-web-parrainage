@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.0.6  
+**Version:** 2.1.0  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -171,8 +171,6 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
     "jours_marge_parrainage": 2,
     "periode_remise_mois": 12,
     "remise_parrain_montant": 7.50,
-    "remise_parrain_pourcentage": 25,
-    "remise_parrain_base_ht": 29.99,
     "remise_parrain_unite": "EUR"
   },
   "parrainage": {
@@ -198,8 +196,6 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
     },
     "remise_parrain": {
       "montant": 7.50,
-      "pourcentage": 25,
-      "base_ht": 29.99,
       "unite": "EUR"
     }
   }
@@ -217,16 +213,14 @@ Cette nouvelle clé n'apparaît que si la commande contient un code parrain vali
 - **`jours_marge_parrainage`** : Nombre de jours de marge ajoutés (défaut : 2)
 - **`periode_remise_mois`** : Durée de la période de remise en mois (12)
 
-#### Nouvelles clés de remise parrain (v2.0.3)
+#### Remise parrain configurée (v2.1.0)
 
-La section `parrainage_pricing` inclut désormais des informations sur la remise du parrain :
+La section `parrainage_pricing` inclut désormais des informations sur la remise du parrain basées sur la configuration produit :
 
-- **`remise_parrain_montant`** : Montant calculé de la remise en euros (25% du montant HT)
-- **`remise_parrain_pourcentage`** : Pourcentage utilisé pour le calcul (25% par défaut)
-- **`remise_parrain_base_ht`** : Montant HT de l'abonnement du filleul utilisé pour le calcul
+- **`remise_parrain_montant`** : Montant fixe configuré de la remise en euros (selon configuration produit)
 - **`remise_parrain_unite`** : Unité monétaire ('EUR')
 
-**Note :** Ces clés ne sont présentes que si l'abonnement du filleul est actif. Dans le cas contraire, les clés `remise_parrain_status: 'pending'` et `remise_parrain_message` indiquent que la remise sera calculée ultérieurement.
+**Note :** Ces clés ne sont présentes que si le produit a une remise configurée. Dans le cas contraire, les clés `remise_parrain_status: 'pending'` et `remise_parrain_message` indiquent que la remise sera appliquée selon la configuration produit.
 
 #### Nouvel objet parrainage unifié (v2.0.5)
 
@@ -264,15 +258,13 @@ La section `parrainage` regroupe toutes les données de parrainage dans une stru
 
 **Section `remise_parrain` :**
 
-- **`montant`** : Montant de la remise en euros (25% du HT filleul)
-- **`pourcentage`** : Pourcentage de remise appliqué (25%)
-- **`base_ht`** : Montant HT de l'abonnement du filleul
+- **`montant`** : Montant fixe de la remise en euros (selon configuration produit)
 - **`unite`** : Unité monétaire ('EUR')
 
-Ou si l'abonnement n'est pas encore actif :
+Ou si le produit n'a pas de remise configurée :
 
 - **`status`** : 'pending'
-- **`message`** : Message explicatif
+- **`message`** : 'La remise sera appliquée selon la configuration produit'
 
 **Avantages :** Cette nouvelle structure améliore la lisibilité, facilite l'intégration et centralise toutes les données de parrainage en un seul endroit.
 
@@ -441,6 +433,33 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.1.0 (24-07-25 à 17h19) - FEATURE MAJEURE
+
+- **🔧 MODIFICATION SYSTÈME** : Remplacement du calcul automatique de remise parrain par un système de configuration flexible
+- **🆕 NOUVEAU CHAMP** : Ajout du champ "Remise Parrain (€/mois)" dans l'interface de configuration des produits
+- **💰 REMISE FIXE** : Les remises parrain sont désormais configurables par produit en montant fixe (€) au lieu d'un pourcentage
+- **🎯 FLEXIBILITÉ ADMIN** : Configuration individuelle par produit avec remise par défaut à 0,00€ pour les produits non configurés
+- **🔗 WEBHOOKS SIMPLIFIÉS** : Suppression des clés obsolètes (`remise_parrain_pourcentage`, `remise_parrain_base_ht`) dans les payloads
+- **⚡ PERFORMANCE** : Simplification de la logique de calcul - lecture directe de configuration vs calcul complexe
+- **🔒 VALIDATION** : Validation JavaScript et PHP des montants de remise (format, plage 0-9999,99€)
+- **🌍 FORMAT FRANÇAIS** : Support du format virgule française pour la saisie des montants (conversion automatique)
+- **🚫 SUPPRESSION CONSTANTE** : Suppression de `WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE` devenue obsolète
+- **📱 INTERFACE ENRICHIE** : Nouveau champ dans l'interface admin avec validation en temps réel
+- **🔄 RÉTROCOMPATIBILITÉ** : Migration transparente des configurations existantes avec remise 0,00€ par défaut
+- **📝 LOGS ADAPTÉS** : Mise à jour des logs pour refléter le nouveau système (configuration vs calcul)
+- **🎨 UX AMÉLIORÉE** : Interface plus intuitive pour les administrateurs avec contrôle total des remises
+
+**IMPACT TECHNIQUE :**
+
+- **Plugin.php** : Ajout du champ remise parrain dans l'interface de configuration
+- **WebhookManager.php** : Remplacement de `calculer_remise_parrain()` par `get_remise_parrain_configuree()`
+- **MyAccountDataProvider.php** : Adaptation de l'affichage côté client pour utiliser la configuration
+- **admin.js** : Validation JavaScript du nouveau champ avec gestion format français
+- **Structure webhook** : Clés simplifiées dans `parrainage_pricing` et `parrainage.remise_parrain`
+
+**MIGRATION :**
+Les configurations existantes sont automatiquement migrées avec une remise par défaut de 0,00€. Les administrateurs doivent configurer manuellement les remises souhaitées via l'interface "Configuration Produits".
 
 ### Version 2.0.6 (24-07-25 à 12h15) - FEATURE
 
