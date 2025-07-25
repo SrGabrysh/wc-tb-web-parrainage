@@ -243,9 +243,96 @@ class WebhookManager {
             }
         }
         
+        // NOUVEAU : Ajouter l'objet parrainage unifié (v2.0.5)
+        $parrainage_unifie = $this->construire_objet_parrainage( $order, $payload );
+        if ( $parrainage_unifie ) {
+            $payload['parrainage'] = $parrainage_unifie;
+            
+            // Log pour la nouvelle structure
+            $this->logger->info( 
+                sprintf( 'Webhook ordre %d : objet parrainage unifié ajouté', $resource_id ),
+                array( 
+                    'webhook_id' => $webhook_id,
+                    'order_id' => $resource_id,
+                    'parrainage_structure' => 'unified_v2.0.5'
+                ),
+                'webhook-parrainage-unifie'
+            );
+        }
+        
         return $payload;
     }
     
+    /**
+     * Construit l'objet parrainage unifié pour le payload webhook
+     * 
+     * @param \WC_Order $order Commande WooCommerce
+     * @param array $payload Payload webhook actuel (pour récupérer remise_parrain si calculée)
+     * @return array|null Objet parrainage structuré ou null si pas de parrainage
+     */
+    private function construire_objet_parrainage( $order, $payload = array() ) {
+        if ( ! $order ) {
+            return null;
+        }
+        
+        // Vérifier si la commande contient un code parrain
+        $code_parrain = $order->get_meta( '_billing_parrain_code' );
+        if ( empty( $code_parrain ) ) {
+            return null;
+        }
+        
+        // Construction de l'objet parrainage unifié
+        $parrainage = array(
+            'actif' => true
+        );
+        
+        // Section FILLEUL (côté réception)
+        $parrainage['filleul'] = array(
+            'code_parrain_saisi' => \sanitize_text_field( $code_parrain ),
+            'avantage' => \sanitize_text_field( $order->get_meta( '_parrainage_avantage' ) ?: '' )
+        );
+        
+        // Section PARRAIN (côté attribution)
+        $parrainage['parrain'] = array(
+            'user_id' => intval( $order->get_meta( '_parrain_user_id' ) ?: 0 ),
+            'subscription_id' => \sanitize_text_field( $order->get_meta( '_parrain_subscription_id' ) ?: '' ),
+            'email' => \sanitize_email( $order->get_meta( '_parrain_email' ) ?: '' ),
+            'nom_complet' => \sanitize_text_field( $order->get_meta( '_parrain_nom_complet' ) ?: '' )
+        );
+        
+        // Section DATES (côté temporalité)
+        $date_debut = $order->get_meta( '_parrainage_date_debut' );
+        $date_fin = $order->get_meta( '_parrainage_date_fin_remise' );
+        $jours_marge = intval( $order->get_meta( '_parrainage_jours_marge' ) ?: 2 );
+        
+        $parrainage['dates'] = array(
+            'debut_parrainage' => $date_debut ?: '',
+            'fin_remise_parrainage' => $date_fin ?: '',
+            'debut_parrainage_formatted' => $date_debut ? date( 'd-m-Y', strtotime( $date_debut ) ) : '',
+            'fin_remise_parrainage_formatted' => $date_fin ? date( 'd-m-Y', strtotime( $date_fin ) ) : '',
+            'jours_marge' => $jours_marge,
+            'periode_remise_mois' => 12
+        );
+        
+        // Section REMISE PARRAIN (côté calcul) - depuis parrainage_pricing si disponible
+        if ( isset( $payload['parrainage_pricing']['remise_parrain_montant'] ) ) {
+            $parrainage['remise_parrain'] = array(
+                'montant' => $payload['parrainage_pricing']['remise_parrain_montant'],
+                'pourcentage' => $payload['parrainage_pricing']['remise_parrain_pourcentage'],
+                'base_ht' => $payload['parrainage_pricing']['remise_parrain_base_ht'],
+                'unite' => $payload['parrainage_pricing']['remise_parrain_unite']
+            );
+        } else {
+            // Si pas encore calculée, indiquer pending
+            $parrainage['remise_parrain'] = array(
+                'status' => 'pending',
+                'message' => 'La remise sera calculée lorsque l\'abonnement du filleul sera actif'
+            );
+        }
+        
+        return $parrainage;
+    }
+
     /**
      * Calcule le montant de la remise parrain pour un abonnement donné
      * 

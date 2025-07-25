@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.0.4  
+**Version:** 2.0.5  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -174,6 +174,33 @@ Les webhooks WooCommerce de type "order" sont automatiquement enrichis avec :
     "remise_parrain_pourcentage": 25,
     "remise_parrain_base_ht": 29.99,
     "remise_parrain_unite": "EUR"
+  },
+  "parrainage": {
+    "actif": true,
+    "filleul": {
+      "code_parrain_saisi": "6894",
+      "avantage": "10% de remise sur la 1ère année d'adhésion"
+    },
+    "parrain": {
+      "user_id": 17,
+      "subscription_id": "6894",
+      "email": "ga.du@outlook.com",
+      "nom_complet": "Charlotte Letest"
+    },
+    "dates": {
+      "debut_parrainage": "2024-07-22",
+      "fin_remise_parrainage": "2025-07-24",
+      "debut_parrainage_formatted": "22-07-2024",
+      "fin_remise_parrainage_formatted": "24-07-2025",
+      "jours_marge": 2,
+      "periode_remise_mois": 12
+    },
+    "remise_parrain": {
+      "montant": 7.50,
+      "pourcentage": 25,
+      "base_ht": 29.99,
+      "unite": "EUR"
+    }
   }
 }
 ```
@@ -199,6 +226,47 @@ La section `parrainage_pricing` inclut désormais des informations sur la remise
 - **`remise_parrain_unite`** : Unité monétaire ('EUR')
 
 **Note :** Ces clés ne sont présentes que si l'abonnement du filleul est actif. Dans le cas contraire, les clés `remise_parrain_status: 'pending'` et `remise_parrain_message` indiquent que la remise sera calculée ultérieurement.
+
+#### Nouvel objet parrainage unifié (v2.0.5)
+
+La section `parrainage` regroupe toutes les données de parrainage dans une structure logique et hiérarchisée :
+
+**Structure générale :**
+- **`actif`** : Boolean indiquant si un parrainage est actif pour cette commande
+- **`filleul`** : Informations côté réception du parrainage
+- **`parrain`** : Informations d'identification du parrain
+- **`dates`** : Données temporelles du système de parrainage
+- **`remise_parrain`** : Calculs de remise pour le parrain
+
+**Section `filleul` :**
+- **`code_parrain_saisi`** : Code parrain tapé par le filleul au checkout
+- **`avantage`** : Avantage que reçoit le filleul grâce au parrainage
+
+**Section `parrain` :**
+- **`user_id`** : ID utilisateur WordPress du parrain
+- **`subscription_id`** : ID de l'abonnement du parrain 
+- **`email`** : Email du parrain
+- **`nom_complet`** : Nom complet du parrain
+
+**Section `dates` :**
+- **`debut_parrainage`** : Date de début du parrainage (YYYY-MM-DD)
+- **`fin_remise_parrainage`** : Date de fin de période de remise (YYYY-MM-DD)
+- **`debut_parrainage_formatted`** : Date début au format DD-MM-YYYY
+- **`fin_remise_parrainage_formatted`** : Date fin au format DD-MM-YYYY
+- **`jours_marge`** : Jours de marge ajoutés (défaut: 2)
+- **`periode_remise_mois`** : Durée de remise en mois (défaut: 12)
+
+**Section `remise_parrain` :**
+- **`montant`** : Montant de la remise en euros (25% du HT filleul)
+- **`pourcentage`** : Pourcentage de remise appliqué (25%)
+- **`base_ht`** : Montant HT de l'abonnement du filleul
+- **`unite`** : Unité monétaire ('EUR')
+
+Ou si l'abonnement n'est pas encore actif :
+- **`status`** : 'pending'
+- **`message`** : Message explicatif
+
+**Avantages :** Cette nouvelle structure améliore la lisibilité, facilite l'intégration et centralise toutes les données de parrainage en un seul endroit.
 
 ## Développement
 
@@ -365,6 +433,19 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.0.5 (24-07-25 à 11h45) - FEATURE
+
+- **🚀 NOUVEAU** : Objet parrainage unifié dans le payload webhook
+- **📊 Restructuration** : Regroupement de toutes les données de parrainage sous un objet `parrainage` unique
+- **🏗️ Architecture** : Structure hiérarchisée avec sections `filleul`, `parrain`, `dates` et `remise_parrain`
+- **✨ Amélioration UX** : Accès simplifié aux données (`payload.parrainage.remise_parrain.montant`)
+- **📚 Documentation** : Documentation complète de la nouvelle structure avec exemples
+- **🔄 Rétrocompatibilité** : Conservation des anciennes structures (`parrainage_pricing`, `meta_data`)
+- **🎯 Logique métier** : Séparation claire filleul/parrain/dates/calculs
+- **🛠️ Nouvelle méthode** : `construire_objet_parrainage()` dans WebhookManager
+- **📝 Logs** : Canal dédié `webhook-parrainage-unifie` pour traçabilité
+- **🎨 Lisibilité** : Structure JSON plus intuitive et maintenable pour les développeurs
 
 ### Version 2.0.4 (24-07-25 à 11h15) - HOTFIX
 
