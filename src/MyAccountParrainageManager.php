@@ -167,6 +167,15 @@ class MyAccountParrainageManager {
             array(),
             WC_TB_PARRAINAGE_VERSION
         );
+        
+        // NOUVEAU v2.4.0 : Charger les assets JavaScript pour les interactions de remise côté client
+        \wp_enqueue_script(
+            'wc-tb-parrainage-my-account-discount',
+            WC_TB_PARRAINAGE_URL . 'assets/my-account-discount.js',
+            array( 'jquery' ),
+            WC_TB_PARRAINAGE_VERSION,
+            true
+        );
     }
     
     /**

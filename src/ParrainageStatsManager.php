@@ -218,6 +218,24 @@ class ParrainageStatsManager {
                 current_pagination: <?php echo wp_json_encode( $validated_pagination ); ?>
             };
         </script>
+        
+        <?php
+        // NOUVEAU v2.4.0 : Charger les assets pour les interactions de remise
+        wp_enqueue_style(
+            'tb-parrainage-admin',
+            WC_TB_PARRAINAGE_URL . 'assets/parrainage-admin.css',
+            array(),
+            WC_TB_PARRAINAGE_VERSION
+        );
+        
+        wp_enqueue_script(
+            'tb-parrainage-admin-discount',
+            WC_TB_PARRAINAGE_URL . 'assets/parrainage-admin-discount.js',
+            array( 'jquery' ),
+            WC_TB_PARRAINAGE_VERSION,
+            true
+        );
+        ?>
         <?php
     }
     
