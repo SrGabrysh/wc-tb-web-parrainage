@@ -234,37 +234,44 @@
 /* Colonnes spécifiques */
 .column-parrain {
   min-width: 250px;
-  width: 20%;
+  width: 18%;
 }
 
 .column-filleuls {
   min-width: 250px;
-  width: 20%;
+  width: 18%;
 }
 
 .column-date {
   min-width: 100px;
-  width: 10%;
+  width: 8%;
 }
 
 .column-produit {
   min-width: 200px;
-  width: 20%;
+  width: 15%;
 }
 
 .column-avantage {
   min-width: 150px;
-  width: 15%;
+  width: 12%;
 }
 
 .column-statut {
   min-width: 120px;
-  width: 10%;
+  width: 8%;
+}
+
+/* NOUVEAU v2.4.0 : Colonnes remise */
+.column-remise-appliquee,
+.column-statut-remise {
+  min-width: 150px;
+  width: 12%;
 }
 
 .column-montant {
   min-width: 100px;
-  width: 10%;
+  width: 9%;
   text-align: right;
 }
 
@@ -491,7 +498,9 @@
 
   /* Masquer certaines colonnes sur mobile */
   .parrainage-table .column-produit,
-  .parrainage-table .column-avantage {
+  .parrainage-table .column-avantage,
+  .parrainage-table .column-remise-appliquee,
+  .parrainage-table .column-statut-remise {
     display: none;
   }
 
@@ -607,4 +616,104 @@
   background: #fff3cd;
   border: 1px solid #ffeaa7;
   color: #856404;
+}
+
+/* ===============================
+   NOUVEAU v2.4.0 : STYLES REMISES
+   =============================== */
+
+/* Montants de remise */
+.discount-amount {
+  font-weight: bold;
+  color: #46b450;
+  font-size: 14px;
+}
+
+.discount-details small {
+  color: #666;
+  font-size: 11px;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Badges de statut de remise */
+.discount-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.discount-status-active {
+  background: #46b450;
+  color: white;
+}
+
+.discount-status-pending {
+  background: #ffb900;
+  color: white;
+}
+
+.discount-status-failed {
+  background: #dc3232;
+  color: white;
+}
+
+.discount-status-suspended {
+  background: #666;
+  color: white;
+}
+
+.discount-status-na {
+  background: #e1e1e1;
+  color: #666;
+}
+
+/* Popup de détails */
+.discount-popup {
+  position: relative;
+  display: none;
+}
+
+.discount-badge:hover + .discount-popup,
+.discount-popup:hover {
+  display: block;
+  position: absolute;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  min-width: 300px;
+  top: 100%;
+  left: 0;
+}
+
+.discount-details-content h4 {
+  margin: 0 0 10px 0;
+  color: #0073aa;
+  font-size: 14px;
+}
+
+.discount-details-table {
+  width: 100%;
+  font-size: 12px;
+}
+
+.discount-details-table th {
+  text-align: left;
+  padding: 4px 8px 4px 0;
+  font-weight: 600;
+  color: #333;
+}
+
+.discount-details-table td {
+  padding: 4px 0;
+  font-weight: bold;
+  color: #46b450;
 }

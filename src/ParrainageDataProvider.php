@@ -266,6 +266,9 @@ class ParrainageDataProvider {
         // Récupérer les informations de l'abonnement du filleul
         $subscription_data = $this->get_filleul_subscription_data( $row->filleul_order_id );
         
+        // AJOUT v2.4.0 : Données de remise mockées
+        $discount_data = $this->get_mock_discount_data( $row->filleul_order_id, $row->parrain_subscription_id );
+        
         return array(
             'user_id' => $row->filleul_user_id,
             'nom' => trim( $row->filleul_prenom . ' ' . $row->filleul_nom ),
@@ -280,7 +283,9 @@ class ParrainageDataProvider {
             'montant_formatted' => $this->format_price( $row->montant_commande, $row->devise ),
             'devise' => $row->devise,
             'produit_info' => $this->get_order_products( $row->filleul_order_id ),
-            'subscription_info' => $subscription_data
+            'subscription_info' => $subscription_data,
+            // NOUVEAU v2.4.0 : Informations de remise mockées
+            'discount_info' => $discount_data
         );
     }
     
@@ -413,5 +418,79 @@ class ParrainageDataProvider {
             }
         }
         return '';
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Générer des données mockées pour les remises
+     * Permet de tester l'interface sans logique métier
+     * 
+     * @param int $filleul_order_id ID de la commande du filleul
+     * @param int $parrain_subscription_id ID de l'abonnement du parrain
+     * @return array Données de remise mockées
+     */
+    private function get_mock_discount_data( $filleul_order_id, $parrain_subscription_id ) {
+        // Simulation de différents statuts pour tests
+        $statuses = ['active', 'pending', 'failed', 'suspended'];
+        $status = $statuses[array_rand($statuses)];
+        
+        // Créer une variation basée sur l'ID pour des résultats cohérents
+        $seed = intval( $filleul_order_id ) + intval( $parrain_subscription_id );
+        mt_srand( $seed );
+        
+        $base_amount = 7.50;
+        $variation = mt_rand( 500, 1500 ) / 100; // Entre 5€ et 15€
+        $discount_amount = round( $variation, 2 );
+        
+        $original_amount = 89.99;
+        $next_billing_amount = $original_amount - $discount_amount;
+        $total_savings = mt_rand( 50, 500 ); // Économies simulées variables
+        
+        return array(
+            'discount_status' => $status,
+            'discount_status_label' => $this->get_discount_status_label( $status ),
+            'discount_status_badge_class' => $this->get_discount_status_badge_class( $status ),
+            'discount_amount' => $discount_amount,
+            'discount_amount_formatted' => number_format( $discount_amount, 2, ',', '' ) . '€/mois',
+            'discount_applied_date' => date( 'Y-m-d H:i:s', strtotime( '-' . mt_rand( 1, 30 ) . ' days' ) ),
+            'discount_applied_date_formatted' => date( 'd/m/Y à H\hi', strtotime( '-' . mt_rand( 1, 30 ) . ' days' ) ),
+            'next_billing_date' => date( 'Y-m-d', strtotime( '+1 month' ) ),
+            'next_billing_amount' => $next_billing_amount,
+            'original_amount' => $original_amount,
+            'total_savings' => $total_savings
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Labels des statuts de remise pour affichage
+     * 
+     * @param string $status Statut technique
+     * @return string Label affiché
+     */
+    private function get_discount_status_label( $status ) {
+        $labels = array(
+            'active' => 'ACTIVE',
+            'pending' => 'EN ATTENTE',
+            'failed' => 'ÉCHEC',
+            'suspended' => 'SUSPENDUE',
+            'na' => 'N/A'
+        );
+        return $labels[$status] ?? 'INCONNU';
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Classes CSS pour les badges de statut
+     * 
+     * @param string $status Statut technique
+     * @return string Classe CSS
+     */
+    private function get_discount_status_badge_class( $status ) {
+        $classes = array(
+            'active' => 'discount-status-active',
+            'pending' => 'discount-status-pending',
+            'failed' => 'discount-status-failed',
+            'suspended' => 'discount-status-suspended',
+            'na' => 'discount-status-na'
+        );
+        return $classes[$status] ?? 'discount-status-default';
     }
 } 

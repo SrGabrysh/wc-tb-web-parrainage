@@ -344,6 +344,9 @@ class MyAccountDataProvider {
             }
         }
         
+        // NOUVEAU v2.4.0 : Données remise mockées côté client
+        $discount_data = $this->get_client_mock_discount_data( $row->order_id );
+        
         return array(
             'order_id' => intval( $row->order_id ),
             'filleul_nom' => \sanitize_text_field( $row->filleul_nom ),
@@ -360,7 +363,158 @@ class MyAccountDataProvider {
             'votre_remise' => $this->get_parrain_reduction( $row->order_id, $row->subscription_status ),
             // Anciennes données conservées pour compatibilité
             'montant' => $this->format_montant( $row->subscription_total ),
-            'montant_raw' => floatval( $row->subscription_total )
+            'montant_raw' => floatval( $row->subscription_total ),
+            // NOUVEAU v2.4.0 : Données remise enrichies côté client
+            'discount_client_info' => $discount_data
         );
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Génération de données mockées côté client
+     * 
+     * @param int $order_id ID de la commande
+     * @return array Données mockées pour l'interface client
+     */
+    private function get_client_mock_discount_data( $order_id ) {
+        $statuses = ['active', 'pending', 'failed', 'suspended'];
+        
+        // Utiliser l'ID de commande pour des résultats cohérents
+        mt_srand( intval( $order_id ) );
+        $status = $statuses[mt_rand( 0, count( $statuses ) - 1 )];
+        
+        $discount_amount = mt_rand( 500, 1500 ) / 100; // Entre 5€ et 15€
+        $total_monthly_savings = mt_rand( 700, 2500 ) / 100; // Entre 7€ et 25€ (1-3 filleuls)
+        $total_savings_to_date = mt_rand( 50, 300 ); // Entre 50€ et 300€
+        
+        return array(
+            'discount_status' => $status,
+            'discount_status_message' => $this->get_client_status_message( $status ),
+            'discount_amount' => $discount_amount,
+            'discount_amount_formatted' => number_format( $discount_amount, 2, ',', '' ) . '€/mois',
+            'status_icon' => $this->get_status_icon( $status ),
+            'status_color' => $this->get_status_color( $status ),
+            'total_monthly_savings' => $total_monthly_savings,
+            'total_savings_to_date' => $total_savings_to_date,
+            'next_billing_preview' => array(
+                'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
+                'amount_before' => 89.99,
+                'amount_after' => 89.99 - $discount_amount,
+                'savings' => $discount_amount
+            )
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Messages de statut pour les clients
+     * 
+     * @param string $status Statut technique
+     * @return string Message affiché au client
+     */
+    private function get_client_status_message( $status ) {
+        $messages = array(
+            'active' => 'ACTIVE - Appliquée depuis le ' . date( 'd/m/Y', strtotime( '-' . mt_rand( 1, 30 ) . ' days' ) ),
+            'pending' => 'EN ATTENTE - Application en cours...',
+            'failed' => 'PROBLÈME - Contactez le support',
+            'suspended' => 'SUSPENDUE - Filleul a suspendu son abonnement'
+        );
+        return $messages[$status] ?? 'Statut inconnu';
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Icônes pour les statuts côté client
+     * 
+     * @param string $status Statut technique
+     * @return string Icône emoji
+     */
+    private function get_status_icon( $status ) {
+        $icons = array(
+            'active' => '🟢',
+            'pending' => '🟡',
+            'failed' => '🔴',
+            'suspended' => '⏸️'
+        );
+        return $icons[$status] ?? '⚪';
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Couleurs pour les statuts côté client
+     * 
+     * @param string $status Statut technique
+     * @return string Classe couleur CSS
+     */
+    private function get_status_color( $status ) {
+        $colors = array(
+            'active' => 'status-success',
+            'pending' => 'status-warning',
+            'failed' => 'status-error',
+            'suspended' => 'status-neutral'
+        );
+        return $colors[$status] ?? 'status-default';
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Calcul du résumé global des économies
+     * 
+     * @param int $user_subscription_id ID de l'abonnement utilisateur
+     * @return array Résumé des économies
+     */
+    public function get_savings_summary( $user_subscription_id ) {
+        // Cache pour éviter les recalculs
+        $cache_key = self::CACHE_KEY_PREFIX . 'summary_' . $user_subscription_id;
+        $cached_summary = \get_transient( $cache_key );
+        
+        if ( $cached_summary !== false ) {
+            return $cached_summary;
+        }
+        
+        // Mock du résumé global basé sur l'ID utilisateur pour cohérence
+        mt_srand( intval( $user_subscription_id ) );
+        
+        $active_discounts = mt_rand( 1, 4 );
+        $total_referrals = $active_discounts + mt_rand( 0, 2 );
+        $monthly_savings = $active_discounts * ( mt_rand( 500, 1500 ) / 100 );
+        $total_savings_to_date = mt_rand( 50, 500 );
+        
+        $summary = array(
+            'active_discounts' => $active_discounts,
+            'total_referrals' => $total_referrals,
+            'monthly_savings' => round( $monthly_savings, 2 ),
+            'total_savings_to_date' => $total_savings_to_date,
+            'next_billing' => array(
+                'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
+                'amount' => round( 89.99 - $monthly_savings, 2 ),
+                'original_amount' => 89.99
+            ),
+            'pending_actions' => $this->get_mock_pending_actions( $active_discounts, $total_referrals )
+        );
+        
+        // Mettre en cache
+        \set_transient( $cache_key, $summary, self::CACHE_DURATION );
+        
+        return $summary;
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Actions en attente mockées
+     * 
+     * @param int $active_discounts Nombre de remises actives
+     * @param int $total_referrals Nombre total de filleuls
+     * @return array Liste des actions en attente
+     */
+    private function get_mock_pending_actions( $active_discounts, $total_referrals ) {
+        $actions = array();
+        
+        // Si il y a des filleuls sans remise active
+        if ( $total_referrals > $active_discounts ) {
+            $pending_count = $total_referrals - $active_discounts;
+            
+            if ( $pending_count === 1 ) {
+                $actions[] = array( 'message' => 'Marie Dupont : Remise en attente (normal, sous 10 min)' );
+            } else {
+                $actions[] = array( 'message' => 'Paul Martin : Abonnement suspendu, remise en pause' );
+            }
+        }
+        
+        return $actions;
     }
 } 

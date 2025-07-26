@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.3.0  
+**Version:** 2.4.0  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -37,6 +37,15 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine cinq 
 - Masquage automatique des champs codes promo au panier et checkout
 - Activation selon les produits configurés dans l'interface d'administration
 - Désactivation complète des fonctionnalités de coupons pour les produits concernés
+
+### 💰 **NOUVEAU v2.4.0** - Interfaces Mockées pour Remises Parrain
+
+- **Nouvelles colonnes admin** : "Remise Appliquée" et "Statut Remise" dans l'interface de parrainage
+- **Popups interactifs** : Détails complets des remises au survol des badges de statut
+- **Section résumé côté client** : Dashboard des économies avec cartes animées
+- **Données simulées** : Génération intelligente de statuts variés pour validation UX
+- **Animations et interactions** : Interface moderne avec tooltips et transitions fluides
+- **Responsive design** : Adaptation parfaite sur mobile et tablette
 - Logs des actions de masquage pour le suivi
 
 ### 🔗 Webhooks Enrichis
@@ -76,6 +85,107 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine cinq 
 - **Badges de statut colorés** - Statuts d'abonnement visuellement distincts
 - **Limite de performance** - Affichage des 10 derniers parrainages pour un chargement rapide
 - **CSS natif WooCommerce** - Intégration parfaite avec tous les thèmes compatibles
+
+## 📦 Nouveautés Version 2.4.0 (26-07-25 à 17h54)
+
+### 🎯 **Interfaces Mockées pour Remises Parrain**
+
+Cette version introduit des **interfaces utilisateur enrichies** avec des données simulées pour valider l'ergonomie des futures fonctionnalités de remise avant l'implémentation de la logique métier réelle.
+
+#### 🏗️ **Architecture Ajoutée**
+
+**Nouvelles méthodes mockées :**
+
+- `ParrainageDataProvider::get_mock_discount_data()` - Génération de données de remise simulées
+- `MyAccountDataProvider::get_client_mock_discount_data()` - Données côté client
+- `MyAccountDataProvider::get_savings_summary()` - Calcul du résumé global des économies
+
+**Nouveaux fichiers :**
+
+- `assets/parrainage-admin-discount.js` - Interactions admin (popups, animations)
+- `assets/my-account-discount.js` - Interactions client (tooltips, animations)
+
+#### 📊 **Interface Administration Enrichie**
+
+**Nouvelles colonnes dans le tableau de parrainage :**
+
+- **"Remise Appliquée"** : Montant de la remise avec date d'application
+- **"Statut Remise"** : Badge interactif (ACTIVE, EN ATTENTE, ÉCHEC, SUSPENDUE)
+
+**Fonctionnalités interactives :**
+
+- **Popups détaillés** au survol des badges de statut
+- **Animations** : Pulsation pour statuts "pending", transitions fluides
+- **Filtrage rapide** par statut de remise
+- **Notifications** en temps réel lors des changements de statut
+
+#### 🎨 **Interface Client Modernisée**
+
+**Section "Résumé de vos remises" :**
+
+- **4 cartes animées** : Remises actives, Économie mensuelle, Économies totales, Prochaine facturation
+- **Actions en attente** : Notifications des remises en cours de traitement
+- **Colonne enrichie** : Statuts visuels avec icônes emoji et messages explicites
+
+**Expérience utilisateur :**
+
+- **Animations d'entrée** progressives pour chaque élément
+- **Tooltips informatifs** au survol des statuts
+- **Notifications** lors des changements de statut
+- **Simulation temps réel** : Évolution des statuts pour démonstration
+
+#### 🔧 **Données Simulées Intelligentes**
+
+**Génération cohérente :**
+
+- Utilisation de `mt_srand()` basée sur les IDs pour des résultats reproductibles
+- **4 statuts variés** : active (vert), pending (orange), failed (rouge), suspended (gris)
+- **Montants réalistes** : Entre 5€ et 15€ de remise mensuelle
+- **Dates cohérentes** : Application récente, prochaine facturation calculée
+
+**Cache optimisé :**
+
+- **5 minutes** de cache pour les données mockées
+- **Invalidation automatique** lors des modifications
+- **Performance** : Pas d'impact sur les requêtes existantes
+
+#### 🎨 **Design System Cohérent**
+
+**Styles CSS ajoutés :**
+
+- **Badges de statut** avec couleurs sémantiques et animations
+- **Cartes économies** avec gradients et ombres modernes
+- **Popups responsives** avec positionnement intelligent
+- **Grille adaptative** pour mobile, tablette et desktop
+
+**Responsive design :**
+
+- **Mobile first** : Masquage intelligent des colonnes selon la taille d'écran
+- **Touch friendly** : Interactions tactiles optimisées
+- **Accessibilité** : Navigation clavier, lecteurs d'écran, attributs ARIA
+
+#### ⚡ **Performance et Compatibilité**
+
+**Optimisations :**
+
+- **Chargement conditionnel** : CSS/JS uniquement sur les pages concernées
+- **Animations performantes** : Utilisation de `transform` plutôt que propriétés coûteuses
+- **Dégradation gracieuse** : Fonctionnement même si JavaScript désactivé
+
+**Compatibilité :**
+
+- **WordPress 6.0+** : Utilisation des APIs modernes
+- **WooCommerce 3.0+** : Intégration native avec les hooks existants
+- **Thèmes standards** : Styles isolés pour éviter les conflits
+
+#### 🎯 **Objectifs Validés**
+
+✅ **Validation UX** : Interface intuitive pour les administrateurs et clients  
+✅ **Feedback précoce** : Démonstration visuelle des futures fonctionnalités  
+✅ **Base technique** : Architecture prête pour recevoir les vraies données  
+✅ **Tests visuels** : Responsive design testé sur toutes les résolutions
+
+Cette version **2.4.0** pose les **fondations visuelles** pour les fonctionnalités de remise parrain, permettant de valider l'ergonomie avant l'implémentation de la logique métier dans les prochaines versions.
 
 ## Installation
 

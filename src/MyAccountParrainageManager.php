@@ -142,6 +142,8 @@ class MyAccountParrainageManager {
         if ( empty( $parrainages ) ) {
             $this->render_invitation_message( $subscription_id );
         } else {
+            // NOUVEAU v2.4.0 : Section résumé des économies
+            $this->render_savings_summary( $subscription_id );
             $this->render_parrainages_table( $parrainages );
         }
         
@@ -203,7 +205,24 @@ class MyAccountParrainageManager {
                             </span>
                         </td>
                         <td><?php echo esc_html( $parrainage['avantage'] ); ?></td>
-                        <td><strong><?php echo esc_html( $parrainage['votre_remise'] ); ?></strong></td>
+                        <!-- MODIFIÉ v2.4.0 : Colonne "Votre remise" enrichie -->
+                        <td class="column-votre-remise">
+                            <?php if ( !empty( $parrainage['discount_client_info'] ) ) : ?>
+                                <?php
+                                $discount = $parrainage['discount_client_info'];
+                                $status_class = 'status-' . $discount['discount_status'];
+                                $icon = $discount['status_icon'];
+                                ?>
+                                <div class="remise-status-container">
+                                    <span class="remise-amount"><?php echo esc_html( $discount['discount_amount_formatted'] ); ?></span>
+                                    <span class="remise-status <?php echo esc_attr( $status_class ); ?>">
+                                        <?php echo $icon . ' ' . esc_html( $discount['discount_status_message'] ); ?>
+                                    </span>
+                                </div>
+                            <?php else : ?>
+                                <span class="remise-na">Non applicable</span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -258,6 +277,50 @@ class MyAccountParrainageManager {
             </div>
             
             <p><em><?php esc_html_e( 'Votre filleul bénéficiera d\'un avantage et vous aussi !', 'wc-tb-web-parrainage' ); ?></em></p>
+        </div>
+        <?php
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Rendu de la section résumé des économies
+     * 
+     * @param int $user_subscription_id ID de l'abonnement utilisateur
+     * @return void
+     */
+    private function render_savings_summary( $user_subscription_id ) {
+        $summary = $this->data_provider->get_savings_summary( $user_subscription_id );
+        ?>
+        <div class="savings-summary-section">
+            <h3><?php esc_html_e( '📊 Résumé de vos remises', 'wc-tb-web-parrainage' ); ?></h3>
+            <div class="savings-grid">
+                <div class="savings-card">
+                    <span class="savings-label">Remises actives :</span>
+                    <span class="savings-value"><?php echo esc_html( $summary['active_discounts'] . ' sur ' . $summary['total_referrals'] . ' filleuls' ); ?></span>
+                </div>
+                <div class="savings-card">
+                    <span class="savings-label">Économie mensuelle :</span>
+                    <span class="savings-value"><?php echo esc_html( number_format( $summary['monthly_savings'], 2, ',', '' ) ); ?>€</span>
+                </div>
+                <div class="savings-card">
+                    <span class="savings-label">Économies totales :</span>
+                    <span class="savings-value"><?php echo esc_html( $summary['total_savings_to_date'] ); ?>€</span>
+                </div>
+                <div class="savings-card">
+                    <span class="savings-label">Prochaine facturation :</span>
+                    <span class="savings-value"><?php echo esc_html( $summary['next_billing']['date'] . ' (' . $summary['next_billing']['amount'] . '€)' ); ?></span>
+                </div>
+            </div>
+            
+            <?php if ( !empty( $summary['pending_actions'] ) ) : ?>
+            <div class="pending-actions">
+                <h4>⚠️ Actions en attente :</h4>
+                <ul>
+                    <?php foreach ( $summary['pending_actions'] as $action ) : ?>
+                        <li><?php echo esc_html( $action['message'] ); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <?php endif; ?>
         </div>
         <?php
     }

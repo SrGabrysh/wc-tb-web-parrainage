@@ -244,6 +244,8 @@ class ParrainageStatsManager {
                     <th class="column-produit"><?php esc_html_e( 'Produit', 'wc-tb-web-parrainage' ); ?></th>
                     <th class="column-avantage"><?php esc_html_e( 'Avantage', 'wc-tb-web-parrainage' ); ?></th>
                     <th class="column-statut"><?php esc_html_e( 'Statut Abonnement', 'wc-tb-web-parrainage' ); ?></th>
+                    <th class="column-remise-appliquee"><?php esc_html_e( 'Remise Appliquée', 'wc-tb-web-parrainage' ); ?></th>
+                    <th class="column-statut-remise"><?php esc_html_e( 'Statut Remise', 'wc-tb-web-parrainage' ); ?></th>
                     <th class="column-montant"><?php esc_html_e( 'Montant', 'wc-tb-web-parrainage' ); ?></th>
                 </tr>
             </thead>
@@ -380,6 +382,39 @@ class ParrainageStatsManager {
                         <span class="status-badge status-default">
                             <?php esc_html_e( 'Non défini', 'wc-tb-web-parrainage' ); ?>
                         </span>
+                    <?php endif; ?>
+                </td>
+                
+                <!-- NOUVEAU v2.4.0 : Remise Appliquée -->
+                <td class="column-remise-appliquee">
+                    <?php if ( !empty( $filleul['discount_info'] ) ) : ?>
+                        <span class="discount-amount"><?php echo esc_html( $filleul['discount_info']['discount_amount_formatted'] ); ?></span>
+                        <div class="discount-details">
+                            <small>Depuis le <?php echo esc_html( $filleul['discount_info']['discount_applied_date_formatted'] ); ?></small>
+                        </div>
+                    <?php else : ?>
+                        <em>Aucune</em>
+                    <?php endif; ?>
+                </td>
+                
+                <!-- NOUVEAU v2.4.0 : Statut Remise -->
+                <td class="column-statut-remise">
+                    <?php if ( !empty( $filleul['discount_info'] ) ) : ?>
+                        <?php
+                        $status_class = $filleul['discount_info']['discount_status_badge_class'];
+                        $status_label = $filleul['discount_info']['discount_status_label'];
+                        ?>
+                        <span class="discount-badge <?php echo esc_attr( $status_class ); ?>" 
+                              data-order-id="<?php echo esc_attr( $filleul['order_id'] ); ?>">
+                            <?php echo esc_html( $status_label ); ?>
+                        </span>
+                        
+                        <!-- Popup détails au survol -->
+                        <div class="discount-popup" data-order-id="<?php echo esc_attr( $filleul['order_id'] ); ?>">
+                            <?php echo $this->render_discount_details_popup( $filleul['discount_info'] ); ?>
+                        </div>
+                    <?php else : ?>
+                        <span class="discount-badge discount-status-na">N/A</span>
                     <?php endif; ?>
                 </td>
                 
@@ -643,5 +678,43 @@ class ParrainageStatsManager {
         );
         
         return admin_url( 'options-general.php?' . http_build_query( $params ) );
+    }
+    
+    /**
+     * NOUVEAU v2.4.0 : Rendu du popup de détails de remise
+     * 
+     * @param array $discount_info Informations de remise
+     * @return string HTML du popup
+     */
+    private function render_discount_details_popup( $discount_info ) {
+        ob_start();
+        ?>
+        <div class="discount-details-content">
+            <h4>Détails de la remise parrain</h4>
+            <table class="discount-details-table">
+                <tr>
+                    <th>Prix original :</th>
+                    <td><?php echo esc_html( $discount_info['original_amount'] ); ?>€/mois</td>
+                </tr>
+                <tr>
+                    <th>Prix actuel :</th>
+                    <td><?php echo esc_html( $discount_info['next_billing_amount'] ); ?>€/mois</td>
+                </tr>
+                <tr>
+                    <th>Économie :</th>
+                    <td><?php echo esc_html( $discount_info['discount_amount_formatted'] ); ?></td>
+                </tr>
+                <tr>
+                    <th>Prochaine facturation :</th>
+                    <td><?php echo esc_html( date( 'd/m/Y', strtotime( $discount_info['next_billing_date'] ) ) ); ?></td>
+                </tr>
+                <tr>
+                    <th>Économies totales :</th>
+                    <td><?php echo esc_html( $discount_info['total_savings'] ); ?>€</td>
+                </tr>
+            </table>
+        </div>
+        <?php
+        return ob_get_clean();
     }
 } 
