@@ -5,44 +5,87 @@
 
 jQuery(document).ready(function ($) {
   /**
-   * Gestion des popups de détails de remise
+   * GESTION INTELLIGENTE DES POPUPS - Version corrigée
    */
   function initDiscountPopups() {
-    // Affichage popup au survol du badge
+    var $activePopup = null;
+    var hideTimeout = null;
+
+    // Afficher popup avec positionnement intelligent
+    function showPopup($badge) {
+      // Fermer popup actif
+      hideAllPopups();
+
+      var $popup = $badge.siblings(".discount-popup");
+      if (!$popup.length) return;
+
+      // Afficher le popup
+      $popup.show();
+      $activePopup = $popup;
+
+      // Positionnement intelligent après affichage
+      setTimeout(function () {
+        adjustPopupPosition($popup, $badge);
+      }, 10);
+    }
+
+    // Cacher tous les popups
+    function hideAllPopups() {
+      $(".discount-popup").hide();
+      $activePopup = null;
+    }
+
+    // Positionnement intelligent selon l'espace disponible
+    function adjustPopupPosition($popup, $badge) {
+      var badgeOffset = $badge.offset();
+      var popupWidth = $popup.outerWidth();
+      var windowWidth = $(window).width();
+
+      // Éviter débordement à droite
+      if (badgeOffset.left + popupWidth / 2 > windowWidth - 20) {
+        $popup.css({
+          left: "auto",
+          right: "0",
+          transform: "translateX(0)",
+        });
+      }
+      // Éviter débordement à gauche
+      else if (badgeOffset.left - popupWidth / 2 < 20) {
+        $popup.css({
+          left: "0",
+          transform: "translateX(0)",
+        });
+      }
+    }
+
+    // ÉVÉNEMENTS
     $(document).on("mouseenter", ".discount-badge", function () {
       var $badge = $(this);
-      var $popup = $badge.siblings(".discount-popup");
-
-      if ($popup.length) {
-        $popup.show();
-
-        // Positionner le popup intelligemment
-        var badgeOffset = $badge.offset();
-        var popupWidth = $popup.outerWidth();
-        var windowWidth = $(window).width();
-
-        // Éviter débordement à droite
-        if (badgeOffset.left + popupWidth > windowWidth) {
-          $popup.css({
-            left: "auto",
-            right: "0",
-          });
-        }
-      }
+      clearTimeout(hideTimeout);
+      showPopup($badge);
     });
 
-    // Masquer popup
     $(document).on("mouseleave", ".discount-badge", function () {
-      $(this).siblings(".discount-popup").hide();
+      hideTimeout = setTimeout(function () {
+        if (!$(".discount-popup:hover").length) {
+          hideAllPopups();
+        }
+      }, 300);
     });
 
-    // Maintenir popup visible au survol
     $(document).on("mouseenter", ".discount-popup", function () {
-      $(this).show();
+      clearTimeout(hideTimeout);
     });
 
     $(document).on("mouseleave", ".discount-popup", function () {
-      $(this).hide();
+      hideTimeout = setTimeout(hideAllPopups, 300);
+    });
+
+    // Clic extérieur - Fermer popup
+    $(document).on("click", function (e) {
+      if (!$(e.target).closest(".discount-badge, .discount-popup").length) {
+        hideAllPopups();
+      }
     });
   }
 
