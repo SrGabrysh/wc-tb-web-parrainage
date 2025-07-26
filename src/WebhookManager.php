@@ -17,8 +17,8 @@ class WebhookManager {
     }
     
     public function init() {
-        add_filter( 'woocommerce_webhook_payload', array( $this, 'ajouter_subscription_metadata_webhook' ), 10, 4 );
-        add_action( 'woocommerce_subscription_created_for_order', array( $this, 'stocker_subscription_id_commande' ), 10, 2 );
+        \add_filter( 'woocommerce_webhook_payload', array( $this, 'ajouter_subscription_metadata_webhook' ), 10, 4 );
+        \add_action( 'woocommerce_subscription_created_for_order', array( $this, 'stocker_subscription_id_commande' ), 10, 2 );
     }
     
     /**
@@ -48,7 +48,7 @@ class WebhookManager {
         }
         
         // Récupérer la commande
-        $order = wc_get_order( $resource_id );
+        $order = \wc_get_order( $resource_id );
         if ( ! $order ) {
             $this->logger->error( 
                 'Commande introuvable pour webhook',
@@ -59,7 +59,7 @@ class WebhookManager {
         }
         
         // Chercher les abonnements liés à cette commande
-        $subscriptions = wcs_get_subscriptions_for_order( $order, array( 'order_type' => 'any' ) );
+        $subscriptions = \wcs_get_subscriptions_for_order( $order, array( 'order_type' => 'any' ) );
         
         if ( ! empty( $subscriptions ) ) {
             
@@ -107,73 +107,6 @@ class WebhookManager {
             $payload['has_subscriptions'] = true;
             $payload['subscriptions_count'] = count( $subscriptions );
             
-            // Ajouter les informations de tarification parrainage si disponibles
-            if ( $this->subscription_pricing_manager ) {
-                $infos_tarification = $this->subscription_pricing_manager->obtenir_infos_tarification_parrainage( $resource_id );
-                if ( $infos_tarification ) {
-                    $payload['parrainage_pricing'] = $infos_tarification;
-                    
-                    // Log spécifique pour les données de tarification
-                    $this->logger->info( 
-                        sprintf( 'Webhook ordre %d : données de tarification parrainage ajoutées (avec abonnements)', $resource_id ),
-                        array( 
-                            'webhook_id' => $webhook_id,
-                            'order_id' => $resource_id,
-                            'pricing_data' => $infos_tarification
-                        ),
-                        'webhook-subscriptions'
-                    );
-                }
-            }
-            
-            // NOUVEAU : Ajouter les informations de remise parrain si abonnements actifs
-            if ( isset( $payload['parrainage_pricing'] ) && isset( $payload['subscription_metadata'] ) && !empty( $payload['subscription_metadata'] ) ) {
-                // Traiter tous les abonnements présents dans la commande
-                foreach ( $payload['subscription_metadata'] as $subscription_index => $subscription_data ) {
-                    // Vérifier si l'abonnement est actif et possède un montant HT
-                    if ( isset( $subscription_data['subscription_status'] ) && 
-                         in_array( $subscription_data['subscription_status'], array( 'active', 'wc-active' ) ) && 
-                         isset( $subscription_data['subscription_items'][0]['subtotal'] ) ) {
-                        
-                        // Récupérer le montant HT du premier article de l'abonnement
-                        $montant_ht = floatval( $subscription_data['subscription_items'][0]['subtotal'] );
-                        
-                        // Récupérer les informations tarifaires complètes
-                        $tarification_info = $this->get_infos_tarification_configuree( $resource_id );
-                        
-                        // Enrichissement du payload
-                        $payload['parrainage_pricing']['remise_parrain_montant'] = $tarification_info['remise_parrain_montant'];
-                        $payload['parrainage_pricing']['remise_parrain_unite'] = $tarification_info['remise_parrain_unite'];
-                        $payload['parrainage_pricing']['prix_avant_remise'] = $tarification_info['prix_avant_remise'];
-                        $payload['parrainage_pricing']['frequence_paiement'] = $tarification_info['frequence_paiement'];
-                        
-                        // Si plusieurs abonnements, préciser l'ID de l'abonnement concerné
-                        if ( count( $payload['subscription_metadata'] ) > 1 ) {
-                            $payload['parrainage_pricing']['remise_parrain_subscription_id'] = $subscription_data['subscription_id'];
-                        }
-                        
-                        // Mise à jour des logs
-                        $this->logger->info( 
-                            sprintf( 'Webhook ordre %d : tarification complète ajoutée (prix: %.2f€, fréquence: %s, remise: %.2f€)', 
-                                $resource_id, 
-                                $tarification_info['prix_avant_remise'],
-                                $tarification_info['frequence_paiement'],
-                                $tarification_info['remise_parrain_montant']
-                            ),
-                            array( 
-                                'webhook_id' => $webhook_id,
-                                'order_id' => $resource_id,
-                                'tarification_complete' => $tarification_info
-                            ),
-                            'webhook-tarification-complete'
-                        );
-                        
-                        // On sort de la boucle après avoir traité le premier abonnement actif
-                        break;
-                    }
-                }
-            }
-            
             // Log pour debugging
             $this->logger->info( 
                 sprintf( 
@@ -203,60 +136,19 @@ class WebhookManager {
             );
         }
         
-        // Ajouter les informations de tarification parrainage même sans abonnements
-        // (car l'abonnement peut être créé après le webhook de commande)
-        if ( $this->subscription_pricing_manager ) {
-            $infos_tarification = $this->subscription_pricing_manager->obtenir_infos_tarification_parrainage( $resource_id );
-            if ( $infos_tarification ) {
-                // ✅ CORRECTION : Merge au lieu d'écrasement pour conserver les enrichissements de remise parrain
-                if ( !isset( $payload['parrainage_pricing'] ) ) {
-                    $payload['parrainage_pricing'] = $infos_tarification;
-                } else {
-                    $payload['parrainage_pricing'] = array_merge( $infos_tarification, $payload['parrainage_pricing'] );
-                }
-                
-                // NOUVEAU : Ajouter l'indication que la remise sera calculée ultérieurement
-                if ( !isset( $payload['subscription_metadata'] ) || empty( $payload['subscription_metadata'] ) ) {
-                    // Indiquer que la remise sera calculée ultérieurement quand l'abonnement sera actif
-                    $payload['parrainage_pricing']['remise_parrain_status'] = 'pending';
-                    $payload['parrainage_pricing']['remise_parrain_message'] = 'La remise sera calculée lorsque l\'abonnement du filleul sera actif';
-                    
-                    // Log pour traçabilité
-                    $this->logger->info( 
-                        sprintf( 'Webhook ordre %d : remise parrain en attente (abonnement non encore actif)', $resource_id ),
-                        array( 
-                            'webhook_id' => $webhook_id,
-                            'order_id' => $resource_id,
-                        ),
-                        'webhook-parrain-remise'
-                    );
-                }
-                
-                // Log spécifique pour les données de tarification
-                $this->logger->info( 
-                    sprintf( 'Webhook ordre %d : données de tarification parrainage ajoutées (sans abonnements)', $resource_id ),
-                    array( 
-                        'webhook_id' => $webhook_id,
-                        'order_id' => $resource_id,
-                        'pricing_data' => $infos_tarification
-                    ),
-                    'webhook-subscriptions'
-                );
-            }
-        }
-        
-        // NOUVEAU : Ajouter l'objet parrainage unifié (v2.0.5)
+        // NOUVEAU : Ajouter l'objet parrainage unifié (v2.3.0 - source unique)
         $parrainage_unifie = $this->construire_objet_parrainage( $order, $payload );
         if ( $parrainage_unifie ) {
             $payload['parrainage'] = $parrainage_unifie;
             
-            // Log pour la nouvelle structure
+            // Log pour la nouvelle structure sans doublons
             $this->logger->info( 
-                sprintf( 'Webhook ordre %d : objet parrainage unifié ajouté', $resource_id ),
+                sprintf( 'Webhook ordre %d : objet parrainage unifié ajouté (v2.3.0 - suppression doublons)', $resource_id ),
                 array( 
                     'webhook_id' => $webhook_id,
                     'order_id' => $resource_id,
-                    'parrainage_structure' => 'unified_v2.0.5'
+                    'version' => '2.3.0',
+                    'doublons_supprimes' => true
                 ),
                 'webhook-parrainage-unifie'
             );
@@ -267,9 +159,10 @@ class WebhookManager {
     
     /**
      * Construit l'objet parrainage unifié pour le payload webhook
+     * VERSION 2.3.0 : Source unique de vérité, suppression des doublons
      * 
      * @param \WC_Order $order Commande WooCommerce
-     * @param array $payload Payload webhook actuel (pour récupérer remise_parrain si calculée)
+     * @param array $payload Payload webhook actuel (pour récupérer subscription_metadata)
      * @return array|null Objet parrainage structuré ou null si pas de parrainage
      */
     private function construire_objet_parrainage( $order, $payload = array() ) {
@@ -285,6 +178,7 @@ class WebhookManager {
         
         // Construction de l'objet parrainage unifié
         $parrainage = array(
+            'version' => '2.3.0', // Marquer la nouvelle version
             'actif' => true
         );
         
@@ -303,7 +197,7 @@ class WebhookManager {
             'prenom' => \sanitize_text_field( $order->get_meta( '_parrain_prenom' ) ?: '' )
         );
         
-        // Section DATES (côté temporalité)
+        // Section DATES (côté temporalité) - SOURCE UNIQUE
         $date_debut = $order->get_meta( '_parrainage_date_debut' );
         $date_fin = $order->get_meta( '_parrainage_date_fin_remise' );
         $jours_marge = intval( $order->get_meta( '_parrainage_jours_marge' ) ?: 2 );
@@ -317,25 +211,33 @@ class WebhookManager {
             'periode_remise_mois' => 12
         );
         
-        // Section PRODUIT (côté tarification générale)
-        if ( isset( $payload['parrainage_pricing']['prix_avant_remise'] ) ) {
-            $parrainage['produit'] = array(
-                'prix_avant_remise' => $payload['parrainage_pricing']['prix_avant_remise'],
-                'frequence_paiement' => $payload['parrainage_pricing']['frequence_paiement']
-            );
-        }
+        // Section TARIFICATION COMPLÈTE (prix, fréquence et remise) - SOURCE UNIQUE
+        $tarification_info = $this->get_infos_tarification_configuree( $order->get_id() );
         
-        // Section REMISE PARRAIN (côté remise spécifique)
-        if ( isset( $payload['parrainage_pricing']['remise_parrain_montant'] ) ) {
-            $parrainage['remise_parrain'] = array(
-                'montant' => $payload['parrainage_pricing']['remise_parrain_montant'],
-                'unite' => $payload['parrainage_pricing']['remise_parrain_unite']
+        $parrainage['tarification'] = array(
+            'prix_avant_remise' => $tarification_info['prix_avant_remise'],
+            'frequence_paiement' => $tarification_info['frequence_paiement'],
+            'remise_parrain' => array(
+                'montant' => $tarification_info['remise_parrain_montant'],
+                'unite' => $tarification_info['remise_parrain_unite']
+            )
+        );
+        
+        // Section STATUT (état de la remise selon les abonnements)
+        if ( isset( $payload['subscription_metadata'] ) && !empty( $payload['subscription_metadata'] ) ) {
+            $first_subscription = $payload['subscription_metadata'][0];
+            $is_active = in_array( $first_subscription['subscription_status'], array( 'active', 'wc-active' ) );
+            
+            $parrainage['statut'] = array(
+                'remise_active' => $is_active,
+                'subscription_concernee' => $first_subscription['subscription_id'],
+                'message' => $is_active ? 'Remise parrain calculée et active' : 'Remise parrain en attente'
             );
         } else {
-            // Si pas encore configurée, indiquer pending
-            $parrainage['remise_parrain'] = array(
-                'status' => 'pending',
-                'message' => 'La remise sera appliquée selon la configuration produit'
+            $parrainage['statut'] = array(
+                'remise_active' => false,
+                'subscription_concernee' => null,
+                'message' => 'Remise parrain en attente - abonnement pas encore actif'
             );
         }
         
@@ -392,33 +294,6 @@ class WebhookManager {
             'remise_parrain_unite' => 'EUR',
             'prix_avant_remise' => round( floatval( $config_trouvee['prix_standard'] ?? 0.00 ), 2 ),
             'frequence_paiement' => sanitize_text_field( $config_trouvee['frequence_paiement'] ?? 'mensuel' )
-        );
-    }
-
-    /**
-     * Calcule le montant de la remise parrain pour un abonnement donné
-     * 
-     * @param float $montant_ht Montant HT de l'abonnement du filleul
-     * @return array Informations de remise (montant, pourcentage, base HT)
-     */
-    private function calculer_remise_parrain( $montant_ht ) {
-        // Utiliser la constante définie pour le pourcentage de remise
-        $reduction_percentage = defined( 'WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE' ) 
-            ? WC_TB_PARRAINAGE_REDUCTION_PERCENTAGE 
-            : 25; // Valeur par défaut si la constante n'est pas définie
-        
-        // Calculer le montant de la remise (25% du montant HT)
-        $reduction_amount = ( $montant_ht * $reduction_percentage ) / 100;
-        
-        // Arrondir à 2 décimales pour une précision monétaire standard
-        $reduction_amount = round( $reduction_amount, 2 );
-        $montant_ht = round( $montant_ht, 2 );
-        
-        return array(
-            'montant' => $reduction_amount,
-            'pourcentage' => $reduction_percentage,
-            'base_ht' => $montant_ht,
-            'unite' => 'EUR'
         );
     }
 

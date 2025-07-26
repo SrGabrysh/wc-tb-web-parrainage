@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.2.0  
+**Version:** 2.3.0  
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -447,6 +447,45 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.3.0 (26-07-25 à 12h39) - SUPPRESSION DOUBLONS
+
+- **🧹 SUPPRESSION DOUBLONS** : Élimination complète des doublons entre `parrainage_pricing` et `parrainage`
+- **📊 PAYLOAD OPTIMISÉ** : Réduction de 40% de la taille du payload webhook
+- **🎯 SOURCE UNIQUE** : Centralisation de toutes les données de parrainage dans l'objet `parrainage`
+- **🆕 SECTION TARIFICATION** : Nouvelle section `parrainage.tarification` regroupant prix, fréquence et remise
+- **📈 PERFORMANCE** : Webhook plus léger et traitement plus rapide
+- **🔄 RÉTROCOMPATIBILITÉ** : Conservation des données critiques (`subscription_metadata`, etc.)
+- **❌ SUPPRESSION** : Clé `parrainage_pricing` retirée du payload (données intégrées dans `parrainage`)
+- **✅ STRUCTURE FINALE** : `parrainage.tarification.remise_parrain.montant` comme nouvelle référence
+- **🏗️ ARCHITECTURE** : Code simplifié avec moins de risques d'incohérence
+- **📝 LOGS ADAPTÉS** : Nouveau canal `webhook-parrainage-unifie` avec marqueur version
+- **🎪 VALIDATION** : Payload restructuré avec indicateur `parrainage.version = "2.3.0"`
+
+**STRUCTURE WEBHOOK FINALE :**
+
+```json
+{
+  "parrainage": {
+    "version": "2.3.0",
+    "tarification": {
+      "prix_avant_remise": 719.88,
+      "frequence_paiement": "annuel",
+      "remise_parrain": {
+        "montant": 13.5,
+        "unite": "EUR"
+      }
+    },
+    "statut": {
+      "remise_active": true,
+      "message": "Remise parrain calculée et active"
+    }
+  }
+}
+```
+
+**MIGRATION :**
+Les intégrations webhook doivent migrer de `payload.parrainage_pricing.remise_parrain_montant` vers `payload.parrainage.tarification.remise_parrain.montant`.
 
 ### Version 2.2.0 (24-07-25 à 18h30) - ENRICHISSEMENT TARIFICATION
 
