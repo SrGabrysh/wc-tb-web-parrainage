@@ -228,6 +228,9 @@ class AutomaticDiscountProcessor {
      * @return void
      */
     public function process_parrain_discount_async( $order_id, $filleul_subscription_id, $attempt_number = 1 ) {
+        // Marquer l'exécution CRON pour monitoring
+        update_option( 'tb_parrainage_last_cron_run', time() );
+        
         $this->logger->info(
             'DÉBUT traitement asynchrone remise parrainage',
             array(
@@ -292,8 +295,10 @@ class AutomaticDiscountProcessor {
                 // Mise à jour du statut workflow
                 $order->update_meta_data( '_parrainage_workflow_status', 'calculated' );
                 $order->update_meta_data( '_tb_parrainage_calculated', current_time( 'mysql' ) );
-                $order->delete_meta_data( '_pending_parrain_discount' );
                 $order->save();
+                
+                // Nettoyage automatique des métadonnées temporaires
+                $this->cleanup_temporary_metadata( $order );
                 
                 $this->logger->info(
                     'Remise parrainage calculée avec succès (simulation v2.6.0)',
@@ -515,5 +520,79 @@ class AutomaticDiscountProcessor {
         }
         
         return $product_ids;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Vérification de la santé du système CRON
+     * 
+     * @return array Statut de santé avec recommandations
+     */
+    public function check_cron_health() {
+        $health_status = array(
+            'cron_enabled' => defined( 'DISABLE_WP_CRON' ) ? ! DISABLE_WP_CRON : true,
+            'pending_events' => wp_get_scheduled_event( WC_TB_PARRAINAGE_QUEUE_HOOK ),
+            'last_run' => get_option( 'tb_parrainage_last_cron_run', false ),
+            'failed_orders' => $this->get_failed_orders_count(),
+            'recommendations' => array()
+        );
+        
+        // Analyses et recommandations
+        if ( ! $health_status['cron_enabled'] ) {
+            $health_status['recommendations'][] = 'CRON WordPress désactivé - Activer WP_CRON ou configurer cron serveur';
+        }
+        
+        if ( $health_status['failed_orders'] > 0 ) {
+            $health_status['recommendations'][] = sprintf( 
+                '%d commandes en échec nécessitent une intervention manuelle',
+                $health_status['failed_orders']
+            );
+        }
+        
+        $last_run = $health_status['last_run'];
+        if ( $last_run && ( time() - $last_run ) > 3600 ) {
+            $health_status['recommendations'][] = 'Aucune exécution CRON depuis plus d\'1 heure - Vérifier configuration';
+        }
+        
+        return $health_status;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Comptage des commandes en échec
+     * 
+     * @return int Nombre de commandes avec workflow en erreur
+     */
+    private function get_failed_orders_count() {
+        global $wpdb;
+        
+        $count = $wpdb->get_var( $wpdb->prepare( "
+            SELECT COUNT(*)
+            FROM {$wpdb->postmeta}
+            WHERE meta_key = '_parrainage_workflow_status'
+            AND meta_value IN (%s, %s)
+        ", 'error', 'cron_failed' ) );
+        
+        return intval( $count );
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Nettoyage des métadonnées temporaires
+     * 
+     * @param WC_Order $order Instance de commande
+     * @return void
+     */
+    public function cleanup_temporary_metadata( $order ) {
+        // Nettoyer les métadonnées temporaires après traitement réussi
+        $order->delete_meta_data( '_pending_parrain_discount' );
+        $order->delete_meta_data( '_parrainage_scheduled_time' );
+        
+        // Marquer la date de nettoyage pour audit
+        $order->update_meta_data( '_parrainage_cleanup_date', current_time( 'mysql' ) );
+        $order->save();
+        
+        $this->logger->debug(
+            'Métadonnées temporaires nettoyées après traitement réussi',
+            array( 'order_id' => $order->get_id() ),
+            'discount-processor'
+        );
     }
 }

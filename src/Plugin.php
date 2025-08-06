@@ -94,8 +94,8 @@ class Plugin {
             $this->my_account_parrainage_manager->init();
         }
         
-        // NOUVEAU v2.5.0 : Hook pour l'initialisation des services techniques
-        add_action( 'init', array( $this, 'init_discount_services' ) );
+        // MODIFICATION v2.6.0 : Initialisation directe des services de remise
+        $this->init_discount_services();
         
         // Nettoyage automatique des logs
         add_action( 'wp_scheduled_delete', array( $this, 'cleanup_old_logs' ) );
@@ -763,5 +763,21 @@ class Plugin {
      */
     public function get_automatic_discount_processor() {
         return $this->automatic_discount_processor;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Vérification de la santé du workflow asynchrone
+     * 
+     * @return array Statut de santé avec recommandations
+     */
+    public function get_workflow_health_status() {
+        if ( $this->automatic_discount_processor ) {
+            return $this->automatic_discount_processor->check_cron_health();
+        }
+        
+        return array(
+            'error' => 'Processeur automatique non initialisé',
+            'recommendations' => array( 'Vérifier l\'initialisation du plugin' )
+        );
     }
 } 

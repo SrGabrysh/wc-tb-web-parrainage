@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WC TB-Web Parrainage
  * Description: Plugin de parrainage WooCommerce avec webhooks enrichis - Gestion des codes parrain au checkout, calcul automatique des dates de fin de remise parrainage, masquage conditionnel des codes promo et ajout des métadonnées d'abonnement dans les webhooks.
- * Version: 2.6.0
+ * Version: 2.6.1
  * Author: TB-Web
  * Text Domain: wc-tb-web-parrainage
  * Domain Path: /languages
@@ -107,5 +107,8 @@ function wc_tb_parrainage_init() {
     }
     
     load_plugin_textdomain( 'wc-tb-web-parrainage', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-    new TBWeb\WCParrainage\Plugin();
+    
+    // AJOUT v2.6.0 : Instance globale pour accès aux services
+    global $wc_tb_parrainage_plugin;
+    $wc_tb_parrainage_plugin = new TBWeb\WCParrainage\Plugin();
 } 
