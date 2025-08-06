@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WC TB-Web Parrainage
  * Description: Plugin de parrainage WooCommerce avec webhooks enrichis - Gestion des codes parrain au checkout, calcul automatique des dates de fin de remise parrainage, masquage conditionnel des codes promo et ajout des métadonnées d'abonnement dans les webhooks.
- * Version: 2.5.5
+ * Version: 2.6.0
  * Author: TB-Web
  * Text Domain: wc-tb-web-parrainage
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Constantes
-define( 'WC_TB_PARRAINAGE_VERSION', '2.5.5' );
+define( 'WC_TB_PARRAINAGE_VERSION', '2.6.0' );
 define( 'WC_TB_PARRAINAGE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WC_TB_PARRAINAGE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -45,6 +45,12 @@ define( 'WC_TB_PARRAINAGE_DISCOUNT_PRECISION', 2 ); // Précision décimale pour
 define( 'WC_TB_PARRAINAGE_MIN_SUBSCRIPTION_AMOUNT', 1.00 ); // Montant minimum d'abonnement
 define( 'WC_TB_PARRAINAGE_DEFAULT_DISCOUNT_RATE', 0.0 ); // Taux par défaut si non configuré
 define( 'WC_TB_PARRAINAGE_MAX_DISCOUNT_RATE', 0.5 ); // Limite maximum 50% de remise
+
+// AJOUT v2.6.0 : Constantes pour le workflow asynchrone
+define( 'WC_TB_PARRAINAGE_ASYNC_DELAY', 300 ); // 5 minutes de délai sécurité
+define( 'WC_TB_PARRAINAGE_MAX_RETRY', 3 ); // Nombre maximum de tentatives
+define( 'WC_TB_PARRAINAGE_RETRY_DELAY', 600 ); // Délai entre retry (10 minutes)
+define( 'WC_TB_PARRAINAGE_QUEUE_HOOK', 'tb_parrainage_process_discount' ); // Hook CRON personnalisé
 
 // Autoload Composer
 require_once WC_TB_PARRAINAGE_PATH . 'vendor/autoload.php';

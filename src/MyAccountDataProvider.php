@@ -364,8 +364,8 @@ class MyAccountDataProvider {
             // Anciennes données conservées pour compatibilité
             'montant' => $this->format_montant( $row->subscription_total ),
             'montant_raw' => floatval( $row->subscription_total ),
-            // NOUVEAU v2.4.0 : Données remise enrichies côté client
-            'discount_client_info' => $discount_data
+            // MODIFICATION v2.6.0 : Données remise réelles côté client
+            'discount_client_info' => $this->get_real_client_discount_data( $row->order_id )
         );
     }
     
@@ -467,26 +467,52 @@ class MyAccountDataProvider {
             return $cached_summary;
         }
         
-        // Mock du résumé global basé sur l'ID utilisateur pour cohérence
-        mt_srand( intval( $user_subscription_id ) );
-        
-        $active_discounts = mt_rand( 1, 4 );
-        $total_referrals = $active_discounts + mt_rand( 0, 2 );
-        $monthly_savings = $active_discounts * ( mt_rand( 500, 1500 ) / 100 );
-        $total_savings_to_date = mt_rand( 50, 500 );
-        
-        $summary = array(
-            'active_discounts' => $active_discounts,
-            'total_referrals' => $total_referrals,
-            'monthly_savings' => round( $monthly_savings, 2 ),
-            'total_savings_to_date' => $total_savings_to_date,
-            'next_billing' => array(
-                'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
-                'amount' => round( 89.99 - $monthly_savings, 2 ),
-                'original_amount' => 89.99
-            ),
-            'pending_actions' => $this->get_mock_pending_actions( $active_discounts, $total_referrals )
-        );
+        // MODIFICATION v2.6.0 : Calcul réel du résumé des économies
+        try {
+            $real_referrals = $this->get_real_referrals_data( $user_subscription_id );
+            
+            $active_discounts = 0;
+            $total_monthly_savings = 0;
+            $total_referrals = count( $real_referrals );
+            
+            foreach ( $real_referrals as $referral ) {
+                if ( isset( $referral['discount_client_info']['discount_status'] ) && 
+                     $referral['discount_client_info']['discount_status'] === 'calculated' ) {
+                    $active_discounts++;
+                    $total_monthly_savings += floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
+                }
+            }
+            
+            $subscription = wcs_get_subscription( $user_subscription_id );
+            $original_amount = $subscription ? $subscription->get_total() : 89.99;
+            
+            $summary = array(
+                'active_discounts' => $active_discounts,
+                'total_referrals' => $total_referrals,
+                'monthly_savings' => number_format( $total_monthly_savings, 2 ),
+                'yearly_projection' => number_format( $total_monthly_savings * 12, 2 ),
+                'currency' => get_woocommerce_currency_symbol(),
+                'next_billing' => array(
+                    'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
+                    'amount' => round( $original_amount - $total_monthly_savings, 2 ),
+                    'original_amount' => $original_amount
+                ),
+                'pending_actions' => $this->get_real_pending_actions( $real_referrals )
+            );
+            
+        } catch ( Exception $e ) {
+            $this->logger->error(
+                'Erreur lors du calcul du résumé des économies réelles - fallback vers mockées',
+                array(
+                    'user_subscription_id' => $user_subscription_id,
+                    'error' => $e->getMessage()
+                ),
+                'account-data-provider'
+            );
+            
+            // Fallback vers données mockées en cas d'erreur
+            return $this->get_mock_savings_summary( $user_subscription_id );
+        }
         
         // Mettre en cache
         \set_transient( $cache_key, $summary, self::CACHE_DURATION );
@@ -516,5 +542,199 @@ class MyAccountDataProvider {
         }
         
         return $actions;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Récupération des vraies données client de remise
+     * 
+     * @param int $order_id ID de la commande
+     * @return array Données de remise réelles côté client
+     */
+    private function get_real_client_discount_data( $order_id ) {
+        try {
+            // Récupération de l'instance du plugin pour accès aux services
+            $plugin_instance = $this->get_plugin_instance();
+            if ( ! $plugin_instance ) {
+                return $this->get_client_mock_discount_data( $order_id );
+            }
+            
+            $calculator = $plugin_instance->get_discount_calculator();
+            if ( ! $calculator ) {
+                return $this->get_client_mock_discount_data( $order_id );
+            }
+            
+            // Récupération des informations de la commande
+            $order = wc_get_order( $order_id );
+            if ( ! $order ) {
+                return array();
+            }
+            
+            // Vérification si remise calculée
+            $calculated_discounts = $order->get_meta( '_parrainage_calculated_discounts' );
+            $workflow_status = $order->get_meta( '_parrainage_workflow_status' );
+            
+            if ( $calculated_discounts && $workflow_status === 'calculated' ) {
+                $discount_data = is_array( $calculated_discounts ) ? $calculated_discounts[0] : $calculated_discounts;
+                
+                return array(
+                    'discount_status' => 'calculated',
+                    'discount_status_label' => 'CALCULÉ (v2.6.0)',
+                    'discount_amount' => $discount_data['discount_amount'] ?? 0,
+                    'discount_amount_formatted' => number_format( $discount_data['discount_amount'] ?? 0, 2, ',', '' ) . '€/mois',
+                    'calculation_date' => $order->get_meta( '_parrainage_calculation_date' ),
+                    'is_simulation' => true // Marquer comme simulation v2.6.0
+                );
+            } elseif ( $workflow_status ) {
+                // Autres statuts du workflow
+                return array(
+                    'discount_status' => $workflow_status,
+                    'discount_status_label' => $this->get_workflow_status_label_client( $workflow_status ),
+                    'discount_amount' => 0,
+                    'discount_amount_formatted' => '0,00€/mois',
+                    'is_simulation' => true
+                );
+            }
+            
+            // Fallback vers données mockées
+            return $this->get_client_mock_discount_data( $order_id );
+            
+        } catch ( Exception $e ) {
+            $this->logger->error(
+                'Erreur lors de la récupération des données client réelles',
+                array(
+                    'order_id' => $order_id,
+                    'error' => $e->getMessage()
+                ),
+                'account-data-provider'
+            );
+            
+            return $this->get_client_mock_discount_data( $order_id );
+        }
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Récupération des vraies données de filleuls pour calculs
+     * 
+     * @param int $user_subscription_id ID de l'abonnement parrain
+     * @return array Données des filleuls avec calculs réels
+     */
+    private function get_real_referrals_data( $user_subscription_id ) {
+        // Utiliser la même logique que get_parrainage_data mais pour un seul parrain
+        $plugin_instance = $this->get_plugin_instance();
+        if ( ! $plugin_instance ) {
+            return array();
+        }
+        
+        // Récupération via ParrainageDataProvider pour cohérence
+        $parrainage_data_provider = new ParrainageDataProvider( $this->logger );
+        
+        $filters = array(
+            'parrain_subscription_id' => $user_subscription_id
+        );
+        
+        $data = $parrainage_data_provider->get_parrainage_data( $filters );
+        
+        // Extraire les filleuls pour ce parrain spécifique
+        if ( isset( $data['parrains'] ) ) {
+            foreach ( $data['parrains'] as $parrain ) {
+                if ( intval( $parrain['subscription_id'] ) === intval( $user_subscription_id ) ) {
+                    return $parrain['filleuls'] ?? array();
+                }
+            }
+        }
+        
+        return array();
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Actions en attente basées sur données réelles
+     * 
+     * @param array $real_referrals Données réelles des filleuls
+     * @return array Actions en attente
+     */
+    private function get_real_pending_actions( $real_referrals ) {
+        $actions = array();
+        
+        foreach ( $real_referrals as $referral ) {
+            $status = $referral['discount_client_info']['discount_status'] ?? 'unknown';
+            
+            switch ( $status ) {
+                case 'pending':
+                    $actions[] = array( 
+                        'type' => 'pending',
+                        'message' => sprintf( '%s : Remise en cours de calcul', $referral['nom'] ?? 'Filleul' )
+                    );
+                    break;
+                case 'error':
+                    $actions[] = array( 
+                        'type' => 'error',
+                        'message' => sprintf( '%s : Erreur de calcul, contactez le support', $referral['nom'] ?? 'Filleul' )
+                    );
+                    break;
+                case 'cron_failed':
+                    $actions[] = array( 
+                        'type' => 'warning',
+                        'message' => sprintf( '%s : Calcul en attente (problème technique)', $referral['nom'] ?? 'Filleul' )
+                    );
+                    break;
+            }
+        }
+        
+        return $actions;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Fallback vers données mockées pour get_savings_summary
+     * 
+     * @param int $user_subscription_id ID de l'abonnement
+     * @return array Résumé mocké
+     */
+    private function get_mock_savings_summary( $user_subscription_id ) {
+        mt_srand( intval( $user_subscription_id ) );
+        
+        $active_discounts = mt_rand( 1, 4 );
+        $total_referrals = $active_discounts + mt_rand( 0, 2 );
+        $monthly_savings = $active_discounts * ( mt_rand( 500, 1500 ) / 100 );
+        
+        return array(
+            'active_discounts' => $active_discounts,
+            'total_referrals' => $total_referrals,
+            'monthly_savings' => round( $monthly_savings, 2 ),
+            'yearly_projection' => round( $monthly_savings * 12, 2 ),
+            'currency' => get_woocommerce_currency_symbol(),
+            'next_billing' => array(
+                'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
+                'amount' => round( 89.99 - $monthly_savings, 2 ),
+                'original_amount' => 89.99
+            ),
+            'pending_actions' => $this->get_mock_pending_actions( $active_discounts, $total_referrals )
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Labels des statuts workflow côté client
+     * 
+     * @param string $status Statut workflow
+     * @return string Label pour affichage client
+     */
+    private function get_workflow_status_label_client( $status ) {
+        $labels = array(
+            'calculated' => 'Calculé (Test v2.6.0)',
+            'pending' => 'En cours de calcul',
+            'scheduled' => 'Programmé',
+            'error' => 'Erreur de calcul',
+            'cron_failed' => 'En attente technique'
+        );
+        return $labels[$status] ?? 'Statut inconnu';
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Récupération de l'instance du plugin
+     * 
+     * @return Plugin|null Instance du plugin ou null
+     */
+    private function get_plugin_instance() {
+        global $wc_tb_parrainage_plugin;
+        return isset( $wc_tb_parrainage_plugin ) ? $wc_tb_parrainage_plugin : null;
     }
 } 

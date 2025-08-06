@@ -21,6 +21,9 @@ class Plugin {
     private $discount_validator;
     private $discount_notification_service;
     
+    // AJOUT v2.6.0 : Processeur automatique de workflow asynchrone
+    private $automatic_discount_processor;
+    
     public function __construct() {
         $this->logger = new Logger();
         $this->init_managers();
@@ -46,6 +49,14 @@ class Plugin {
         $this->discount_calculator = new DiscountCalculator( $this->logger );
         $this->discount_validator = new DiscountValidator( $this->logger );
         $this->discount_notification_service = new DiscountNotificationService( $this->logger );
+        
+        // NOUVEAU v2.6.0 : Chargement du processeur de workflow asynchrone
+        $this->automatic_discount_processor = new AutomaticDiscountProcessor( 
+            $this->logger, 
+            $this->discount_calculator, 
+            $this->discount_validator, 
+            $this->discount_notification_service 
+        );
     }
     
     private function init_hooks() {
@@ -723,6 +734,11 @@ class Plugin {
      */
     public function init_discount_services() {
         if ( $this->discount_calculator && $this->discount_validator ) {
+            // MODIFICATION v2.6.0 : Initialisation du workflow asynchrone
+            if ( $this->automatic_discount_processor ) {
+                $this->automatic_discount_processor->init();
+            }
+            
             do_action( 'tb_parrainage_discount_services_loaded', $this );
         }
     }
@@ -740,5 +756,12 @@ class Plugin {
     
     public function get_discount_notification_service() {
         return $this->discount_notification_service;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Getter pour accès au processeur automatique
+     */
+    public function get_automatic_discount_processor() {
+        return $this->automatic_discount_processor;
     }
 } 

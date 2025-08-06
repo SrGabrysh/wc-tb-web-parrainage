@@ -266,8 +266,8 @@ class ParrainageDataProvider {
         // Récupérer les informations de l'abonnement du filleul
         $subscription_data = $this->get_filleul_subscription_data( $row->filleul_order_id );
         
-        // AJOUT v2.4.0 : Données de remise mockées
-        $discount_data = $this->get_mock_discount_data( $row->filleul_order_id, $row->parrain_subscription_id );
+        // MODIFICATION v2.6.0 : Remplacement des données mockées par vraies données calculées
+        $discount_data = $this->get_real_discount_data( $row->filleul_order_id, $row->parrain_subscription_id );
         
         return array(
             'user_id' => $row->filleul_user_id,
@@ -492,5 +492,212 @@ class ParrainageDataProvider {
             'na' => 'discount-status-na'
         );
         return $classes[$status] ?? 'discount-status-default';
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Récupération des vraies données de remise calculées
+     * 
+     * @param int $filleul_order_id ID de la commande filleul
+     * @param int $parrain_subscription_id ID de l'abonnement parrain
+     * @return array|false Données de remise réelles ou false
+     */
+    private function get_real_discount_data( $filleul_order_id, $parrain_subscription_id ) {
+        try {
+            // Récupération de l'instance du plugin pour accès aux services
+            $plugin_instance = $this->get_plugin_instance();
+            if ( ! $plugin_instance ) {
+                return $this->get_mock_discount_data( $filleul_order_id, $parrain_subscription_id );
+            }
+            
+            $calculator = $plugin_instance->get_discount_calculator();
+            $validator = $plugin_instance->get_discount_validator();
+            
+            if ( ! $calculator || ! $validator ) {
+                $this->logger->warning(
+                    'Services de calcul non disponibles - fallback vers données mockées',
+                    array(
+                        'filleul_order_id' => $filleul_order_id,
+                        'parrain_subscription_id' => $parrain_subscription_id
+                    ),
+                    'data-provider'
+                );
+                return $this->get_mock_discount_data( $filleul_order_id, $parrain_subscription_id );
+            }
+            
+            // Récupération des informations de la commande filleul
+            $order = wc_get_order( $filleul_order_id );
+            if ( ! $order ) {
+                return false;
+            }
+            
+            $code_parrain = $order->get_meta( '_billing_parrain_code' );
+            if ( ! $code_parrain ) {
+                return false;
+            }
+            
+            // Validation de l'éligibilité
+            $product_ids = $this->get_order_product_ids( $order );
+            
+            foreach ( $product_ids as $product_id ) {
+                $validation = $validator->validate_discount_eligibility( 
+                    $parrain_subscription_id, 
+                    $filleul_order_id, 
+                    $product_id 
+                );
+                
+                if ( $validation['is_eligible'] ) {
+                    // Calcul de la remise réelle
+                    $parrain_subscription = wcs_get_subscription( $parrain_subscription_id );
+                    if ( $parrain_subscription ) {
+                        $current_price = $parrain_subscription->get_total();
+                        
+                        $discount_data = $calculator->calculate_parrain_discount( 
+                            $product_id, 
+                            $current_price, 
+                            $parrain_subscription_id 
+                        );
+                        
+                        if ( $discount_data ) {
+                            // Détermination du statut basé sur l'état du workflow
+                            $workflow_status = $this->get_workflow_status( $filleul_order_id, $parrain_subscription_id );
+                            
+                            return array(
+                                'discount_status' => $workflow_status,
+                                'discount_status_label' => $this->get_workflow_status_label( $workflow_status ),
+                                'discount_status_badge_class' => $this->get_workflow_status_badge_class( $workflow_status ),
+                                'discount_amount' => $discount_data['discount_amount'],
+                                'discount_amount_formatted' => number_format( $discount_data['discount_amount'], 2, ',', '' ) . '€/mois',
+                                'discount_applied_date' => $discount_data['calculation_date'],
+                                'discount_applied_date_formatted' => mysql2date( 'd/m/Y à H\hi', $discount_data['calculation_date'] ),
+                                'next_billing_date' => date( 'Y-m-d', strtotime( '+1 month' ) ),
+                                'next_billing_amount' => $current_price - $discount_data['discount_amount'],
+                                'original_amount' => $current_price,
+                                'total_savings' => $discount_data['discount_amount'] * 12, // Estimation annuelle
+                                'workflow_details' => $this->get_workflow_details( $filleul_order_id )
+                            );
+                        }
+                    }
+                }
+            }
+            
+            return false;
+            
+        } catch ( Exception $e ) {
+            $this->logger->error(
+                'Erreur lors du calcul des vraies données de remise - fallback vers mockées',
+                array(
+                    'filleul_order_id' => $filleul_order_id,
+                    'parrain_subscription_id' => $parrain_subscription_id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ),
+                'data-provider'
+            );
+            
+            // Fallback vers données mockées en cas d'erreur
+            return $this->get_mock_discount_data( $filleul_order_id, $parrain_subscription_id );
+        }
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Détermination du statut workflow
+     * 
+     * @param int $filleul_order_id ID de la commande filleul
+     * @param int $parrain_subscription_id ID de l'abonnement parrain
+     * @return string Statut du workflow
+     */
+    private function get_workflow_status( $filleul_order_id, $parrain_subscription_id ) {
+        $order = wc_get_order( $filleul_order_id );
+        
+        if ( $order->get_meta( '_tb_parrainage_calculated' ) ) {
+            return 'calculated';
+        } elseif ( $order->get_meta( '_pending_parrain_discount' ) ) {
+            return 'pending';
+        } elseif ( $order->get_meta( '_parrainage_workflow_status' ) ) {
+            return $order->get_meta( '_parrainage_workflow_status' );
+        } else {
+            return 'simulated';
+        }
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Labels des statuts workflow v2.6.0
+     * 
+     * @param string $status Statut workflow
+     * @return string Label pour affichage
+     */
+    private function get_workflow_status_label( $status ) {
+        $labels = array(
+            'calculated' => 'CALCULÉ (v2.6.0)',
+            'pending' => 'EN COURS',
+            'scheduled' => 'PROGRAMMÉ',
+            'simulated' => 'SIMULÉ',
+            'error' => 'ERREUR',
+            'cron_failed' => 'CRON DÉFAILLANT'
+        );
+        return $labels[$status] ?? 'INCONNU';
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Classes CSS des statuts workflow
+     * 
+     * @param string $status Statut workflow
+     * @return string Classe CSS
+     */
+    private function get_workflow_status_badge_class( $status ) {
+        $classes = array(
+            'calculated' => 'discount-status-calculated',
+            'pending' => 'discount-status-pending',
+            'scheduled' => 'discount-status-scheduled',
+            'simulated' => 'discount-status-simulated',
+            'error' => 'discount-status-error',
+            'cron_failed' => 'discount-status-cron-failed'
+        );
+        return $classes[$status] ?? 'discount-status-default';
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Détails du workflow pour monitoring
+     * 
+     * @param int $filleul_order_id ID de la commande filleul
+     * @return array Détails du workflow
+     */
+    private function get_workflow_details( $filleul_order_id ) {
+        $order = wc_get_order( $filleul_order_id );
+        
+        return array(
+            'marked_date' => $order->get_meta( '_parrainage_marked_date' ),
+            'scheduled_time' => $order->get_meta( '_parrainage_scheduled_time' ),
+            'calculation_date' => $order->get_meta( '_parrainage_calculation_date' ),
+            'workflow_status' => $order->get_meta( '_parrainage_workflow_status' ),
+            'final_error' => $order->get_meta( '_parrainage_final_error' ),
+            'cron_failure_date' => $order->get_meta( '_parrainage_cron_failure_date' )
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Récupération de l'instance du plugin
+     * 
+     * @return Plugin|null Instance du plugin ou null
+     */
+    private function get_plugin_instance() {
+        global $wc_tb_parrainage_plugin;
+        return isset( $wc_tb_parrainage_plugin ) ? $wc_tb_parrainage_plugin : null;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Récupération des IDs produits d'une commande
+     * 
+     * @param WC_Order $order Instance de commande
+     * @return array IDs des produits
+     */
+    private function get_order_product_ids( $order ) {
+        $product_ids = array();
+        
+        foreach ( $order->get_items() as $item ) {
+            $product_ids[] = $item->get_product_id();
+        }
+        
+        return $product_ids;
     }
 } 

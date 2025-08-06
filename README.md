@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.5.5
+**Version:** 2.6.0
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -38,7 +38,32 @@ Plugin de parrainage WooCommerce avec webhooks enrichis. Ce plugin combine cinq 
 - Activation selon les produits configurés dans l'interface d'administration
 - Désactivation complète des fonctionnalités de coupons pour les produits concernés
 
-### 💰 **NOUVEAU v2.4.0** - Interfaces Mockées pour Remises Parrain
+### ⚡ **NOUVEAU v2.6.0** - Workflow Asynchrone et Données Réelles
+
+Le système de remises parrain dispose maintenant d'un **workflow asynchrone complet** qui traite les remises en arrière-plan pour optimiser les performances du checkout :
+
+#### 🔄 Workflow en 3 Phases
+
+1. **Marquage Synchrone** - Identification rapide des commandes avec parrainage (< 50ms)
+2. **Programmation Asynchrone** - Planification automatique lors de l'activation de l'abonnement filleul
+3. **Traitement Différé** - Calculs réels des remises via le système CRON WordPress
+
+#### 📊 Données Calculées en Temps Réel
+
+- **Remplacement des données mockées** par de vrais calculs basés sur les classes techniques v2.5.0
+- **Statuts de workflow visibles** : `CALCULÉ (v2.6.0)`, `EN COURS`, `PROGRAMMÉ`, `ERREUR`
+- **Monitoring complet** via les logs avec canal spécialisé `discount-processor`
+- **Gestion d'erreurs robuste** avec retry automatique (max 3 tentatives)
+
+#### ⚠️ Mode Simulation v2.6.0
+
+Les remises sont **calculées mais non appliquées** aux abonnements WooCommerce. Cette version permet de :
+
+- Valider le workflow complet en sécurité
+- Visualiser les calculs réels dans les interfaces
+- Tester la robustesse du système asynchrone
+
+### 💰 **v2.4.0** - Interfaces Mockées pour Remises Parrain
 
 - **Nouvelles colonnes admin** : "Remise Appliquée" et "Statut Remise" dans l'interface de parrainage
 - **Popups interactifs** : Détails complets des remises au survol des badges de statut
@@ -411,9 +436,15 @@ wc-tb-web-parrainage/
 │   ├── ParrainageDataProvider.php       # Fournisseur données admin
 │   ├── ParrainageExporter.php           # Export données
 │   ├── ParrainageValidator.php          # Validation données
-│   ├── MyAccountParrainageManager.php   # Gestionnaire onglet client (Nouveau v1.3.0)
-│   ├── MyAccountDataProvider.php        # Fournisseur données client (Nouveau v1.3.0)
-│   └── MyAccountAccessValidator.php     # Validateur accès client (Nouveau v1.3.0)
+│   ├── MyAccountParrainageManager.php   # Gestionnaire onglet client
+│   ├── MyAccountDataProvider.php        # Fournisseur données client
+│   ├── MyAccountAccessValidator.php     # Validateur accès client
+│   │   # NOUVEAU v2.5.0 : Classes techniques fondamentales
+│   ├── DiscountCalculator.php           # Calculs de remises
+│   ├── DiscountValidator.php            # Validation éligibilité
+│   ├── DiscountNotificationService.php  # Notifications remises
+│   │   # NOUVEAU v2.6.0 : Workflow asynchrone
+│   └── AutomaticDiscountProcessor.php   # Processeur workflow asynchrone
 ├── assets/
 │   ├── admin.css                        # Styles administration
 │   ├── admin.js                         # Scripts administration
@@ -424,6 +455,8 @@ wc-tb-web-parrainage/
 ```
 
 ### Hooks Disponibles
+
+#### Hooks de Configuration
 
 ```php
 // Personnaliser les messages de parrainage
@@ -437,6 +470,83 @@ function custom_parrainage_messages( $config ) {
     );
     return $config;
 }
+```
+
+#### Hooks Workflow Asynchrone v2.6.0
+
+```php
+// Hook après calcul d'une remise (simulation v2.6.0)
+add_action( 'tb_parrainage_discount_calculated', 'on_discount_calculated', 10, 2 );
+
+function on_discount_calculated( $order_id, $discount_results ) {
+    // Actions personnalisées après calcul réussi
+    error_log( "Remise calculée pour commande $order_id" );
+}
+
+// Hook en cas d'échec définitif de traitement
+add_action( 'tb_parrainage_processing_failed', 'on_processing_failed', 10, 2 );
+
+function on_processing_failed( $order_id, $error_message ) {
+    // Notification administrateur ou logging spécialisé
+    wp_mail( 'admin@site.com', 'Échec remise parrainage', $error_message );
+}
+
+// Hook en cas d'échec CRON
+add_action( 'tb_parrainage_cron_failure', 'on_cron_failure', 10, 2 );
+
+function on_cron_failure( $order_id, $subscription_id ) {
+    // Alerte problème de configuration serveur
+    error_log( "CRON WordPress défaillant - Vérifier configuration serveur" );
+}
+```
+
+#### Hooks de Retry et Monitoring
+
+```php
+// Hook avant retry automatique
+add_action( 'tb_parrainage_retry_discount', 'before_retry', 10, 4 );
+
+function before_retry( $order_id, $subscription_id, $attempt_number, $previous_error ) {
+    // Actions avant nouvelle tentative
+    if ( $attempt_number >= 2 ) {
+        // Alerter après 2ème échec
+        error_log( "2ème échec remise parrainage: $previous_error" );
+    }
+}
+
+// Hook après chargement des services techniques
+add_action( 'tb_parrainage_discount_services_loaded', 'on_services_loaded' );
+
+function on_services_loaded( $plugin_instance ) {
+    // Accès aux services de calcul après initialisation
+    $calculator = $plugin_instance->get_discount_calculator();
+    $validator = $plugin_instance->get_discount_validator();
+    $processor = $plugin_instance->get_automatic_discount_processor();
+}
+```
+
+#### Statuts de Workflow
+
+Le système v2.6.0 utilise ces statuts dans les métadonnées des commandes :
+
+- **`pending`** : Marqué pour traitement différé
+- **`scheduled`** : Programmé via CRON WordPress
+- **`calculated`** : Remise calculée avec succès (simulation)
+- **`error`** : Échec définitif après retry
+- **`cron_failed`** : Problème de programmation CRON
+
+#### Métadonnées Workflow
+
+```php
+// Accès aux métadonnées de workflow
+$order = wc_get_order( $order_id );
+
+$workflow_status = $order->get_meta( '_parrainage_workflow_status' );
+$marked_date = $order->get_meta( '_parrainage_marked_date' );
+$scheduled_time = $order->get_meta( '_parrainage_scheduled_time' );
+$calculation_date = $order->get_meta( '_tb_parrainage_calculated' );
+$calculated_discounts = $order->get_meta( '_parrainage_calculated_discounts' );
+$final_error = $order->get_meta( '_parrainage_final_error' );
 ```
 
 ### Classes Principales
@@ -557,6 +667,56 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.6.0 (06-08-25 à 15h36) - WORKFLOW ASYNCHRONE COMPLET
+
+**🔄 WORKFLOW ASYNCHRONE COMPLET**
+
+- **Nouveau** : Classe `AutomaticDiscountProcessor` pour orchestrer le workflow asynchrone en 3 phases
+- **Nouveau** : Marquage synchrone rapide des commandes avec parrainage (< 50ms au checkout)
+- **Nouveau** : Programmation asynchrone automatique lors de l'activation d'abonnement filleul
+- **Nouveau** : Traitement différé robuste avec calculs réels via CRON WordPress
+- **Nouveau** : Système de retry automatique (max 3 tentatives) avec délais progressifs
+- **Nouveau** : Gestion d'erreurs complète avec fallback CRON et alertes administrateur
+
+**📊 DONNÉES CALCULÉES EN TEMPS RÉEL**
+
+- **Amélioration** : Remplacement des données mockées par vrais calculs basés sur classes techniques v2.5.0
+- **Amélioration** : Intégration `DiscountCalculator`, `DiscountValidator` et `DiscountNotificationService`
+- **Nouveau** : Statuts de workflow visibles : `CALCULÉ (v2.6.0)`, `EN COURS`, `PROGRAMMÉ`, `ERREUR`
+- **Nouveau** : Fallback intelligent vers données mockées en cas d'erreur des services
+- **Nouveau** : Cache invalidation automatique pour transition données mockées → réelles
+
+**⚠️ MODE SIMULATION SÉCURISÉ**
+
+- **Important** : Les remises sont calculées mais NON appliquées aux abonnements (version test)
+- **Nouveau** : Messages d'avertissement dans interfaces admin et client "(Calculé v2.6.0)"
+- **Nouveau** : Métadonnées workflow complètes pour monitoring et debug
+- **Nouveau** : Hooks développeur pour extension et monitoring personnalisé
+
+**🔧 CONSTANTES ET CONFIGURATION**
+
+- **Nouveau** : `WC_TB_PARRAINAGE_ASYNC_DELAY` (300s) - Délai sécurité avant traitement
+- **Nouveau** : `WC_TB_PARRAINAGE_MAX_RETRY` (3) - Nombre maximum de tentatives
+- **Nouveau** : `WC_TB_PARRAINAGE_RETRY_DELAY` (600s) - Délai entre retry
+- **Nouveau** : `WC_TB_PARRAINAGE_QUEUE_HOOK` - Hook CRON personnalisé
+
+**📋 HOOKS DÉVELOPPEUR**
+
+- **Nouveau** : `tb_parrainage_discount_calculated` - Après calcul réussi
+- **Nouveau** : `tb_parrainage_processing_failed` - Échec définitif
+- **Nouveau** : `tb_parrainage_cron_failure` - Problème CRON détecté
+- **Nouveau** : `tb_parrainage_retry_discount` - Avant retry automatique
+- **Amélioration** : `tb_parrainage_discount_services_loaded` - Accès aux services
+
+**🏗️ ARCHITECTURE**
+
+- **Amélioration** : Séparation claire des responsabilités (SRP) avec classes spécialisées
+- **Amélioration** : Injection de dépendances pour tous les services techniques
+- **Amélioration** : Extensibilité via hooks WordPress (OCP)
+- **Amélioration** : Logging spécialisé avec canal `discount-processor`
+
+---
 
 ### Version 2.3.0 (26-07-25 à 12h39) - SUPPRESSION DOUBLONS
 
