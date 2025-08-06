@@ -16,9 +16,15 @@ class Plugin {
     private $parrainage_stats_manager;
     private $my_account_parrainage_manager;
     
+    // AJOUT v2.5.0 : Classes techniques fondamentales
+    private $discount_calculator;
+    private $discount_validator;
+    private $discount_notification_service;
+    
     public function __construct() {
         $this->logger = new Logger();
         $this->init_managers();
+        $this->load_discount_classes();
         $this->init_hooks();
     }
     
@@ -30,6 +36,16 @@ class Plugin {
         $this->coupon_manager = new CouponManager( $this->logger );
         $this->parrainage_stats_manager = new ParrainageStatsManager( $this->logger );
         $this->my_account_parrainage_manager = new MyAccountParrainageManager( $this->logger );
+    }
+    
+    /**
+     * NOUVEAU v2.5.0 : Chargement des classes techniques
+     * Chargement conditionnel des classes uniquement si nécessaire
+     */
+    private function load_discount_classes() {
+        $this->discount_calculator = new DiscountCalculator( $this->logger );
+        $this->discount_validator = new DiscountValidator( $this->logger );
+        $this->discount_notification_service = new DiscountNotificationService( $this->logger );
     }
     
     private function init_hooks() {
@@ -66,6 +82,9 @@ class Plugin {
         if ( ! empty( $settings['enable_parrainage'] ) ) {
             $this->my_account_parrainage_manager->init();
         }
+        
+        // NOUVEAU v2.5.0 : Hook pour l'initialisation des services techniques
+        add_action( 'init', array( $this, 'init_discount_services' ) );
         
         // Nettoyage automatique des logs
         add_action( 'wp_scheduled_delete', array( $this, 'cleanup_old_logs' ) );
@@ -697,5 +716,29 @@ class Plugin {
                 'frequence_paiement' => 'mensuel'
             )
         );
+    }
+    
+    /**
+     * NOUVEAU v2.5.0 : Initialisation des services de remise
+     */
+    public function init_discount_services() {
+        if ( $this->discount_calculator && $this->discount_validator ) {
+            do_action( 'tb_parrainage_discount_services_loaded', $this );
+        }
+    }
+    
+    /**
+     * NOUVEAU v2.5.0 : Getters pour l'accès aux services depuis l'extérieur
+     */
+    public function get_discount_calculator() {
+        return $this->discount_calculator;
+    }
+    
+    public function get_discount_validator() {
+        return $this->discount_validator;
+    }
+    
+    public function get_discount_notification_service() {
+        return $this->discount_notification_service;
     }
 } 

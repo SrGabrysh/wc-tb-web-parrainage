@@ -733,33 +733,32 @@
   overflow: visible;
 }
 
-/* POPUP PRINCIPAL - Positionnement corrigé */
 .discount-popup {
+  /* FOND BLANC OPAQUE - CRITIQUE */
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+
+  /* POSITIONNEMENT AU-DESSUS DE TOUT */
   position: absolute !important;
+  z-index: 999999 !important;
+
+  /* DIMENSIONS */
+  min-width: 300px !important;
+  max-width: 400px !important;
+  padding: 20px !important;
+
+  /* BORDURE ET OMBRE POUR DÉTACHER DU FOND */
+  border: 2px solid #0073aa !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+
+  /* POSITIONNEMENT */
+  top: 100% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin-top: 8px !important;
+
   display: none;
-  z-index: 999999 !important; /* CRITIQUE - Passer au-dessus de tout */
-  background: #ffffff !important; /* FOND 100% BLANC OPAQUE */
-  border: 3px solid #0073aa;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 5px 15px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  min-width: 350px;
-  max-width: 420px;
-
-  /* Positionnement intelligent */
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-top: 10px;
-
-  /* LISIBILITÉ 100% ASSURÉE */
-  color: #333 !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-  /* ISOLATION COMPLÈTE */
-  isolation: isolate;
-  contain: layout style paint;
 }
 
 /* Flèche vers le badge */
@@ -776,45 +775,42 @@
   border-bottom: 8px solid #0073aa;
 }
 
-/* CONTENU POPUP - Styling amélioré */
-.discount-details-content h4 {
-  margin: 0 0 20px 0;
-  color: #0073aa !important;
-  font-size: 18px;
-  font-weight: 700;
-  border-bottom: 3px solid #0073aa;
-  padding-bottom: 12px;
+.discount-details-content {
   background: #ffffff !important;
-  text-shadow: none !important;
+}
+
+.discount-details-content h4 {
+  background: #ffffff !important;
+  color: #0073aa !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  margin: 0 0 15px 0 !important;
+  padding-bottom: 8px !important;
+  border-bottom: 2px solid #0073aa !important;
 }
 
 .discount-details-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
   background: #ffffff !important;
-  border-radius: 6px;
-  border: 1px solid #e1e1e1;
-  overflow: hidden;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 14px !important;
+}
+
+.discount-details-table th,
+.discount-details-table td {
+  background: #ffffff !important;
+  padding: 8px 4px !important;
+  color: #333 !important;
 }
 
 .discount-details-table th {
-  text-align: left;
-  padding: 12px 15px 12px 0;
-  font-weight: 700;
-  color: #222 !important;
-  border-bottom: 2px solid #0073aa;
-  background: #f8f9fa !important;
-  font-size: 14px;
+  font-weight: bold !important;
+  border-bottom: 1px solid #ddd !important;
 }
 
 .discount-details-table td {
-  padding: 12px 0;
-  font-weight: 700;
+  font-weight: bold !important;
   color: #46b450 !important;
-  border-bottom: 1px solid #e9ecef;
-  background: #ffffff !important;
-  font-size: 15px;
 }
 
 /* SÉCURITÉ - Empêcher débordements */

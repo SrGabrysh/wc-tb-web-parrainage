@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WC TB-Web Parrainage
  * Description: Plugin de parrainage WooCommerce avec webhooks enrichis - Gestion des codes parrain au checkout, calcul automatique des dates de fin de remise parrainage, masquage conditionnel des codes promo et ajout des métadonnées d'abonnement dans les webhooks.
- * Version: 1.0.18
+ * Version: 2.5.5
  * Author: TB-Web
  * Text Domain: wc-tb-web-parrainage
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Constantes
-define( 'WC_TB_PARRAINAGE_VERSION', '2.4.0' );
+define( 'WC_TB_PARRAINAGE_VERSION', '2.5.5' );
 define( 'WC_TB_PARRAINAGE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WC_TB_PARRAINAGE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -39,6 +39,12 @@ define( 'WC_TB_PARRAINAGE_LIMIT_DISPLAY', 10 );
 define( 'WC_TB_PARRAINAGE_INVITATION_URL', 'https://tb-web.fr/parrainage/' );
 define( 'WC_TB_PARRAINAGE_CACHE_USER_DATA', 300 );
 define( 'WC_TB_PARRAINAGE_EMAIL_MASK_CHAR', '*' );
+
+// AJOUT : Nouvelles constantes pour les classes techniques v2.5.0
+define( 'WC_TB_PARRAINAGE_DISCOUNT_PRECISION', 2 ); // Précision décimale pour les calculs
+define( 'WC_TB_PARRAINAGE_MIN_SUBSCRIPTION_AMOUNT', 1.00 ); // Montant minimum d'abonnement
+define( 'WC_TB_PARRAINAGE_DEFAULT_DISCOUNT_RATE', 0.0 ); // Taux par défaut si non configuré
+define( 'WC_TB_PARRAINAGE_MAX_DISCOUNT_RATE', 0.5 ); // Limite maximum 50% de remise
 
 // Autoload Composer
 require_once WC_TB_PARRAINAGE_PATH . 'vendor/autoload.php';
