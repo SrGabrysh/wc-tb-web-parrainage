@@ -780,4 +780,37 @@ class Plugin {
             'recommendations' => array( 'Vérifier l\'initialisation du plugin' )
         );
     }
+    
+    /**
+     * NOUVEAU v2.6.0 : Rapport de santé complet du système
+     * 
+     * @return array Rapport détaillé avec métriques et statuts
+     */
+    public function get_system_health_report() {
+        $report = array(
+            'plugin_version' => WC_TB_PARRAINAGE_VERSION,
+            'workflow_status' => $this->get_workflow_health_status(),
+            'services_status' => array(
+                'discount_calculator' => $this->discount_calculator ? 'loaded' : 'missing',
+                'discount_validator' => $this->discount_validator ? 'loaded' : 'missing',
+                'notification_service' => $this->discount_notification_service ? 'loaded' : 'missing',
+                'automatic_processor' => $this->automatic_discount_processor ? 'loaded' : 'missing'
+            ),
+            'configuration' => array(
+                'async_delay' => WC_TB_PARRAINAGE_ASYNC_DELAY,
+                'max_retry' => WC_TB_PARRAINAGE_MAX_RETRY,
+                'retry_delay' => WC_TB_PARRAINAGE_RETRY_DELAY,
+                'queue_hook' => WC_TB_PARRAINAGE_QUEUE_HOOK
+            ),
+            'environment' => array(
+                'wordpress_version' => get_bloginfo( 'version' ),
+                'woocommerce_active' => class_exists( 'WooCommerce' ),
+                'subscriptions_active' => class_exists( 'WC_Subscriptions' ),
+                'cron_enabled' => ! ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON )
+            ),
+            'timestamp' => current_time( 'mysql' )
+        );
+        
+        return $report;
+    }
 } 

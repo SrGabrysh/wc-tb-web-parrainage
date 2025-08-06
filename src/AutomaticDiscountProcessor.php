@@ -268,7 +268,7 @@ class AutomaticDiscountProcessor {
             }
             
             if ( empty( $eligible_products ) ) {
-                throw new Exception( 'Aucun produit éligible pour remise parrain' );
+                throw new InvalidArgumentException( 'Aucun produit éligible pour remise parrain' );
             }
             
             // Calculs réels des remises
@@ -314,7 +314,7 @@ class AutomaticDiscountProcessor {
                 // Notification optionnelle
                 do_action( 'tb_parrainage_discount_calculated', $order_id, $discount_results );
             } else {
-                throw new Exception( 'Échec des calculs de remise' );
+                throw new RuntimeException( 'Échec des calculs de remise' );
             }
             
         } catch ( Exception $e ) {

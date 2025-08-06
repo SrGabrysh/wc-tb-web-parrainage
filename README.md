@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.6.1
+**Version:** 2.6.2
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -62,6 +62,34 @@ Les remises sont **calculées mais non appliquées** aux abonnements WooCommerce
 - Valider le workflow complet en sécurité
 - Visualiser les calculs réels dans les interfaces
 - Tester la robustesse du système asynchrone
+
+#### 🔧 Activation et Vérification du Workflow
+
+**Prérequis obligatoires :**
+
+1. **CRON WordPress activé** : Vérifier que `DISABLE_WP_CRON` n'est pas défini ou = `false`
+2. **WooCommerce Subscriptions** : Plugin actif et fonctionnel
+3. **Parrainage activé** : Dans Réglages > TB-Web Parrainage > Paramètres
+
+**Vérification du workflow :**
+
+```php
+// Via code PHP - Vérifier la santé du système
+global $wc_tb_parrainage_plugin;
+$health_status = $wc_tb_parrainage_plugin->get_workflow_health_status();
+var_dump( $health_status );
+
+// Logs à surveiller
+// Canal 'discount-processor' dans Réglages > TB-Web Parrainage > Logs
+```
+
+**Test du workflow complet :**
+
+1. Créer une commande avec code parrain valide
+2. Activer l'abonnement filleul correspondant
+3. Attendre 5 minutes (délai de sécurité)
+4. Vérifier les logs pour "Remise parrainage calculée avec succès"
+5. Contrôler les statuts dans les interfaces admin/client
 
 ### 💰 **v2.4.0** - Interfaces Mockées pour Remises Parrain
 
