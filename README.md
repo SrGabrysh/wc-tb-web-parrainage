@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.6.3
+**Version:** 2.6.4
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -104,6 +104,42 @@ print_r( $diagnostic['workflow_statistics'] );
 3. Attendre 5 minutes (délai de sécurité)
 4. Vérifier les logs pour "Remise parrainage calculée avec succès"
 5. Contrôler les statuts dans les interfaces admin/client
+
+#### 🧪 Tests de Validation Recommandés
+
+**Test de Conformité :**
+
+```php
+// Validation complète du système
+global $wc_tb_parrainage_plugin;
+$validation = $wc_tb_parrainage_plugin->validate_system_readiness();
+
+if ( $validation['is_ready'] ) {
+    echo "✅ Système validé - Prêt pour tests\n";
+
+    // Générer rapport de diagnostic
+    $report = $wc_tb_parrainage_plugin->generate_diagnostic_report();
+    echo "📊 Commandes traitées 24h: " . $report['workflow_statistics']['processed_24h'] . "\n";
+
+} else {
+    echo "❌ Problèmes détectés:\n";
+    foreach ( $validation['errors'] as $error ) {
+        echo "- " . $error . "\n";
+    }
+
+    echo "\n💡 Recommandations:\n";
+    foreach ( $validation['recommendations'] as $rec ) {
+        echo "- " . $rec . "\n";
+    }
+}
+```
+
+**Tests de Robustesse :**
+
+1. **Test avec code parrain invalide** : Vérifier les logs d'erreur
+2. **Test sans WooCommerce Subscriptions** : Valider les alertes système
+3. **Test avec CRON désactivé** : Contrôler les recommandations
+4. **Test de charge** : 50+ commandes simultanées avec codes parrain
 
 ### 💰 **v2.4.0** - Interfaces Mockées pour Remises Parrain
 
@@ -709,6 +745,44 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.6.4 (08-01-26 à 14h22) - DIAGNOSTIC SYSTÈME COMPLET
+
+**🔍 SYSTÈME DE DIAGNOSTIC AVANCÉ**
+
+- **Nouveau** : Méthode `validate_system_readiness()` pour validation automatique des prérequis
+- **Nouveau** : Fonction `generate_diagnostic_report()` avec métriques complètes de performance
+- **Nouveau** : Statistiques workflow par statut et période (dernières 24h)
+- **Nouveau** : Validation automatique des dépendances (WordPress, WooCommerce, Subscriptions, CRON)
+- **Nouveau** : Rapport de santé en temps réel avec recommandations spécifiques
+
+**🛠️ OUTILS DE MONITORING**
+
+- **Amélioration** : Documentation README enrichie avec exemples de code de diagnostic
+- **Amélioration** : Interface de validation système accessible via `$wc_tb_parrainage_plugin->validate_system_readiness()`
+- **Nouveau** : Détection automatique des problèmes de configuration avec solutions
+- **Nouveau** : Métriques de performance intégrées (commandes traitées, statuts, échecs)
+
+**🔧 CORRECTIFS ET OPTIMISATIONS**
+
+- **Correction** : Harmonisation complète du versioning sur toute la codebase
+- **Amélioration** : Documentation inline PHPDoc complétée pour toutes les méthodes
+- **Amélioration** : Gestion d'exceptions standardisée (`InvalidArgumentException`, `RuntimeException`)
+- **Amélioration** : Messages d'erreur plus précis avec contexte enrichi
+
+**📊 NOUVEAUX OUTILS POUR DÉVELOPPEURS**
+
+```php
+// Validation système automatique
+global $wc_tb_parrainage_plugin;
+$readiness = $wc_tb_parrainage_plugin->validate_system_readiness();
+
+// Rapport diagnostic complet
+$diagnostic = $wc_tb_parrainage_plugin->generate_diagnostic_report();
+echo "Statistiques: " . print_r($diagnostic['workflow_statistics'], true);
+```
+
+---
 
 ### Version 2.6.0 (06-08-25 à 15h36) - WORKFLOW ASYNCHRONE COMPLET
 
