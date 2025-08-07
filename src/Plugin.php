@@ -813,4 +813,38 @@ class Plugin {
         
         return $report;
     }
+    
+    /**
+     * NOUVEAU v2.6.0 : Validation de l'état de préparation du système
+     * 
+     * @return array Résultat de validation avec recommandations
+     */
+    public function validate_system_readiness() {
+        if ( $this->automatic_discount_processor ) {
+            return $this->automatic_discount_processor->validate_system_readiness();
+        }
+        
+        return array(
+            'is_ready' => false,
+            'errors' => array( 'Processeur automatique non initialisé' ),
+            'recommendations' => array( 'Vérifier l\'initialisation du plugin' )
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Génération d'un rapport de diagnostic complet
+     * 
+     * @return array Rapport détaillé pour audit et debug
+     */
+    public function generate_diagnostic_report() {
+        if ( $this->automatic_discount_processor ) {
+            return $this->automatic_discount_processor->generate_diagnostic_report();
+        }
+        
+        return array(
+            'error' => 'Processeur automatique non initialisé',
+            'timestamp' => current_time( 'mysql' ),
+            'version' => WC_TB_PARRAINAGE_VERSION
+        );
+    }
 } 

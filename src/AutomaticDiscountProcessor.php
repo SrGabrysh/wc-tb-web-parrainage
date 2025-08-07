@@ -595,4 +595,118 @@ class AutomaticDiscountProcessor {
             'discount-processor'
         );
     }
+    
+    /**
+     * NOUVEAU v2.6.0 : Validation complète du système pour tests
+     * 
+     * @return array Résultat de validation avec recommandations
+     */
+    public function validate_system_readiness() {
+        $validation_result = array(
+            'is_ready' => true,
+            'checks' => array(),
+            'errors' => array(),
+            'warnings' => array(),
+            'recommendations' => array()
+        );
+        
+        // Vérification des services WordPress
+        $validation_result['checks']['wordpress'] = get_bloginfo( 'version' );
+        $validation_result['checks']['woocommerce'] = class_exists( 'WooCommerce' );
+        $validation_result['checks']['subscriptions'] = class_exists( 'WC_Subscriptions' );
+        $validation_result['checks']['cron_enabled'] = ! ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON );
+        
+        // Vérification des services techniques
+        $validation_result['checks']['calculator_loaded'] = ! is_null( $this->discount_calculator );
+        $validation_result['checks']['validator_loaded'] = ! is_null( $this->discount_validator );
+        $validation_result['checks']['notification_loaded'] = ! is_null( $this->notification_service );
+        
+        // Analyse des erreurs critiques
+        if ( ! $validation_result['checks']['woocommerce'] ) {
+            $validation_result['errors'][] = 'WooCommerce non activé';
+            $validation_result['is_ready'] = false;
+        }
+        
+        if ( ! $validation_result['checks']['subscriptions'] ) {
+            $validation_result['errors'][] = 'WooCommerce Subscriptions non activé';
+            $validation_result['is_ready'] = false;
+        }
+        
+        if ( ! $validation_result['checks']['cron_enabled'] ) {
+            $validation_result['warnings'][] = 'CRON WordPress désactivé - Le workflow asynchrone ne fonctionnera pas';
+            $validation_result['recommendations'][] = 'Activer WP_CRON ou configurer un CRON serveur';
+        }
+        
+        // Vérification de la santé CRON
+        $cron_health = $this->check_cron_health();
+        if ( isset( $cron_health['failed_orders'] ) && $cron_health['failed_orders'] > 0 ) {
+            $validation_result['warnings'][] = sprintf( 
+                '%d commandes en échec nécessitent une intervention', 
+                $cron_health['failed_orders'] 
+            );
+        }
+        
+        // Recommandations générales
+        if ( $validation_result['is_ready'] ) {
+            $validation_result['recommendations'][] = 'Système prêt - Tester avec une commande de test';
+            $validation_result['recommendations'][] = 'Surveiller les logs canal "discount-processor"';
+        }
+        
+        return $validation_result;
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Génération d'un rapport de diagnostic complet
+     * 
+     * @return array Rapport détaillé pour audit et debug
+     */
+    public function generate_diagnostic_report() {
+        return array(
+            'timestamp' => current_time( 'mysql' ),
+            'version' => WC_TB_PARRAINAGE_VERSION,
+            'system_validation' => $this->validate_system_readiness(),
+            'cron_health' => $this->check_cron_health(),
+            'workflow_statistics' => $this->get_workflow_statistics(),
+            'configuration' => array(
+                'async_delay' => WC_TB_PARRAINAGE_ASYNC_DELAY . ' seconds',
+                'max_retry' => WC_TB_PARRAINAGE_MAX_RETRY,
+                'retry_delay' => WC_TB_PARRAINAGE_RETRY_DELAY . ' seconds',
+                'queue_hook' => WC_TB_PARRAINAGE_QUEUE_HOOK
+            )
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.6.0 : Statistiques du workflow pour monitoring
+     * 
+     * @return array Métriques de performance du workflow
+     */
+    private function get_workflow_statistics() {
+        global $wpdb;
+        
+        $stats = array();
+        
+        // Comptage par statut de workflow
+        $status_counts = $wpdb->get_results( $wpdb->prepare( "
+            SELECT meta_value as status, COUNT(*) as count
+            FROM {$wpdb->postmeta}
+            WHERE meta_key = %s
+            GROUP BY meta_value
+        ", '_parrainage_workflow_status' ), ARRAY_A );
+        
+        foreach ( $status_counts as $status_count ) {
+            $stats['by_status'][ $status_count['status'] ] = intval( $status_count['count'] );
+        }
+        
+        // Commandes traitées dans les dernières 24h
+        $stats['processed_24h'] = $wpdb->get_var( $wpdb->prepare( "
+            SELECT COUNT(*)
+            FROM {$wpdb->postmeta} pm
+            INNER JOIN {$wpdb->posts} p ON pm.post_id = p.ID
+            WHERE pm.meta_key = %s
+            AND p.post_date > %s
+        ", '_tb_parrainage_calculated', date( 'Y-m-d H:i:s', time() - 86400 ) ) );
+        
+        return $stats;
+    }
 }

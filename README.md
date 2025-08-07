@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.6.2
+**Version:** 2.6.3
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -76,8 +76,22 @@ Les remises sont **calculées mais non appliquées** aux abonnements WooCommerce
 ```php
 // Via code PHP - Vérifier la santé du système
 global $wc_tb_parrainage_plugin;
-$health_status = $wc_tb_parrainage_plugin->get_workflow_health_status();
-var_dump( $health_status );
+
+// Validation de l'état de préparation
+$readiness = $wc_tb_parrainage_plugin->validate_system_readiness();
+if ( $readiness['is_ready'] ) {
+    echo "✅ Système prêt pour le workflow asynchrone\n";
+} else {
+    echo "❌ Erreurs détectées:\n";
+    foreach ( $readiness['errors'] as $error ) {
+        echo "- $error\n";
+    }
+}
+
+// Rapport de diagnostic complet
+$diagnostic = $wc_tb_parrainage_plugin->generate_diagnostic_report();
+echo "📊 Statistiques workflow:\n";
+print_r( $diagnostic['workflow_statistics'] );
 
 // Logs à surveiller
 // Canal 'discount-processor' dans Réglages > TB-Web Parrainage > Logs
