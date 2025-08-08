@@ -719,7 +719,14 @@ class MyAccountDataProvider {
      */
     private function get_workflow_status_label_client( $status ) {
         $labels = array(
+            // NOUVEAU v2.7.0 : Labels pour application réelle côté client
+            'applied' => 'Remise active',
+            'application_failed' => 'Échec activation',
+            'active' => 'Remise en cours',
+            
+            // Labels existants conservés
             'calculated' => 'Calculé (Test v2.6.0)',
+            'simulated' => 'Simulé (Test v2.6.0)',
             'pending' => 'En cours de calcul',
             'scheduled' => 'Programmé',
             'error' => 'Erreur de calcul',

@@ -24,7 +24,7 @@ class Plugin {
     // AJOUT v2.6.0 : Processeur automatique de workflow asynchrone
     private $automatic_discount_processor;
     
-    // AJOUT v2.7.0 : Gestionnaire d'application des remises
+    // AJOUT v2.7.0 : Gestionnaire d'application réelle des remises
     private $subscription_discount_manager;
     
     public function __construct() {
@@ -53,24 +53,13 @@ class Plugin {
         $this->discount_validator = new DiscountValidator( $this->logger );
         $this->discount_notification_service = new DiscountNotificationService( $this->logger );
         
-        // NOUVEAU v2.7.1 : Gestionnaire d'application réelle des remises
-        $this->subscription_discount_manager = new SubscriptionDiscountManager(
-            $this->logger,
-            $this->discount_notification_service
-        );
-        
-        // NOUVEAU v2.7.1 : Processeur avec injection du gestionnaire
+        // NOUVEAU v2.6.0 : Chargement du processeur de workflow asynchrone
         $this->automatic_discount_processor = new AutomaticDiscountProcessor( 
             $this->logger, 
             $this->discount_calculator, 
             $this->discount_validator, 
             $this->discount_notification_service 
         );
-        
-        // Injecter le gestionnaire au processeur si setter disponible (compat v2.7.1)
-        if ( method_exists( $this->automatic_discount_processor, 'set_subscription_discount_manager' ) ) {
-            $this->automatic_discount_processor->set_subscription_discount_manager( $this->subscription_discount_manager );
-        }
     }
     
     private function init_hooks() {
@@ -113,9 +102,6 @@ class Plugin {
         
         // Nettoyage automatique des logs
         add_action( 'wp_scheduled_delete', array( $this, 'cleanup_old_logs' ) );
-
-        // NOUVEAU v2.7.1 : Hook quotidien pour retrait des remises expirées
-        add_action( WC_TB_PARRAINAGE_DAILY_CHECK_HOOK, array( $this, 'handle_daily_discount_check' ) );
     }
     
     public function add_admin_menu() {
@@ -405,15 +391,6 @@ class Plugin {
         $retention_days = $settings['log_retention_days'] ?? 30;
         
         $this->logger->cleanup_old_logs( $retention_days );
-    }
-
-    /**
-     * NOUVEAU v2.7.1 : Gestion du CRON quotidien pour remises expirées
-     */
-    public function handle_daily_discount_check() {
-        if ( $this->subscription_discount_manager ) {
-            $this->subscription_discount_manager->check_expired_discounts();
-        }
     }
     
     private function render_products_tab() {

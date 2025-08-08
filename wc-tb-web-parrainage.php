@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WC TB-Web Parrainage
  * Description: Plugin de parrainage WooCommerce avec webhooks enrichis - Gestion des codes parrain au checkout, calcul automatique des dates de fin de remise parrainage, masquage conditionnel des codes promo et ajout des métadonnées d'abonnement dans les webhooks.
- * Version: 2.6.4
+ * Version: 2.7.1
  * Author: TB-Web
  * Text Domain: wc-tb-web-parrainage
  * Domain Path: /languages
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Constantes
-define( 'WC_TB_PARRAINAGE_VERSION', '2.6.4' );
+define( 'WC_TB_PARRAINAGE_VERSION', '2.7.1' );
 define( 'WC_TB_PARRAINAGE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WC_TB_PARRAINAGE_URL', plugin_dir_url( __FILE__ ) );
 
@@ -51,6 +51,24 @@ define( 'WC_TB_PARRAINAGE_ASYNC_DELAY', 300 ); // 5 minutes de délai sécurité
 define( 'WC_TB_PARRAINAGE_MAX_RETRY', 3 ); // Nombre maximum de tentatives
 define( 'WC_TB_PARRAINAGE_RETRY_DELAY', 600 ); // Délai entre retry (10 minutes)
 define( 'WC_TB_PARRAINAGE_QUEUE_HOOK', 'tb_parrainage_process_discount' ); // Hook CRON personnalisé
+
+// AJOUT v2.7.1 : Constantes d'activation application réelle et hooks complémentaires
+if ( ! defined( 'WC_TB_PARRAINAGE_SIMULATION_MODE' ) ) {
+    // false = mode PRODUCTION (application réelle)
+    define( 'WC_TB_PARRAINAGE_SIMULATION_MODE', false );
+}
+if ( ! defined( 'WC_TB_PARRAINAGE_DISCOUNT_DURATION' ) ) {
+    define( 'WC_TB_PARRAINAGE_DISCOUNT_DURATION', 12 ); // 12 mois
+}
+if ( ! defined( 'WC_TB_PARRAINAGE_DISCOUNT_GRACE_PERIOD' ) ) {
+    define( 'WC_TB_PARRAINAGE_DISCOUNT_GRACE_PERIOD', 2 ); // 2 jours
+}
+if ( ! defined( 'WC_TB_PARRAINAGE_END_DISCOUNT_HOOK' ) ) {
+    define( 'WC_TB_PARRAINAGE_END_DISCOUNT_HOOK', 'tb_parrainage_end_discount' );
+}
+if ( ! defined( 'WC_TB_PARRAINAGE_DAILY_CHECK_HOOK' ) ) {
+    define( 'WC_TB_PARRAINAGE_DAILY_CHECK_HOOK', 'tb_parrainage_daily_check' );
+}
 
 // Autoload Composer
 require_once WC_TB_PARRAINAGE_PATH . 'vendor/autoload.php';
@@ -89,11 +107,18 @@ function wc_tb_parrainage_activate() {
     
     // Flush les permaliens APRÈS l'ajout de l'endpoint
     flush_rewrite_rules();
+
+    // Planifier la vérification quotidienne des remises expirées
+    if ( ! wp_next_scheduled( WC_TB_PARRAINAGE_DAILY_CHECK_HOOK ) ) {
+        wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', WC_TB_PARRAINAGE_DAILY_CHECK_HOOK );
+    }
 }
 
 // Désactivation
 function wc_tb_parrainage_deactivate() {
     flush_rewrite_rules();
+    // Nettoyer les événements planifiés
+    wp_clear_scheduled_hook( WC_TB_PARRAINAGE_DAILY_CHECK_HOOK );
 }
 
 // Initialisation

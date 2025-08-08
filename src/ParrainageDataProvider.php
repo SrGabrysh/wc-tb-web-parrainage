@@ -628,10 +628,16 @@ class ParrainageDataProvider {
      */
     private function get_workflow_status_label( $status ) {
         $labels = array(
+            // NOUVEAU v2.7.0 : Statuts application réelle
+            'applied' => 'ACTIVE',
+            'application_failed' => 'ÉCHEC APPLICATION',
+            'active' => 'REMISE ACTIVE',
+            
+            // Statuts existants conservés pour rétrocompatibilité
             'calculated' => 'CALCULÉ (v2.6.0)',
+            'simulated' => 'SIMULÉ (v2.6.0)',
             'pending' => 'EN COURS',
             'scheduled' => 'PROGRAMMÉ',
-            'simulated' => 'SIMULÉ',
             'error' => 'ERREUR',
             'cron_failed' => 'CRON DÉFAILLANT'
         );

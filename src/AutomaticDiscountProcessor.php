@@ -42,6 +42,12 @@ class AutomaticDiscountProcessor {
     private $notification_service;
     
     /**
+     * NOUVEAU v2.7.0 : Gestionnaire d'application des remises
+     * @var SubscriptionDiscountManager|null
+     */
+    private $subscription_discount_manager = null;
+    
+    /**
      * Statuts de workflow supportés
      * @var array
      */
@@ -49,6 +55,10 @@ class AutomaticDiscountProcessor {
         'pending',
         'calculated', 
         'simulated',
+        // v2.7.x
+        'applied',
+        'application_failed',
+        'active',
         'error',
         'retry'
     );
@@ -72,6 +82,13 @@ class AutomaticDiscountProcessor {
         $this->discount_validator = $discount_validator;
         $this->notification_service = $notification_service;
     }
+
+    /**
+     * v2.7.1: injection du gestionnaire d'application réelle des remises
+     */
+    public function set_subscription_discount_manager( SubscriptionDiscountManager $manager ) {
+        $this->subscription_discount_manager = $manager;
+    }
     
     /**
      * Initialise le workflow asynchrone avec hooks WordPress
@@ -87,6 +104,9 @@ class AutomaticDiscountProcessor {
         
         // PHASE 3 : Traitement différé via hook CRON personnalisé
         add_action( WC_TB_PARRAINAGE_QUEUE_HOOK, array( $this, 'process_parrain_discount_async' ), 10, 3 );
+        
+        // v2.7.1 : Fin de remise programmée
+        add_action( WC_TB_PARRAINAGE_END_DISCOUNT_HOOK, array( $this, 'end_parrain_discount' ), 10, 2 );
         
         // Gestion des retry automatiques
         add_action( 'tb_parrainage_retry_discount', array( $this, 'retry_failed_discount' ), 10, 4 );
@@ -289,30 +309,50 @@ class AutomaticDiscountProcessor {
             }
             
             if ( ! empty( $discount_results ) ) {
-                // Stockage des résultats calculés (simulation uniquement en v2.6.0)
-                $this->store_calculated_discount_results( $order, $discount_results );
+                // v2.7.1 : bascule selon mode simulation/production
+                $simulation_mode = defined( 'WC_TB_PARRAINAGE_SIMULATION_MODE' ) ? WC_TB_PARRAINAGE_SIMULATION_MODE : true;
+                $status = 'calculated';
                 
-                // Mise à jour du statut workflow
-                $order->update_meta_data( '_parrainage_workflow_status', 'calculated' );
-                $order->update_meta_data( '_tb_parrainage_calculated', current_time( 'mysql' ) );
+                if ( $simulation_mode !== false ) {
+                    // Mode simulation (comportement v2.6.0)
+                    $this->store_calculated_discount_results( $order, $discount_results );
+                    $order->update_meta_data( '_tb_parrainage_calculated', current_time( 'mysql' ) );
+                    $status = 'simulated';
+                } else {
+                    // Application réelle requiert le gestionnaire
+                    if ( ! $this->subscription_discount_manager ) {
+                        throw new \RuntimeException( 'SubscriptionDiscountManager non disponible' );
+                    }
+                    $application_result = $this->subscription_discount_manager->apply_discount(
+                        $parrain_subscription_id,
+                        $discount_results[0],
+                        $filleul_subscription_id,
+                        $order_id
+                    );
+                    if ( ! empty( $application_result['success'] ) ) {
+                        // Programmer la fin de remise
+                        $months = defined( 'WC_TB_PARRAINAGE_DISCOUNT_DURATION' ) ? WC_TB_PARRAINAGE_DISCOUNT_DURATION : 12;
+                        $grace = defined( 'WC_TB_PARRAINAGE_DISCOUNT_GRACE_PERIOD' ) ? WC_TB_PARRAINAGE_DISCOUNT_GRACE_PERIOD : 2;
+                        $end_time = strtotime( "+{$months} months +{$grace} days" );
+                        wp_schedule_single_event( $end_time, WC_TB_PARRAINAGE_END_DISCOUNT_HOOK, array( $parrain_subscription_id, $filleul_subscription_id ) );
+                        $order->update_meta_data( '_tb_parrainage_applied', current_time( 'mysql' ) );
+                        $order->update_meta_data( '_tb_parrainage_end_scheduled', date( 'Y-m-d H:i:s', $end_time ) );
+                        $status = 'applied';
+                    } else {
+                        $status = 'application_failed';
+                        $order->update_meta_data( '_tb_parrainage_application_error', $application_result['error'] ?? 'unknown' );
+                    }
+                }
+                
+                // Mise à jour statut workflow
+                $order->update_meta_data( '_parrainage_workflow_status', $status );
                 $order->save();
                 
-                // Nettoyage automatique des métadonnées temporaires
+                // Nettoyage métadonnées temporaires
                 $this->cleanup_temporary_metadata( $order );
                 
-                $this->logger->info(
-                    'Remise parrainage calculée avec succès (simulation v2.6.0)',
-                    array(
-                        'order_id' => $order_id,
-                        'parrain_subscription_id' => $parrain_subscription_id,
-                        'discount_results' => $discount_results,
-                        'attempt' => $attempt_number
-                    ),
-                    'discount-processor'
-                );
-                
                 // Notification optionnelle
-                do_action( 'tb_parrainage_discount_calculated', $order_id, $discount_results );
+                do_action( 'tb_parrainage_discount_processed', $order_id, $discount_results, $status );
             } else {
                 throw new RuntimeException( 'Échec des calculs de remise' );
             }
@@ -320,6 +360,24 @@ class AutomaticDiscountProcessor {
         } catch ( Exception $e ) {
             $this->handle_processing_error( $order_id, $filleul_subscription_id, $attempt_number, $e );
         }
+    }
+
+    /**
+     * v2.7.1 : Fin de la remise programmée
+     */
+    public function end_parrain_discount( $parrain_subscription_id, $filleul_subscription_id ) {
+        if ( ! $this->subscription_discount_manager ) {
+            $this->logger->error(
+                'Fin remise: SubscriptionDiscountManager non disponible',
+                array(
+                    'parrain_subscription' => $parrain_subscription_id,
+                    'filleul_subscription' => $filleul_subscription_id
+                ),
+                'discount-processor'
+            );
+            return;
+        }
+        $this->subscription_discount_manager->remove_discount( $parrain_subscription_id, $filleul_subscription_id );
     }
     
     /**
