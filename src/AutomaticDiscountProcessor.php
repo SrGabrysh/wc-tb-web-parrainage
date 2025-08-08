@@ -162,7 +162,7 @@ class AutomaticDiscountProcessor {
                 }
             }
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Erreur lors du marquage de commande parrainage',
                 array(
@@ -226,7 +226,7 @@ class AutomaticDiscountProcessor {
                 }
             }
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Erreur lors de la programmation de remise asynchrone',
                 array(
@@ -288,7 +288,7 @@ class AutomaticDiscountProcessor {
             }
             
             if ( empty( $eligible_products ) ) {
-                throw new InvalidArgumentException( 'Aucun produit éligible pour remise parrain' );
+                throw new \InvalidArgumentException( 'Aucun produit éligible pour remise parrain' );
             }
             
             // Calculs réels des remises
@@ -346,6 +346,7 @@ class AutomaticDiscountProcessor {
                 
                 // Mise à jour statut workflow
                 $order->update_meta_data( '_parrainage_workflow_status', $status );
+                $order->update_meta_data( '_tb_parrainage_processed', current_time( 'mysql' ) );
                 $order->save();
                 
                 // Nettoyage métadonnées temporaires
@@ -354,10 +355,10 @@ class AutomaticDiscountProcessor {
                 // Notification optionnelle
                 do_action( 'tb_parrainage_discount_processed', $order_id, $discount_results, $status );
             } else {
-                throw new RuntimeException( 'Échec des calculs de remise' );
+                throw new \RuntimeException( 'Échec des calculs de remise' );
             }
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->handle_processing_error( $order_id, $filleul_subscription_id, $attempt_number, $e );
         }
     }
@@ -429,13 +430,15 @@ class AutomaticDiscountProcessor {
         
         // Vérification anti-doublon
         $order = wc_get_order( $order_id );
-        if ( $order && $order->get_meta( '_tb_parrainage_calculated' ) ) {
-            $this->logger->info(
-                'Remise déjà calculée - abandon traitement',
-                array( 'order_id' => $order_id ),
-                'discount-processor'
-            );
-            return false;
+        if ( $order ) {
+            if ( $order->get_meta( '_tb_parrainage_processed' ) || $order->get_meta( '_tb_parrainage_calculated' ) || $order->get_meta( '_tb_parrainage_applied' ) ) {
+                $this->logger->info(
+                    'Remise déjà traitée - abandon traitement',
+                    array( 'order_id' => $order_id ),
+                    'discount-processor'
+                );
+                return false;
+            }
         }
         
         return true;
@@ -763,7 +766,7 @@ class AutomaticDiscountProcessor {
             INNER JOIN {$wpdb->posts} p ON pm.post_id = p.ID
             WHERE pm.meta_key = %s
             AND p.post_date > %s
-        ", '_tb_parrainage_calculated', date( 'Y-m-d H:i:s', time() - 86400 ) ) );
+        ", '_tb_parrainage_processed', date( 'Y-m-d H:i:s', time() - 86400 ) ) );
         
         return $stats;
     }
