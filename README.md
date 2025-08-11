@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.7.2
+**Version:** 2.7.3
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -745,6 +745,31 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.7.3 (2026-01-08) - APPLICATION RÉELLE STABILISÉE
+
+**🎯 MISE EN PRODUCTION DU MODE RÉEL**
+
+- Activation par défaut du mode production: `WC_TB_PARRAINAGE_SIMULATION_MODE = false`
+- Application réelle des remises via `SubscriptionDiscountManager`
+- Programmation automatique de fin de remise (12 mois + 2 jours de grâce)
+- Vérification quotidienne des remises expirées via CRON et retrait automatique
+
+**🛡️ ROBUSTESSE ET SÉCURITÉ**
+
+- Verrouillage anti‑doublon (transient) lors de l'application d'une remise
+- Validation stricte de l'abonnement parrain (doit être actif)
+- Qualification des exceptions dans l'espace de noms (`\InvalidArgumentException`, `\RuntimeException`, `\Exception`)
+- Condition du mode simulation clarifiée (`if ($simulation_mode === true)`)
+
+**🧪 TESTS ET DIAGNOSTIC**
+
+- Logs enrichis `subscription-discount-manager` à chaque étape
+- Méthodes de diagnostic existantes (v2.6.x) inchangées
+
+**BREAKING CHANGE**: Les remises sont désormais appliquées réellement. Tester en staging avant déploiement.
+
+---
 
 ### Version 2.6.4 (08-01-26 à 14h22) - DIAGNOSTIC SYSTÈME COMPLET
 

@@ -51,24 +51,44 @@ class SubscriptionDiscountManager {
      * @throws RuntimeException Si remise déjà active
      */
     public function apply_discount( $parrain_subscription_id, $discount_data, $filleul_subscription_id, $filleul_order_id ) {
+        // Verrou anti-doublon: éviter applications concurrentes
+        $lock_key = 'tb_parrainage_apply_lock_' . intval( $parrain_subscription_id );
+        if ( function_exists( 'get_transient' ) && get_transient( $lock_key ) ) {
+            return array(
+                'success' => false,
+                'error' => 'Traitement déjà en cours pour cet abonnement',
+                'error_type' => 'ConcurrencyLock'
+            );
+        }
+        if ( function_exists( 'set_transient' ) ) {
+            set_transient( $lock_key, 1, 60 );
+        }
         try {
             // Hook avant application pour extensibilité
             do_action( 'tb_parrainage_before_apply_discount', $parrain_subscription_id, $discount_data );
             
             $parrain_subscription = wcs_get_subscription( $parrain_subscription_id );
             if ( ! $parrain_subscription ) {
-                throw new InvalidArgumentException( 'Abonnement parrain introuvable' );
+                throw new \InvalidArgumentException( 'Abonnement parrain introuvable' );
+            }
+
+            // Validation: abonnement parrain doit être actif
+            if ( method_exists( $parrain_subscription, 'get_status' ) ) {
+                $parrain_status = $parrain_subscription->get_status();
+                if ( $parrain_status !== 'active' ) {
+                    throw new \RuntimeException( 'Abonnement parrain non actif' );
+                }
             }
             
             // Validation critique : vérifier si une remise est déjà active
             $existing_discount = $parrain_subscription->get_meta( '_tb_parrainage_discount_active' );
             if ( $existing_discount ) {
-                throw new RuntimeException( 'Une remise est déjà active sur cet abonnement' );
+                throw new \RuntimeException( 'Une remise est déjà active sur cet abonnement' );
             }
             
             // Validation de la structure des données de remise
             if ( ! isset( $discount_data['discount_amount'] ) || $discount_data['discount_amount'] <= 0 ) {
-                throw new InvalidArgumentException( 'Montant de remise invalide' );
+                throw new \InvalidArgumentException( 'Montant de remise invalide' );
             }
             
             // Capturer le prix actuel comme "original" uniquement si pas déjà sauvegardé
@@ -78,7 +98,7 @@ class SubscriptionDiscountManager {
             if ( ! $saved_original ) {
                 // Validation de cohérence
                 if ( $current_price <= 0 ) {
-                    throw new InvalidArgumentException( 'Prix abonnement invalide pour application remise' );
+                    throw new \InvalidArgumentException( 'Prix abonnement invalide pour application remise' );
                 }
                 
                 // Sauvegarder avec timestamp pour audit
@@ -169,7 +189,7 @@ class SubscriptionDiscountManager {
             
             return $result;
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Échec application remise parrainage',
                 array( 
@@ -185,6 +205,10 @@ class SubscriptionDiscountManager {
                 'error' => $e->getMessage(),
                 'error_type' => get_class( $e )
             );
+        } finally {
+            if ( function_exists( 'delete_transient' ) ) {
+                delete_transient( $lock_key );
+            }
         }
     }
     
@@ -201,7 +225,7 @@ class SubscriptionDiscountManager {
         try {
             $parrain_subscription = wcs_get_subscription( $parrain_subscription_id );
             if ( ! $parrain_subscription ) {
-                throw new InvalidArgumentException( 'Abonnement parrain introuvable pour retrait remise' );
+                throw new \InvalidArgumentException( 'Abonnement parrain introuvable pour retrait remise' );
             }
             
             // Vérifier qu'une remise est active
@@ -218,7 +242,7 @@ class SubscriptionDiscountManager {
             // Récupérer le prix original avec validation
             $original_price = $parrain_subscription->get_meta( '_tb_parrainage_original_price' );
             if ( ! $original_price || $original_price <= 0 ) {
-                throw new RuntimeException( 'Prix original non trouvé ou invalide' );
+                throw new \RuntimeException( 'Prix original non trouvé ou invalide' );
             }
             
             $original_price_float = floatval( $original_price );
@@ -266,7 +290,7 @@ class SubscriptionDiscountManager {
             
             return $result;
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Échec suppression remise parrainage',
                 array( 
@@ -297,14 +321,14 @@ class SubscriptionDiscountManager {
     private function update_subscription_price( $subscription, $new_price ) {
         // Compatibilité WCS 2.0+
         if ( ! method_exists( $subscription, 'get_items' ) ) {
-            throw new RuntimeException( 'Version WooCommerce Subscriptions non supportée' );
+            throw new \RuntimeException( 'Version WooCommerce Subscriptions non supportée' );
         }
         
         $items = $subscription->get_items();
         $item_count = count( $items );
         
         if ( $item_count === 0 ) {
-            throw new RuntimeException( 'Aucun produit trouvé dans l\'abonnement' );
+            throw new \RuntimeException( 'Aucun produit trouvé dans l\'abonnement' );
         }
         
         $this->logger->debug(
@@ -340,7 +364,7 @@ class SubscriptionDiscountManager {
             $original_total = $subscription->get_total();
             
             if ( $original_total <= 0 ) {
-                throw new RuntimeException( 'Total abonnement invalide pour répartition proportionnelle' );
+                throw new \RuntimeException( 'Total abonnement invalide pour répartition proportionnelle' );
             }
             
             $ratio = $new_price / $original_total;

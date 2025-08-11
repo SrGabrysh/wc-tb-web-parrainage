@@ -313,7 +313,8 @@ class AutomaticDiscountProcessor {
                 $simulation_mode = defined( 'WC_TB_PARRAINAGE_SIMULATION_MODE' ) ? WC_TB_PARRAINAGE_SIMULATION_MODE : true;
                 $status = 'calculated';
                 
-                if ( $simulation_mode !== false ) {
+                // Lisibilité accrue: simulation explicite uniquement si true
+                if ( $simulation_mode === true ) {
                     // Mode simulation (comportement v2.6.0)
                     $this->store_calculated_discount_results( $order, $discount_results );
                     $order->update_meta_data( '_tb_parrainage_calculated', current_time( 'mysql' ) );

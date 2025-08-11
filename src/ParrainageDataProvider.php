@@ -652,6 +652,10 @@ class ParrainageDataProvider {
      */
     private function get_workflow_status_badge_class( $status ) {
         $classes = array(
+            // v2.7.x nouveaux statuts
+            'applied' => 'discount-status-applied',
+            'active' => 'discount-status-active',
+            'application_failed' => 'discount-status-error',
             'calculated' => 'discount-status-calculated',
             'pending' => 'discount-status-pending',
             'scheduled' => 'discount-status-scheduled',
