@@ -55,17 +55,17 @@ class DiscountNotificationService {
         try {
             // Validation des paramètres d'entrée
             if ( ! is_numeric( $parrain_subscription_id ) || $parrain_subscription_id <= 0 ) {
-                throw new InvalidArgumentException( 'ID abonnement parrain invalide : ' . $parrain_subscription_id );
+                throw new \InvalidArgumentException( 'ID abonnement parrain invalide : ' . $parrain_subscription_id );
             }
             
             if ( ! is_array( $discount_data ) || empty( $discount_data['discount_amount'] ) ) {
-                throw new InvalidArgumentException( 'Données de remise invalides ou incomplètes' );
+                throw new \InvalidArgumentException( 'Données de remise invalides ou incomplètes' );
             }
             
             // Récupération des informations parrain
             $parrain_info = $this->get_parrain_info( $parrain_subscription_id );
             if ( ! $parrain_info ) {
-                throw new InvalidArgumentException( 'Informations parrain introuvables pour l\'ID : ' . $parrain_subscription_id );
+                throw new \InvalidArgumentException( 'Informations parrain introuvables pour l\'ID : ' . $parrain_subscription_id );
             }
             
             // Préparation du message
@@ -77,7 +77,7 @@ class DiscountNotificationService {
                 'new_price' => $discount_data['new_price'],
                 'original_price' => $discount_data['original_price'],
                 'currency' => $discount_data['currency'] ?? 'EUR',
-                'notification_date' => current_time( 'mysql' )
+            'notification_date' => \current_time( 'mysql' )
             );
             
             // Envoi selon préférences utilisateur
@@ -96,7 +96,7 @@ class DiscountNotificationService {
             
             return $notification_sent;
             
-        } catch ( InvalidArgumentException $e ) {
+        } catch ( \InvalidArgumentException $e ) {
             // Paramètres invalides pour la notification
             $this->logger->warning(
                 'Paramètres invalides pour notification remise appliquée',
@@ -107,7 +107,7 @@ class DiscountNotificationService {
                 'discount-notifications'
             );
             return false;
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             // Erreur système lors de l'envoi
             $this->logger->error(
                 'Erreur système envoi notification remise appliquée',
@@ -142,7 +142,7 @@ class DiscountNotificationService {
                 'parrain_email' => $parrain_info['email'],
                 'error_reason' => $error_details['reason'] ?? 'Erreur inconnue',
                 'error_details' => $error_details,
-                'notification_date' => current_time( 'mysql' )
+            'notification_date' => \current_time( 'mysql' )
             );
             
             $notification_sent = $this->send_notification( $message_data );
@@ -159,7 +159,7 @@ class DiscountNotificationService {
             
             return $notification_sent;
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Erreur envoi notification échec remise',
                 array(
@@ -192,8 +192,8 @@ class DiscountNotificationService {
                 'alert_type' => $alert_type,
                 'alert_data' => $alert_data,
                 'admin_emails' => $admin_emails,
-                'notification_date' => current_time( 'mysql' ),
-                'site_url' => get_site_url()
+            'notification_date' => \current_time( 'mysql' ),
+            'site_url' => \get_site_url()
             );
             
             $notification_sent = $this->send_admin_notification( $message_data );
@@ -210,7 +210,7 @@ class DiscountNotificationService {
             
             return $notification_sent;
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Erreur envoi alerte administrative',
                 array(
@@ -234,13 +234,13 @@ class DiscountNotificationService {
             return false;
         }
         
-        $subscription = wcs_get_subscription( $subscription_id );
+        $subscription = \wcs_get_subscription( $subscription_id );
         if ( ! $subscription ) {
             return false;
         }
         
         $user_id = $subscription->get_user_id();
-        $user = get_user_by( 'id', $user_id );
+        $user = \get_user_by( 'id', $user_id );
         if ( ! $user ) {
             return false;
         }
@@ -261,7 +261,7 @@ class DiscountNotificationService {
      */
     private function send_notification( $message_data ) {
         // Vérification des préférences utilisateur pour les notifications
-        $notifications_enabled = get_option( 'wc_tb_parrainage_notifications_enabled', true );
+        $notifications_enabled = \get_option( 'wc_tb_parrainage_notifications_enabled', true );
         if ( ! $notifications_enabled ) {
             return false;
         }
@@ -270,14 +270,14 @@ class DiscountNotificationService {
             case 'discount_applied':
                 return $this->send_email_notification(
                     $message_data['parrain_email'],
-                    __( 'Votre remise parrain a été appliquée', 'wc-tb-web-parrainage' ),
+                    \__( 'Votre remise parrain a été appliquée', 'wc-tb-web-parrainage' ),
                     $this->build_discount_applied_email_content( $message_data )
                 );
                 
             case 'discount_failed':
                 return $this->send_email_notification(
                     $message_data['parrain_email'],
-                    __( 'Problème avec votre remise parrain', 'wc-tb-web-parrainage' ),
+                    \__( 'Problème avec votre remise parrain', 'wc-tb-web-parrainage' ),
                     $this->build_discount_failed_email_content( $message_data )
                 );
                 
@@ -308,11 +308,11 @@ class DiscountNotificationService {
         
         return sprintf(
             $template,
-            esc_html( $data['parrain_name'] ),
-            esc_html( number_format( $data['discount_amount'], 2, ',', '' ) . '€' ),
-            esc_html( number_format( $data['original_price'], 2, ',', '' ) . '€' ),
-            esc_html( number_format( $data['discount_amount'], 2, ',', '' ) . '€' ),
-            esc_html( number_format( $data['new_price'], 2, ',', '' ) . '€' )
+            \esc_html( $data['parrain_name'] ),
+            \esc_html( number_format( $data['discount_amount'], 2, ',', '' ) . '€' ),
+            \esc_html( number_format( $data['original_price'], 2, ',', '' ) . '€' ),
+            \esc_html( number_format( $data['discount_amount'], 2, ',', '' ) . '€' ),
+            \esc_html( number_format( $data['new_price'], 2, ',', '' ) . '€' )
         );
     }
     
@@ -335,8 +335,8 @@ class DiscountNotificationService {
         
         return sprintf(
             $template,
-            esc_html( $data['parrain_name'] ),
-            esc_html( $data['error_reason'] )
+            \esc_html( $data['parrain_name'] ),
+            \esc_html( $data['error_reason'] )
         );
     }
     
@@ -351,10 +351,10 @@ class DiscountNotificationService {
     private function send_email_notification( $to, $subject, $content ) {
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_bloginfo( 'name' ) . ' <' . get_option( 'admin_email' ) . '>'
+            'From: ' . \get_bloginfo( 'name' ) . ' <' . \get_option( 'admin_email' ) . '>'
         );
         
-        return wp_mail( $to, $subject, $content, $headers );
+        return \wp_mail( $to, $subject, $content, $headers );
     }
     
     /**
@@ -363,11 +363,11 @@ class DiscountNotificationService {
      * @return array Liste des emails administrateurs
      */
     private function get_admin_notification_emails() {
-        $admin_emails = get_option( 'wc_tb_parrainage_admin_notification_emails', array() );
+        $admin_emails = \get_option( 'wc_tb_parrainage_admin_notification_emails', array() );
         
         if ( empty( $admin_emails ) ) {
             // Email admin par défaut si rien configuré
-            $admin_emails = array( get_option( 'admin_email' ) );
+            $admin_emails = array( \get_option( 'admin_email' ) );
         }
         
         return array_filter( $admin_emails );
@@ -382,7 +382,7 @@ class DiscountNotificationService {
     private function send_admin_notification( $message_data ) {
         $subject = sprintf(
             '[%s] Alerte système parrainage : %s',
-            get_bloginfo( 'name' ),
+            \get_bloginfo( 'name' ),
             $message_data['alert_type']
         );
         
@@ -392,9 +392,9 @@ class DiscountNotificationService {
              <p><strong>Date :</strong> %s</p>
              <p><strong>Détails :</strong></p>
              <pre>%s</pre>',
-            esc_html( $message_data['alert_type'] ),
-            esc_html( $message_data['notification_date'] ),
-            esc_html( print_r( $message_data['alert_data'], true ) )
+            \esc_html( $message_data['alert_type'] ),
+            \esc_html( $message_data['notification_date'] ),
+            \esc_html( print_r( $message_data['alert_data'], true ) )
         );
         
         $success = true;

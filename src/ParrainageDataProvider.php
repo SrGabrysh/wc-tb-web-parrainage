@@ -26,7 +26,7 @@ class ParrainageDataProvider {
         $cache_key = $this->generate_cache_key( $filters, $pagination );
         
         // Vérifier le cache
-        $cached_data = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        $cached_data = \wp_cache_get( $cache_key, self::CACHE_GROUP );
         if ( $cached_data !== false ) {
             $this->logger->debug( 
                 'Données parrainage récupérées depuis le cache',
@@ -41,7 +41,7 @@ class ParrainageDataProvider {
         $processed_data = $this->process_raw_data( $raw_data );
         
         // Mettre en cache
-        wp_cache_set( $cache_key, $processed_data, self::CACHE_GROUP, WC_TB_PARRAINAGE_CACHE_TIME );
+        \wp_cache_set( $cache_key, $processed_data, self::CACHE_GROUP, WC_TB_PARRAINAGE_CACHE_TIME );
         
         $this->logger->info( 
             sprintf( 'Données parrainage récupérées - %d parrains trouvés', count( $processed_data['parrains'] ) ),
@@ -95,13 +95,13 @@ class ParrainageDataProvider {
      * Récupérer la liste des produits configurés
      */
     public function get_product_list() {
-        $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
+        $products_config = \get_option( 'wc_tb_parrainage_products_config', array() );
         $product_list = array();
         
         foreach ( $products_config as $product_id => $config ) {
             if ( $product_id === 'default' ) continue;
             
-            $product = wc_get_product( $product_id );
+            $product = \wc_get_product( $product_id );
             if ( $product ) {
                 $product_list[] = array(
                     'id' => $product_id,
@@ -123,13 +123,13 @@ class ParrainageDataProvider {
         }
         
         return array(
-            'active' => __( 'Actif', 'wc-tb-web-parrainage' ),
-            'suspended' => __( 'Suspendu', 'wc-tb-web-parrainage' ),
-            'cancelled' => __( 'Annulé', 'wc-tb-web-parrainage' ),
-            'expired' => __( 'Expiré', 'wc-tb-web-parrainage' ),
-            'on-hold' => __( 'En attente', 'wc-tb-web-parrainage' ),
-            'pending' => __( 'En cours', 'wc-tb-web-parrainage' ),
-            'pending-cancel' => __( 'Annulation en cours', 'wc-tb-web-parrainage' )
+            'active' => \__( 'Actif', 'wc-tb-web-parrainage' ),
+            'suspended' => \__( 'Suspendu', 'wc-tb-web-parrainage' ),
+            'cancelled' => \__( 'Annulé', 'wc-tb-web-parrainage' ),
+            'expired' => \__( 'Expiré', 'wc-tb-web-parrainage' ),
+            'on-hold' => \__( 'En attente', 'wc-tb-web-parrainage' ),
+            'pending' => \__( 'En cours', 'wc-tb-web-parrainage' ),
+            'pending-cancel' => \__( 'Annulation en cours', 'wc-tb-web-parrainage' )
         );
     }
     
@@ -274,10 +274,10 @@ class ParrainageDataProvider {
             'nom' => trim( $row->filleul_prenom . ' ' . $row->filleul_nom ),
             'email' => $row->filleul_email,
             'date_parrainage' => $row->date_commande,
-            'date_parrainage_formatted' => mysql2date( 'd/m/Y', $row->date_commande ),
+            'date_parrainage_formatted' => \mysql2date( 'd/m/Y', $row->date_commande ),
             'order_id' => $row->filleul_order_id,
-            'order_link' => admin_url( 'post.php?post=' . $row->filleul_order_id . '&action=edit' ),
-            'user_link' => $row->filleul_user_id ? admin_url( 'user-edit.php?user_id=' . $row->filleul_user_id ) : '',
+            'order_link' => \admin_url( 'post.php?post=' . $row->filleul_order_id . '&action=edit' ),
+            'user_link' => $row->filleul_user_id ? \admin_url( 'user-edit.php?user_id=' . $row->filleul_user_id ) : '',
             'avantage' => $row->avantage ?: 'Avantage parrainage',
             'montant' => floatval( $row->montant_commande ),
             'montant_formatted' => $this->format_price( $row->montant_commande, $row->devise ),
@@ -297,7 +297,7 @@ class ParrainageDataProvider {
             return null;
         }
         
-        $subscriptions = wcs_get_subscriptions_for_order( $order_id );
+        $subscriptions = \wcs_get_subscriptions_for_order( $order_id );
         
         if ( empty( $subscriptions ) ) {
             return null;
@@ -308,10 +308,10 @@ class ParrainageDataProvider {
         return array(
             'id' => $subscription->get_id(),
             'status' => $subscription->get_status(),
-            'status_label' => wcs_get_subscription_status_name( $subscription->get_status() ),
+            'status_label' => \wcs_get_subscription_status_name( $subscription->get_status() ),
             'status_badge_class' => $this->get_status_badge_class( $subscription->get_status() ),
             'next_payment' => $subscription->get_date( 'next_payment' ),
-            'link' => admin_url( 'post.php?post=' . $subscription->get_id() . '&action=edit' )
+            'link' => \admin_url( 'post.php?post=' . $subscription->get_id() . '&action=edit' )
         );
     }
     
@@ -319,7 +319,7 @@ class ParrainageDataProvider {
      * Récupérer les produits d'une commande
      */
     private function get_order_products( $order_id ) {
-        $order = wc_get_order( $order_id );
+        $order = \wc_get_order( $order_id );
         if ( ! $order ) {
             return array();
         }
@@ -332,7 +332,7 @@ class ParrainageDataProvider {
                     'id' => $product->get_id(),
                     'name' => $item->get_name(),
                     'quantity' => $item->get_quantity(),
-                    'link' => admin_url( 'post.php?post=' . $product->get_id() . '&action=edit' )
+                    'link' => \admin_url( 'post.php?post=' . $product->get_id() . '&action=edit' )
                 );
             }
         }
@@ -387,7 +387,7 @@ class ParrainageDataProvider {
      * Formater un prix avec devise
      */
     private function format_price( $amount, $currency ) {
-        return wc_price( $amount, array( 'currency' => $currency ) );
+        return \wc_price( $amount, array( 'currency' => $currency ) );
     }
     
     /**
@@ -412,9 +412,9 @@ class ParrainageDataProvider {
      */
     private function get_subscription_admin_link( $subscription_id ) {
         if ( function_exists( 'wcs_get_subscription' ) ) {
-            $subscription = wcs_get_subscription( $subscription_id );
+            $subscription = \wcs_get_subscription( $subscription_id );
             if ( $subscription ) {
-                return admin_url( 'post.php?post=' . $subscription_id . '&action=edit' );
+                return \admin_url( 'post.php?post=' . $subscription_id . '&action=edit' );
             }
         }
         return '';
@@ -547,7 +547,7 @@ class ParrainageDataProvider {
                 
                 if ( $validation['is_eligible'] ) {
                     // Calcul de la remise réelle
-                    $parrain_subscription = wcs_get_subscription( $parrain_subscription_id );
+            $parrain_subscription = \wcs_get_subscription( $parrain_subscription_id );
                     if ( $parrain_subscription ) {
                         $current_price = $parrain_subscription->get_total();
                         
@@ -582,7 +582,7 @@ class ParrainageDataProvider {
             
             return false;
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Erreur lors du calcul des vraies données de remise - fallback vers mockées',
                 array(
@@ -607,7 +607,7 @@ class ParrainageDataProvider {
      * @return string Statut du workflow
      */
     private function get_workflow_status( $filleul_order_id, $parrain_subscription_id ) {
-        $order = wc_get_order( $filleul_order_id );
+        $order = \wc_get_order( $filleul_order_id );
         
         if ( $order->get_meta( '_tb_parrainage_calculated' ) ) {
             return 'calculated';

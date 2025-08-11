@@ -53,7 +53,7 @@ class SubscriptionDiscountManager {
     public function apply_discount( $parrain_subscription_id, $discount_data, $filleul_subscription_id, $filleul_order_id ) {
         // Verrou anti-doublon: éviter applications concurrentes
         $lock_key = 'tb_parrainage_apply_lock_' . intval( $parrain_subscription_id );
-        if ( function_exists( 'get_transient' ) && get_transient( $lock_key ) ) {
+        if ( function_exists( 'get_transient' ) && \get_transient( $lock_key ) ) {
             return array(
                 'success' => false,
                 'error' => 'Traitement déjà en cours pour cet abonnement',
@@ -61,13 +61,13 @@ class SubscriptionDiscountManager {
             );
         }
         if ( function_exists( 'set_transient' ) ) {
-            set_transient( $lock_key, 1, 60 );
+            \set_transient( $lock_key, 1, 60 );
         }
         try {
             // Hook avant application pour extensibilité
-            do_action( 'tb_parrainage_before_apply_discount', $parrain_subscription_id, $discount_data );
+            \do_action( 'tb_parrainage_before_apply_discount', $parrain_subscription_id, $discount_data );
             
-            $parrain_subscription = wcs_get_subscription( $parrain_subscription_id );
+            $parrain_subscription = \wcs_get_subscription( $parrain_subscription_id );
             if ( ! $parrain_subscription ) {
                 throw new \InvalidArgumentException( 'Abonnement parrain introuvable' );
             }
@@ -103,7 +103,7 @@ class SubscriptionDiscountManager {
                 
                 // Sauvegarder avec timestamp pour audit
                 $parrain_subscription->update_meta_data( '_tb_parrainage_original_price', $current_price );
-                $parrain_subscription->update_meta_data( '_tb_parrainage_original_price_date', current_time( 'mysql' ) );
+            $parrain_subscription->update_meta_data( '_tb_parrainage_original_price_date', \current_time( 'mysql' ) );
                 
                 $this->logger->info(
                     'Prix original sauvegardé avant application remise',
@@ -137,13 +137,13 @@ class SubscriptionDiscountManager {
             // Métadonnées de traçabilité complètes
             $parrain_subscription->update_meta_data( '_tb_parrainage_discount_active', true );
             $parrain_subscription->update_meta_data( '_tb_parrainage_discount_amount', $discount_data['discount_amount'] );
-            $parrain_subscription->update_meta_data( '_tb_parrainage_discount_start', current_time( 'mysql' ) );
+            $parrain_subscription->update_meta_data( '_tb_parrainage_discount_start', \current_time( 'mysql' ) );
             $parrain_subscription->update_meta_data( '_tb_parrainage_filleul_id', $filleul_subscription_id );
             $parrain_subscription->update_meta_data( '_tb_parrainage_filleul_order_id', $filleul_order_id );
             
             // Calculer et stocker la date de fin (12 mois + 2 jours de grâce)
-            $duration_months = apply_filters( 'tb_parrainage_discount_duration', WC_TB_PARRAINAGE_DISCOUNT_DURATION );
-            $grace_days = apply_filters( 'tb_parrainage_discount_grace_period', WC_TB_PARRAINAGE_DISCOUNT_GRACE_PERIOD );
+            $duration_months = \apply_filters( 'tb_parrainage_discount_duration', WC_TB_PARRAINAGE_DISCOUNT_DURATION );
+            $grace_days = \apply_filters( 'tb_parrainage_discount_grace_period', WC_TB_PARRAINAGE_DISCOUNT_GRACE_PERIOD );
             $end_date = date( 'Y-m-d H:i:s', strtotime( "+{$duration_months} months +{$grace_days} days" ) );
             
             $parrain_subscription->update_meta_data( '_tb_parrainage_discount_end_date', $end_date );
@@ -207,7 +207,7 @@ class SubscriptionDiscountManager {
             );
         } finally {
             if ( function_exists( 'delete_transient' ) ) {
-                delete_transient( $lock_key );
+                \delete_transient( $lock_key );
             }
         }
     }
@@ -223,7 +223,7 @@ class SubscriptionDiscountManager {
      */
     public function remove_discount( $parrain_subscription_id, $filleul_subscription_id ) {
         try {
-            $parrain_subscription = wcs_get_subscription( $parrain_subscription_id );
+            $parrain_subscription = \wcs_get_subscription( $parrain_subscription_id );
             if ( ! $parrain_subscription ) {
                 throw new \InvalidArgumentException( 'Abonnement parrain introuvable pour retrait remise' );
             }
@@ -253,7 +253,7 @@ class SubscriptionDiscountManager {
             
             // Mise à jour des métadonnées de fin
             $parrain_subscription->delete_meta_data( '_tb_parrainage_discount_active' );
-            $parrain_subscription->update_meta_data( '_tb_parrainage_discount_end', current_time( 'mysql' ) );
+            $parrain_subscription->update_meta_data( '_tb_parrainage_discount_end', \current_time( 'mysql' ) );
             $parrain_subscription->update_meta_data( '_tb_parrainage_discount_removed_reason', 'expired_12_months' );
             
             // Conserver l'historique pour audit (ne pas supprimer toutes les métadonnées)
@@ -286,7 +286,7 @@ class SubscriptionDiscountManager {
             );
             
             // Hook pour notification de fin de remise
-            do_action( 'tb_parrainage_discount_removed', $parrain_subscription_id, $filleul_subscription_id );
+            \do_action( 'tb_parrainage_discount_removed', $parrain_subscription_id, $filleul_subscription_id );
             
             return $result;
             
@@ -405,10 +405,10 @@ class SubscriptionDiscountManager {
         
         // Forcer la mise à jour du montant récurrent (compatibilité)
         $subscription_id = $subscription->get_id();
-        update_post_meta( $subscription_id, '_order_total', $new_price );
+        \update_post_meta( $subscription_id, '_order_total', $new_price );
         
         // Hook pour compatibilité et extensibilité
-        do_action( 'tb_parrainage_subscription_price_updated', $subscription, $new_price );
+        \do_action( 'tb_parrainage_subscription_price_updated', $subscription, $new_price );
         
         $this->logger->info(
             'Prix abonnement mis à jour avec succès',
@@ -479,7 +479,7 @@ class SubscriptionDiscountManager {
                     $error_count++;
                 }
                 
-            } catch ( Exception $e ) {
+            } catch ( \Exception $e ) {
                 $error_count++;
                 
                 $this->logger->error(

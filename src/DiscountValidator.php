@@ -59,7 +59,7 @@ class DiscountValidator {
             'errors' => array(),
             'warnings' => array(),
             'details' => array(),
-            'validation_date' => current_time( 'mysql' )
+            'validation_date' => \current_time( 'mysql' )
         );
         
         try {
@@ -113,7 +113,7 @@ class DiscountValidator {
                 'discount-validator'
             );
             
-        } catch ( InvalidArgumentException $e ) {
+        } catch ( \InvalidArgumentException $e ) {
             // Erreur de validation des paramètres d'entrée
             $result['is_eligible'] = false;
             $result['errors'][] = 'Paramètres de validation invalides : ' . $e->getMessage();
@@ -128,7 +128,7 @@ class DiscountValidator {
                 ),
                 'discount-validator'
             );
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             // Erreur système générale
             $result['is_eligible'] = false;
             $result['errors'][] = 'Erreur système lors de la validation : ' . $e->getMessage();
@@ -172,7 +172,7 @@ class DiscountValidator {
             return $result;
         }
         
-        $subscription = wcs_get_subscription( $subscription_id );
+        $subscription = \wcs_get_subscription( $subscription_id );
         if ( ! $subscription ) {
             $result['is_valid'] = false;
             $result['errors'][] = 'Abonnement parrain non trouvé : ' . $subscription_id;
@@ -216,7 +216,7 @@ class DiscountValidator {
         );
         
         // Vérification existence commande
-        $order = wc_get_order( $order_id );
+        $order = \wc_get_order( $order_id );
         if ( ! $order ) {
             $result['is_valid'] = false;
             $result['errors'][] = 'Commande filleul non trouvée : ' . $order_id;
@@ -233,7 +233,8 @@ class DiscountValidator {
         }
         
         // Vérification présence code parrain
-        $parrain_code = $order->get_meta( '_parrain_code' );
+        // Clé utilisée dans tout le plugin: _billing_parrain_code
+        $parrain_code = $order->get_meta( '_billing_parrain_code' );
         if ( empty( $parrain_code ) ) {
             $result['is_valid'] = false;
             $result['errors'][] = 'Code parrain manquant dans la commande filleul';
@@ -273,7 +274,7 @@ class DiscountValidator {
         );
         
         // Récupération configuration
-        $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
+        $products_config = \get_option( 'wc_tb_parrainage_products_config', array() );
         
         if ( ! isset( $products_config[ $product_id ] ) ) {
             $result['is_valid'] = false;
@@ -338,7 +339,7 @@ class DiscountValidator {
         
         // Règle : Vérifier limite de remises par parrain (si applicable)
         $active_discounts_count = $this->count_active_discounts_for_parrain( $parrain_subscription_id );
-        $max_discounts = apply_filters( 'tb_parrainage_max_discounts_per_parrain', 5 );
+        $max_discounts = \apply_filters( 'tb_parrainage_max_discounts_per_parrain', 5 );
         
         if ( $active_discounts_count >= $max_discounts ) {
             $result['is_valid'] = false;
@@ -364,7 +365,7 @@ class DiscountValidator {
             return false;
         }
         
-        $subscription = wcs_get_subscription( $subscription_id );
+        $subscription = \wcs_get_subscription( $subscription_id );
         return $subscription ? $subscription->get_user_id() : false;
     }
     
@@ -375,7 +376,7 @@ class DiscountValidator {
      * @return int|false ID utilisateur ou false
      */
     private function get_order_user_id( $order_id ) {
-        $order = wc_get_order( $order_id );
+        $order = \wc_get_order( $order_id );
         return $order ? $order->get_user_id() : false;
     }
     

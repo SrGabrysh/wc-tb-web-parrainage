@@ -592,8 +592,8 @@ class AutomaticDiscountProcessor {
     public function check_cron_health() {
         $health_status = array(
             'cron_enabled' => defined( 'DISABLE_WP_CRON' ) ? ! DISABLE_WP_CRON : true,
-            'pending_events' => wp_get_scheduled_event( WC_TB_PARRAINAGE_QUEUE_HOOK ),
-            'last_run' => get_option( 'tb_parrainage_last_cron_run', false ),
+            'pending_events' => \wp_get_scheduled_event( WC_TB_PARRAINAGE_QUEUE_HOOK ),
+            'last_run' => \get_option( 'tb_parrainage_last_cron_run', false ),
             'failed_orders' => $this->get_failed_orders_count(),
             'recommendations' => array()
         );

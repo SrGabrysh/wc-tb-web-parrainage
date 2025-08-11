@@ -86,7 +86,7 @@ class DiscountCalculator {
             
             return $discount_data;
             
-        } catch ( InvalidArgumentException $e ) {
+        } catch ( \InvalidArgumentException $e ) {
             // Erreur de validation des paramètres - plus spécifique
             $this->logger->warning(
                 'Paramètres invalides pour le calcul de remise parrain',
@@ -98,7 +98,7 @@ class DiscountCalculator {
                 'discount-calculator'
             );
             return false;
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             // Erreur système générale
             $this->logger->error(
                 'Erreur système lors du calcul de remise parrain',
@@ -140,26 +140,40 @@ class DiscountCalculator {
         }
         
         // Récupération depuis la configuration existante du plugin
-        $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
+        $products_config = \get_option( 'wc_tb_parrainage_products_config', array() );
         
         if ( ! isset( $products_config[ $product_id ] ) ) {
             return false;
         }
         
         $config = $products_config[ $product_id ];
-        
-        // Validation de la structure de configuration
+
+        // Validation présence de la clé
         if ( ! isset( $config['remise_parrain'] ) ) {
             return false;
         }
-        
-        // Normalisation de la configuration
-        $normalized_config = array(
-            'discount_type' => $config['remise_parrain']['type'] ?? 'percentage',
-            'discount_value' => (float) ( $config['remise_parrain']['montant'] ?? WC_TB_PARRAINAGE_DEFAULT_DISCOUNT_RATE ),
-            'currency' => $config['remise_parrain']['unite'] ?? 'EUR',
-            'product_name' => $config['description'] ?? 'Produit inconnu'
-        );
+
+        // Supporter les deux formats de configuration:
+        // 1) Format détaillé (ancien): ['remise_parrain' => ['type' => 'percentage'|'fixed', 'montant' => float, 'unite' => 'EUR']]
+        // 2) Format plat (actuel):    ['remise_parrain' => float]
+        $remise = $config['remise_parrain'];
+
+        if ( is_array( $remise ) ) {
+            $normalized_config = array(
+                'discount_type' => $remise['type'] ?? 'percentage',
+                'discount_value' => (float) ( $remise['montant'] ?? WC_TB_PARRAINAGE_DEFAULT_DISCOUNT_RATE ),
+                'currency' => $remise['unite'] ?? 'EUR',
+                'product_name' => $config['description'] ?? 'Produit inconnu'
+            );
+        } else {
+            // Format plat: considérer comme remise fixe en EUR par défaut
+            $normalized_config = array(
+                'discount_type' => 'fixed',
+                'discount_value' => (float) $remise,
+                'currency' => 'EUR',
+                'product_name' => $config['description'] ?? 'Produit inconnu'
+            );
+        }
         
         // Mise en cache pour performance
         $this->product_configs_cache[ $product_id ] = $normalized_config;
@@ -191,7 +205,7 @@ class DiscountCalculator {
                 break;
                 
             default:
-                throw new InvalidArgumentException( 'Type de remise non supporté : ' . $config['discount_type'] );
+                throw new \InvalidArgumentException( 'Type de remise non supporté : ' . $config['discount_type'] );
         }
         
         // Arrondir selon la précision définie
@@ -208,7 +222,7 @@ class DiscountCalculator {
             'discount_type' => $config['discount_type'],
             'discount_rate' => $config['discount_value'],
             'currency' => $config['currency'],
-            'calculation_date' => current_time( 'mysql' ),
+            'calculation_date' => \current_time( 'mysql' ),
             'metadata' => array(
                 'calculator_version' => '2.5.0',
                 'subscription_id' => $subscription_id,
@@ -229,13 +243,13 @@ class DiscountCalculator {
         if ( ! is_numeric( $product_id ) || $product_id <= 0 ) {
             $error_msg = 'ID produit invalide pour calcul remise : ' . $product_id;
             $this->logger->error( $error_msg, array( 'product_id' => $product_id ), 'discount-calculator' );
-            throw new InvalidArgumentException( $error_msg );
+            throw new \InvalidArgumentException( $error_msg );
         }
         
         if ( ! is_numeric( $price ) || $price < WC_TB_PARRAINAGE_MIN_SUBSCRIPTION_AMOUNT ) {
             $error_msg = 'Prix invalide pour calcul remise : ' . $price . ' (minimum: ' . WC_TB_PARRAINAGE_MIN_SUBSCRIPTION_AMOUNT . ')';
             $this->logger->error( $error_msg, array( 'price' => $price ), 'discount-calculator' );
-            throw new InvalidArgumentException( $error_msg );
+            throw new \InvalidArgumentException( $error_msg );
         }
         
         return true;
@@ -249,7 +263,7 @@ class DiscountCalculator {
      * @return string Montant formaté
      */
     public function format_discount_amount( $amount, $currency = 'EUR' ) {
-        return number_format( $amount, WC_TB_PARRAINAGE_DISCOUNT_PRECISION, ',', '' ) . '€/' . __( 'mois', 'wc-tb-web-parrainage' );
+        return number_format( $amount, WC_TB_PARRAINAGE_DISCOUNT_PRECISION, ',', '' ) . '€/' . \__( 'mois', 'wc-tb-web-parrainage' );
     }
     
     /**
