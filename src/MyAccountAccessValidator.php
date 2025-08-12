@@ -23,7 +23,7 @@ class MyAccountAccessValidator {
     const ERROR_NOT_LOGGED_IN = 'not_logged_in';
     
     // Statuts d'abonnement considérés comme actifs
-    const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'pending-cancel'];
+    const ACTIVE_SUBSCRIPTION_STATUSES = ['active', 'wc-active', 'pending-cancel', 'wc-pending-cancel'];
     
     /**
      * @var Logger Instance du système de logs

@@ -476,8 +476,8 @@ class MyAccountDataProvider {
             $total_referrals = count( $real_referrals );
             
             foreach ( $real_referrals as $referral ) {
-                if ( isset( $referral['discount_client_info']['discount_status'] ) && 
-                     $referral['discount_client_info']['discount_status'] === 'calculated' ) {
+                $status = $referral['discount_client_info']['discount_status'] ?? '';
+                if ( in_array( $status, array( 'calculated', 'applied', 'active' ), true ) ) {
                     $active_discounts++;
                     $total_monthly_savings += floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
                 }
@@ -494,8 +494,8 @@ class MyAccountDataProvider {
                 'currency' => get_woocommerce_currency_symbol(),
                 'next_billing' => array(
                     'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
-                    'amount' => round( $original_amount - $total_monthly_savings, 2 ),
-                    'original_amount' => $original_amount
+                    'amount' => number_format( round( $original_amount - $total_monthly_savings, 2 ), 2, ',', '' ),
+                    'original_amount' => number_format( $original_amount, 2, ',', '' )
                 ),
                 'pending_actions' => $this->get_real_pending_actions( $real_referrals )
             );
@@ -569,23 +569,53 @@ class MyAccountDataProvider {
                 return array();
             }
             
-            // Vérification si remise calculée
+            // Vérification si remise calculée (simulation) ou appliquée (réel)
             $calculated_discounts = $order->get_meta( '_parrainage_calculated_discounts' );
             $workflow_status = $order->get_meta( '_parrainage_workflow_status' );
-            
+
+            // 1) Mode simulation (v2.6.0)
             if ( $calculated_discounts && $workflow_status === 'calculated' ) {
                 $discount_data = is_array( $calculated_discounts ) ? $calculated_discounts[0] : $calculated_discounts;
-                
                 return array(
                     'discount_status' => 'calculated',
                     'discount_status_label' => 'CALCULÉ (v2.6.0)',
                     'discount_amount' => $discount_data['discount_amount'] ?? 0,
                     'discount_amount_formatted' => number_format( $discount_data['discount_amount'] ?? 0, 2, ',', '' ) . '€/mois',
                     'calculation_date' => $order->get_meta( '_parrainage_calculation_date' ),
-                    'is_simulation' => true // Marquer comme simulation v2.6.0
+                    'is_simulation' => true
                 );
-            } elseif ( $workflow_status ) {
-                // Autres statuts du workflow
+            }
+
+            // 2) Mode réel (v2.7.x) : workflow 'applied' ou 'active' → lire la méta sur la souscription du parrain
+            if ( in_array( $workflow_status, array( 'applied', 'active' ), true ) ) {
+                $parrain_subscription_id = (int) $order->get_meta( '_parrain_subscription_id' );
+                if ( $parrain_subscription_id && \function_exists( 'wcs_get_subscription' ) ) {
+                    $parrain_subscription = \wcs_get_subscription( $parrain_subscription_id );
+                    if ( $parrain_subscription ) {
+                        $amount = (float) $parrain_subscription->get_meta( '_tb_parrainage_discount_amount' );
+                        if ( $amount > 0 ) {
+                            return array(
+                                'discount_status' => 'active',
+                                'discount_status_label' => 'Remise active',
+                                'discount_amount' => $amount,
+                                'discount_amount_formatted' => number_format( $amount, 2, ',', '' ) . '€/mois',
+                                'is_simulation' => false
+                            );
+                        }
+                    }
+                }
+                // Si rien trouvé, afficher 0 mais conserver le statut
+                return array(
+                    'discount_status' => $workflow_status,
+                    'discount_status_label' => $this->get_workflow_status_label_client( $workflow_status ),
+                    'discount_amount' => 0,
+                    'discount_amount_formatted' => '0,00€/mois',
+                    'is_simulation' => false
+                );
+            }
+
+            // 3) Autres statuts → 0 par défaut
+            if ( $workflow_status ) {
                 return array(
                     'discount_status' => $workflow_status,
                     'discount_status_label' => $this->get_workflow_status_label_client( $workflow_status ),
@@ -598,7 +628,7 @@ class MyAccountDataProvider {
             // Fallback vers données mockées
             return $this->get_client_mock_discount_data( $order_id );
             
-        } catch ( Exception $e ) {
+        } catch ( \Exception $e ) {
             $this->logger->error(
                 'Erreur lors de la récupération des données client réelles',
                 array(

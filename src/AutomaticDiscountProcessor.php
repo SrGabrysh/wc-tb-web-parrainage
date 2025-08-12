@@ -191,8 +191,9 @@ class AutomaticDiscountProcessor {
             $pending_discount = $parent_order->get_meta( '_pending_parrain_discount' );
             
             if ( $pending_discount && $parent_order->get_meta( '_parrainage_workflow_status' ) === 'pending' ) {
-                // Programmation avec délai de sécurité
-                $schedule_time = time() + WC_TB_PARRAINAGE_ASYNC_DELAY;
+                // Programmation avec délai de sécurité (filtrable)
+                $delay = (int) \apply_filters( 'tb_parrainage_async_delay', WC_TB_PARRAINAGE_ASYNC_DELAY );
+                $schedule_time = time() + max( 0, $delay );
                 
                 $scheduled = wp_schedule_single_event(
                     $schedule_time,
@@ -221,8 +222,17 @@ class AutomaticDiscountProcessor {
                         'discount-processor'
                     );
                 } else {
-                    // Fallback pour problème CRON
+                    // Fallback pour problème CRON: exécuter immédiatement
                     $this->handle_cron_failure( $parent_order->get_id(), $subscription->get_id() );
+                    $this->logger->warning(
+                        'CRON non planifié - exécution immédiate du traitement asynchrone',
+                        array(
+                            'order_id' => $parent_order->get_id(),
+                            'subscription_id' => $subscription->get_id()
+                        ),
+                        'discount-processor'
+                    );
+                    $this->process_parrain_discount_async( $parent_order->get_id(), $subscription->get_id(), 1 );
                 }
             }
             
