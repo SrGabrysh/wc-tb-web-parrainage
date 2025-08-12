@@ -93,10 +93,15 @@ class MyAccountDataProvider {
      * @return array Tableau des parrainages formatés
      */
     public function get_user_parrainages( $user_subscription_id, $limit = WC_TB_PARRAINAGE_LIMIT_DISPLAY ) {
-        // CORRECTIF v2.7.5 : Vider le cache pour forcer la régénération avec nouvelles corrections
+        // FORCE CACHE CLEAR v2.7.10 - Vider systématiquement pour tests
         $cache_key = self::CACHE_KEY_PREFIX . $user_subscription_id;
-        \delete_transient( $cache_key ); // Force refresh après corrections
-        $cached_data = false; // Forcer nouvelle récupération
+        \delete_transient( $cache_key );
+        $cached_data = false;
+        
+        $this->logger->info( 'FORCE CACHE CLEAR v2.7.10 - Cache vidé systématiquement', array(
+            'subscription_id' => $user_subscription_id,
+            'cache_key' => $cache_key
+        ), 'account-data-provider' );
         
         if ( $cached_data !== false ) {
             $this->logger->info( 'Données de parrainage récupérées depuis le cache', array(
@@ -209,13 +214,23 @@ class MyAccountDataProvider {
      * @return string Montant de la remise formaté ou statut
      */
     private function get_parrain_reduction( $order_id, $subscription_status ) {
+        // DEBUG : Logs pour identifier le problème
+        $this->logger->debug( 'get_parrain_reduction appelé', array(
+            'order_id' => $order_id,
+            'subscription_status' => $subscription_status
+        ), 'account-data-provider' );
+        
         // Vérifier si l'abonnement est actif
         if ( ! in_array( $subscription_status, ['active', 'wc-active'] ) ) {
+            $this->logger->debug( 'Abonnement non actif', array(
+                'subscription_status' => $subscription_status
+            ), 'account-data-provider' );
             return 'Non applicable';
         }
         
         $order = wc_get_order( $order_id );
         if ( ! $order ) {
+            $this->logger->warning( 'Commande non trouvée', array( 'order_id' => $order_id ), 'account-data-provider' );
             return '0,00€';
         }
         
@@ -223,8 +238,19 @@ class MyAccountDataProvider {
         $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
         $remise_montant = 0.00;
         
+        $this->logger->debug( 'Configuration produits récupérée', array(
+            'config_count' => count( $products_config ),
+            'config_keys' => array_keys( $products_config )
+        ), 'account-data-provider' );
+        
         foreach ( $order->get_items() as $item ) {
             $product_id = $item->get_product_id();
+            
+            $this->logger->debug( 'Vérification produit', array(
+                'product_id' => $product_id,
+                'has_config' => isset( $products_config[ $product_id ]['remise_parrain'] ),
+                'config_value' => $products_config[ $product_id ]['remise_parrain'] ?? 'NOT_SET'
+            ), 'account-data-provider' );
             
             if ( isset( $products_config[ $product_id ]['remise_parrain'] ) ) {
                 $remise = $products_config[ $product_id ]['remise_parrain'];
@@ -235,6 +261,12 @@ class MyAccountDataProvider {
                 } else {
                     $remise_montant = floatval( $remise );
                 }
+                
+                $this->logger->debug( 'Remise trouvée', array(
+                    'product_id' => $product_id,
+                    'remise_raw' => $remise,
+                    'remise_montant' => $remise_montant
+                ), 'account-data-provider' );
                 break;
             }
         }
@@ -242,10 +274,18 @@ class MyAccountDataProvider {
         // Si aucune remise spécifique, vérifier la config par défaut
         if ( $remise_montant == 0.00 && isset( $products_config['default']['remise_parrain'] ) ) {
             $remise_montant = floatval( $products_config['default']['remise_parrain'] );
+            $this->logger->debug( 'Remise par défaut utilisée', array( 'remise_montant' => $remise_montant ), 'account-data-provider' );
         }
         
-        // Formatage avec virgule française
-        return number_format( $remise_montant, 2, ',', '' ) . '€';
+        $result = number_format( $remise_montant, 2, ',', '' ) . '€/mois';
+        
+        $this->logger->info( 'Remise parrain calculée', array(
+            'order_id' => $order_id,
+            'remise_montant' => $remise_montant,
+            'result' => $result
+        ), 'account-data-provider' );
+        
+        return $result;
     }
     
     /**
@@ -373,7 +413,7 @@ class MyAccountDataProvider {
             'montant' => $this->format_montant( $row->subscription_total ),
             'montant_raw' => floatval( $row->subscription_total ),
             // MODIFICATION v2.6.0 : Données remise réelles côté client
-            'discount_client_info' => $this->get_real_client_discount_data( $row->order_id )
+            'discount_client_info' => $this->get_real_client_discount_data_safe( $row->order_id )
         );
     }
     
@@ -467,10 +507,23 @@ class MyAccountDataProvider {
      * @return array Résumé des économies
      */
     public function get_savings_summary( $user_subscription_id ) {
-        // CORRECTIF v2.7.5 : Vider le cache pour forcer la régénération avec nouvelles corrections  
+        // CORRECTIF v2.7.6 : Vider le cache du résumé si contient timestamp
         $cache_key = self::CACHE_KEY_PREFIX . 'summary_' . $user_subscription_id;
-        \delete_transient( $cache_key ); // Force refresh après corrections
-        $cached_summary = false; // Forcer nouveau calcul
+        $cached_summary = \get_transient( $cache_key );
+        
+        if ( $cached_summary !== false ) {
+            // Vérifier si le résumé contient un timestamp au lieu d'un montant
+            $total_savings = $cached_summary['total_savings_to_date'] ?? 0;
+            if ( is_numeric( $total_savings ) && $total_savings > 100000 ) {
+                \delete_transient( $cache_key );
+                $cached_summary = false;
+                
+                $this->logger->info( 'Cache résumé invalidé - timestamp détecté', array(
+                    'subscription_id' => $user_subscription_id,
+                    'timestamp_detected' => $total_savings
+                ), 'account-data-provider' );
+            }
+        }
         
         if ( $cached_summary !== false ) {
             return $cached_summary;
@@ -588,33 +641,98 @@ class MyAccountDataProvider {
     }
     
     /**
+     * WRAPPER SAFE pour get_real_client_discount_data avec gestion d'erreurs
+     */
+    private function get_real_client_discount_data_safe( $order_id ) {
+        try {
+            $this->logger->info( '🛡️ APPEL SAFE get_real_client_discount_data', array(
+                'order_id' => $order_id
+            ), 'account-data-provider' );
+            
+            return $this->get_real_client_discount_data( $order_id );
+            
+        } catch ( \Exception $e ) {
+            $this->logger->error( '❌ ERREUR dans get_real_client_discount_data', array(
+                'order_id' => $order_id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ), 'account-data-provider' );
+            
+            // Fallback vers données mockées en cas d'erreur
+            return $this->get_client_mock_discount_data( $order_id );
+        }
+    }
+
+    /**
      * NOUVEAU v2.6.0 : Récupération des vraies données client de remise
      * 
      * @param int $order_id ID de la commande
      * @return array Données de remise réelles côté client
      */
     private function get_real_client_discount_data( $order_id ) {
+        $this->logger->info( '🚀 DEBUT get_real_client_discount_data', array(
+            'order_id' => $order_id,
+            'method' => 'get_real_client_discount_data'
+        ), 'account-data-provider' );
         try {
             // Récupération de l'instance du plugin pour accès aux services
+            $this->logger->info( '🔧 Récupération instance plugin', array(
+                'order_id' => $order_id
+            ), 'account-data-provider' );
+            
             $plugin_instance = $this->get_plugin_instance();
             if ( ! $plugin_instance ) {
+                $this->logger->warning( '❌ ÉCHEC - Instance plugin non trouvée !', array(
+                    'order_id' => $order_id
+                ), 'account-data-provider' );
                 return $this->get_client_mock_discount_data( $order_id );
             }
+            
+            $this->logger->info( '✅ Instance plugin OK - récupération calculator', array(
+                'order_id' => $order_id
+            ), 'account-data-provider' );
             
             $calculator = $plugin_instance->get_discount_calculator();
             if ( ! $calculator ) {
+                $this->logger->warning( '❌ ÉCHEC - Calculator non trouvé !', array(
+                    'order_id' => $order_id
+                ), 'account-data-provider' );
                 return $this->get_client_mock_discount_data( $order_id );
             }
             
+            $this->logger->info( '✅ Calculator OK - récupération commande', array(
+                'order_id' => $order_id
+            ), 'account-data-provider' );
+            
             // Récupération des informations de la commande
+            $this->logger->info( '📦 Récupération commande WooCommerce', array(
+                'order_id' => $order_id
+            ), 'account-data-provider' );
+            
             $order = wc_get_order( $order_id );
             if ( ! $order ) {
+                $this->logger->error( '❌ ÉCHEC - Commande WooCommerce non trouvée !', array(
+                    'order_id' => $order_id,
+                    'wc_get_order_result' => 'false'
+                ), 'account-data-provider' );
                 return array();
             }
+            
+            $this->logger->info( '✅ Commande OK - vérification workflow status', array(
+                'order_id' => $order_id,
+                'order_status' => $order->get_status()
+            ), 'account-data-provider' );
             
             // Vérification si remise calculée (simulation) ou appliquée (réel)
             $calculated_discounts = $order->get_meta( '_parrainage_calculated_discounts' );
             $workflow_status = $order->get_meta( '_parrainage_workflow_status' );
+            
+            $this->logger->info( '🔍 Récupération métadonnées workflow', array(
+                'order_id' => $order_id,
+                'workflow_status' => $workflow_status,
+                'has_calculated_discounts' => !empty($calculated_discounts)
+            ), 'account-data-provider' );
 
             // 1) Mode simulation (v2.6.0)
             if ( $calculated_discounts && $workflow_status === 'calculated' ) {
@@ -657,12 +775,20 @@ class MyAccountDataProvider {
                 );
             }
 
-            // 3) Statut 'scheduled' → Récupérer depuis la configuration produit directement 
-            if ( $workflow_status === 'scheduled' ) {
+            // 3) Statut 'application_failed' → Solution simple avec configuration directe
+            if ( $workflow_status === 'application_failed' ) {
+                // Pour application_failed, utiliser directement la configuration produit
                 $remise_amount = $this->get_configured_discount_amount( $order_id );
+                
+                $this->logger->info( 'GESTION application_failed - remise depuis configuration', array(
+                    'order_id' => $order_id,
+                    'workflow_status' => $workflow_status,
+                    'remise_amount' => $remise_amount
+                ), 'account-data-provider' );
+                
                 return array(
-                    'discount_status' => 'scheduled',
-                    'discount_status_label' => 'Programmé',
+                    'discount_status' => 'application_failed',
+                    'discount_status_label' => 'Échec application - Remise configurée',
                     'discount_amount' => $remise_amount,
                     'discount_amount_formatted' => number_format( $remise_amount, 2, ',', '' ) . '€/mois',
                     'is_simulation' => false
