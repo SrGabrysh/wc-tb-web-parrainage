@@ -226,7 +226,14 @@ class MyAccountDataProvider {
             $product_id = $item->get_product_id();
             
             if ( isset( $products_config[ $product_id ]['remise_parrain'] ) ) {
-                $remise_montant = floatval( $products_config[ $product_id ]['remise_parrain'] );
+                $remise = $products_config[ $product_id ]['remise_parrain'];
+                
+                // Gérer les formats de configuration uniformément avec DiscountCalculator
+                if ( is_array( $remise ) && isset( $remise['montant'] ) ) {
+                    $remise_montant = floatval( $remise['montant'] );
+                } else {
+                    $remise_montant = floatval( $remise );
+                }
                 break;
             }
         }
@@ -384,7 +391,7 @@ class MyAccountDataProvider {
         
         $discount_amount = mt_rand( 500, 1500 ) / 100; // Entre 5€ et 15€
         $total_monthly_savings = mt_rand( 700, 2500 ) / 100; // Entre 7€ et 25€ (1-3 filleuls)
-        $total_savings_to_date = mt_rand( 50, 300 ); // Entre 50€ et 300€
+        $total_savings_to_date = mt_rand( 50, 300 ); // Entre 50€ et 300€ (montant simulé)
         
         return array(
             'discount_status' => $status,
@@ -486,11 +493,24 @@ class MyAccountDataProvider {
             $subscription = wcs_get_subscription( $user_subscription_id );
             $original_amount = $subscription ? $subscription->get_total() : 89.99;
             
+            // Calculer les économies totales depuis le début (estimation basée sur la durée des parrainages actifs)
+            $total_savings_to_date = 0;
+            foreach ( $real_referrals as $referral ) {
+                $status = $referral['discount_client_info']['discount_status'] ?? '';
+                if ( in_array( $status, array( 'calculated', 'applied', 'active' ), true ) ) {
+                    $discount_amount = floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
+                    $parrainage_date = strtotime( $referral['date_parrainage_raw'] ?? 'now' );
+                    $months_active = max( 1, floor( ( time() - $parrainage_date ) / ( 30 * 24 * 3600 ) ) );
+                    $total_savings_to_date += $discount_amount * $months_active;
+                }
+            }
+
             $summary = array(
                 'active_discounts' => $active_discounts,
                 'total_referrals' => $total_referrals,
                 'monthly_savings' => number_format( $total_monthly_savings, 2 ),
                 'yearly_projection' => number_format( $total_monthly_savings * 12, 2 ),
+                'total_savings_to_date' => number_format( $total_savings_to_date, 2 ),
                 'currency' => get_woocommerce_currency_symbol(),
                 'next_billing' => array(
                     'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
@@ -731,6 +751,7 @@ class MyAccountDataProvider {
             'total_referrals' => $total_referrals,
             'monthly_savings' => round( $monthly_savings, 2 ),
             'yearly_projection' => round( $monthly_savings * 12, 2 ),
+            'total_savings_to_date' => round( $monthly_savings * mt_rand( 6, 24 ), 2 ), // 6-24 mois d'économies simulées
             'currency' => get_woocommerce_currency_symbol(),
             'next_billing' => array(
                 'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),

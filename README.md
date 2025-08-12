@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.7.5
+**Version:** 2.7.6
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -745,6 +745,28 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.7.4 (12-08-2025) - CORRECTIONS BUGS CRITIQUES
+
+**🐛 CORRECTIONS DE BUGS MAJEURS**
+
+- **Fix remise affichée à 0,00€/mois** : Correction de la gestion des formats de configuration remise parrain dans `DiscountCalculator`
+- **Fix montant astronomique prochaine facturation** : Ajout du champ manquant `total_savings_to_date` dans les méthodes de calcul du résumé
+- **Gestion uniforme des formats** : Support des formats objet `{montant: 15, unite: "EUR"}` et plat dans `MyAccountDataProvider`
+- **Prévention confusion timestamp/montant** : Calcul réel des économies totales basé sur la durée des parrainages actifs
+
+**🔧 AMÉLIORATIONS TECHNIQUES**
+
+- Harmonisation du traitement des configurations remise entre `DiscountCalculator` et `MyAccountDataProvider`
+- Calcul intelligent des économies totales basé sur la date de parrainage et les montants réels
+- Fallback robuste vers données simulées avec montants cohérents
+- Documentation inline enrichie pour les formats de configuration supportés
+
+**📊 CALCULS CORRIGÉS**
+
+- Économies totales : estimation réaliste basée sur `(date_actuelle - date_parrainage) * remise_mensuelle`
+- Données simulées : montants cohérents entre 50€ et 300€ au lieu de timestamps
+- Format uniforme : support `remise_parrain.montant` et `remise_parrain` (nombre direct)
 
 ### Version 2.7.3 (2026-01-08) - APPLICATION RÉELLE STABILISÉE
 

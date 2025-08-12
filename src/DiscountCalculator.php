@@ -159,12 +159,23 @@ class DiscountCalculator {
         $remise = $config['remise_parrain'];
 
         if ( is_array( $remise ) ) {
-            $normalized_config = array(
-                'discount_type' => $remise['type'] ?? 'percentage',
-                'discount_value' => (float) ( $remise['montant'] ?? WC_TB_PARRAINAGE_DEFAULT_DISCOUNT_RATE ),
-                'currency' => $remise['unite'] ?? 'EUR',
-                'product_name' => $config['description'] ?? 'Produit inconnu'
-            );
+            // Format objet avec montant et unité
+            if ( isset( $remise['montant'] ) ) {
+                $normalized_config = array(
+                    'discount_type' => 'fixed', // Les montants configurés sont toujours fixes
+                    'discount_value' => (float) $remise['montant'],
+                    'currency' => $remise['unite'] ?? 'EUR',
+                    'product_name' => $config['description'] ?? 'Produit inconnu'
+                );
+            } else {
+                // Format ancien avec 'type' (fallback)
+                $normalized_config = array(
+                    'discount_type' => $remise['type'] ?? 'fixed',
+                    'discount_value' => (float) ( $remise['value'] ?? $remise['amount'] ?? WC_TB_PARRAINAGE_DEFAULT_DISCOUNT_RATE ),
+                    'currency' => $remise['unite'] ?? 'EUR',
+                    'product_name' => $config['description'] ?? 'Produit inconnu'
+                );
+            }
         } else {
             // Format plat: considérer comme remise fixe en EUR par défaut
             $normalized_config = array(
