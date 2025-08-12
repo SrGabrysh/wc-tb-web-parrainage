@@ -312,7 +312,17 @@ class MyAccountParrainageManager {
                 </div>
                 <div class="savings-card">
                     <span class="savings-label">Économies totales :</span>
-                    <span class="savings-value"><?php echo esc_html( $summary['total_savings_to_date'] ); ?>€</span>
+                    <span class="savings-value"><?php 
+                        // PROTECTION : Éviter l'affichage de timestamps comme montants
+                        $total_savings = $summary['total_savings_to_date'] ?? 0;
+                        
+                        // Si c'est un nombre très grand (probable timestamp), afficher 0
+                        if ( is_numeric( $total_savings ) && $total_savings > 100000 ) {
+                            echo '0,00';
+                        } else {
+                            echo esc_html( $total_savings );
+                        }
+                    ?>€</span>
                 </div>
                 <div class="savings-card">
                     <span class="savings-label">Prochaine facturation :</span>

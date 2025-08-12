@@ -293,22 +293,34 @@ class DiscountValidator {
         
         $remise_config = $config['remise_parrain'];
         
-        // Validation montant remise
-        if ( ! isset( $remise_config['montant'] ) || ! is_numeric( $remise_config['montant'] ) ) {
-            $result['is_valid'] = false;
-            $result['errors'][] = 'Montant de remise parrain invalide pour le produit : ' . $product_id;
+        // CORRECTION : Gérer les deux formats de configuration
+        if ( is_array( $remise_config ) ) {
+            // Format objet avec 'montant' et 'type'
+            if ( ! isset( $remise_config['montant'] ) || ! is_numeric( $remise_config['montant'] ) ) {
+                $result['is_valid'] = false;
+                $result['errors'][] = 'Montant de remise parrain invalide pour le produit : ' . $product_id;
+            }
+            
+            // Validation type remise
+            $valid_types = array( 'percentage', 'fixed' );
+            $type = $remise_config['type'] ?? 'fixed';
+            if ( ! in_array( $type, $valid_types, true ) ) {
+                $result['is_valid'] = false;
+                $result['errors'][] = 'Type de remise invalide : ' . $type;
+            }
+            
+            $result['details']['discount_amount'] = $remise_config['montant'];
+            $result['details']['discount_type'] = $type;
+        } else {
+            // Format simple : nombre direct (cas actuel)
+            if ( ! is_numeric( $remise_config ) || $remise_config <= 0 ) {
+                $result['is_valid'] = false;
+                $result['errors'][] = 'Montant de remise parrain invalide pour le produit : ' . $product_id . ' (valeur: ' . $remise_config . ')';
+            }
+            
+            $result['details']['discount_amount'] = floatval( $remise_config );
+            $result['details']['discount_type'] = 'fixed'; // Par défaut en format simple
         }
-        
-        // Validation type remise
-        $valid_types = array( 'percentage', 'fixed' );
-        $type = $remise_config['type'] ?? 'percentage';
-        if ( ! in_array( $type, $valid_types, true ) ) {
-            $result['is_valid'] = false;
-            $result['errors'][] = 'Type de remise invalide : ' . $type;
-        }
-        
-        $result['details']['discount_amount'] = $remise_config['montant'];
-        $result['details']['discount_type'] = $type;
         $result['details']['product_config'] = $config;
         
         return $result;

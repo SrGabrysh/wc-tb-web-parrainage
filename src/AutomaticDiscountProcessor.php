@@ -285,11 +285,32 @@ class AutomaticDiscountProcessor {
             $product_ids = $this->get_order_product_ids( $order );
             $eligible_products = array();
             
+            $this->logger->debug(
+                'Début validation éligibilité produits',
+                array(
+                    'order_id' => $order_id,
+                    'product_ids' => $product_ids,
+                    'parrain_subscription_id' => $parrain_subscription_id
+                ),
+                'discount-processor'
+            );
+            
             foreach ( $product_ids as $product_id ) {
                 $validation = $this->discount_validator->validate_discount_eligibility( 
                     $parrain_subscription_id, 
                     $order_id, 
                     $product_id 
+                );
+                
+                $this->logger->debug(
+                    'Validation produit individuel',
+                    array(
+                        'product_id' => $product_id,
+                        'is_eligible' => $validation['is_eligible'],
+                        'errors' => $validation['errors'] ?? array(),
+                        'details' => $validation['details'] ?? array()
+                    ),
+                    'discount-processor'
                 );
                 
                 if ( $validation['is_eligible'] ) {
@@ -298,6 +319,17 @@ class AutomaticDiscountProcessor {
             }
             
             if ( empty( $eligible_products ) ) {
+                $this->logger->error(
+                    'Aucun produit éligible pour remise parrain - détails complets',
+                    array(
+                        'order_id' => $order_id,
+                        'product_ids' => $product_ids,
+                        'eligible_products' => $eligible_products,
+                        'parrain_subscription_id' => $parrain_subscription_id,
+                        'code_parrain' => $code_parrain
+                    ),
+                    'discount-processor'
+                );
                 throw new \InvalidArgumentException( 'Aucun produit éligible pour remise parrain' );
             }
             

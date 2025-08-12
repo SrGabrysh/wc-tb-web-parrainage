@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.7.6
+**Version:** 2.7.7
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -745,6 +745,28 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.7.5 (12-08-2025) - CORRECTIONS BUGS CRITIQUES RÉELLES
+
+**🐛 VRAIES CORRECTIONS IDENTIFIÉES**
+
+- **Fix "Aucun produit éligible pour remise parrain"** : Correction du `DiscountValidator` pour gérer le format simple (15.00) et objet ({montant: 15, unite: "EUR"})
+- **Fix timestamp astronomique** : Protection contre l'affichage de timestamps (1754989464) comme montants avec détection automatique et logs d'alerte
+- **Logs enrichis pour diagnostic** : Ajout de logs détaillés dans `AutomaticDiscountProcessor` pour tracer les validations d'éligibilité produit
+- **Protection interface utilisateur** : Validation des montants dans `MyAccountParrainageManager` pour éviter les timestamps en affichage
+
+**🔧 AMÉLIORATIONS DIAGNOSTIQUES**
+
+- Logs DEBUG pour validation éligibilité avec détails des erreurs par produit
+- Détection automatique de timestamps dans `total_savings_to_date` avec log d'alerte et correction
+- Messages d'erreur enrichis avec valeurs de configuration pour faciliter le débogage
+- Fallback robuste vers 0,00€ quand timestamp détecté
+
+**📊 CAUSES RÉELLES IDENTIFIÉES**
+
+- Configuration produits en format simple (15) non reconnue par le validateur qui cherchait un objet
+- Timestamp `_parrainage_scheduled_time` utilisé par erreur comme montant dans certains cas
+- Validation produit trop stricte empêchant l'éligibilité des configurations simples
 
 ### Version 2.7.4 (12-08-2025) - CORRECTIONS BUGS CRITIQUES
 

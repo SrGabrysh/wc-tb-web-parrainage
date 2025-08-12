@@ -534,6 +534,27 @@ class MyAccountDataProvider {
             return $this->get_mock_savings_summary( $user_subscription_id );
         }
         
+        // PROTECTION : Détecter et corriger les timestamps dans total_savings_to_date
+        if ( isset( $summary['total_savings_to_date'] ) ) {
+            $total_savings_raw = $summary['total_savings_to_date'];
+            
+            // Si c'est un timestamp (nombre > 100000), corriger
+            if ( is_numeric( $total_savings_raw ) && $total_savings_raw > 100000 ) {
+                $this->logger->warning(
+                    'TIMESTAMP DÉTECTÉ dans total_savings_to_date - correction appliquée',
+                    array(
+                        'user_subscription_id' => $user_subscription_id,
+                        'timestamp_detected' => $total_savings_raw,
+                        'converted_date' => date( 'Y-m-d H:i:s', $total_savings_raw )
+                    ),
+                    'account-data-provider'
+                );
+                
+                // Remplacer par un montant par défaut
+                $summary['total_savings_to_date'] = '0,00';
+            }
+        }
+        
         // Mettre en cache
         \set_transient( $cache_key, $summary, self::CACHE_DURATION );
         
