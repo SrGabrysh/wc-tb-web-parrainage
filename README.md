@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.7.7
+**Version:** 2.7.8
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -745,6 +745,43 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.7.6 (12-08-2025) - CORRECTION FINALE STATUT SCHEDULED
+
+**🎯 PROBLÈME RÉEL IDENTIFIÉ ET CORRIGÉ**
+
+Le payload montrait `"_parrainage_workflow_status": "scheduled"` mais le code ne gérait que les statuts `calculated`, `applied`, `active`.
+
+**✅ CORRECTIONS APPLIQUÉES**
+
+- **Support statut 'scheduled'** : Ajout de la gestion du statut 'scheduled' dans `get_real_client_discount_data()`
+- **Récupération directe depuis configuration** : Nouvelle méthode `get_configured_discount_amount()` pour lire la remise depuis `wc_tb_parrainage_products_config`
+- **Calcul résumé corrigé** : Inclusion du statut 'scheduled' dans les calculs d'économies
+- **Cache forcé invalidé** : Suppression temporaire du cache pour forcer la régénération avec les nouvelles corrections
+- **Label utilisateur amélioré** : "Programmé (activation prochaine)" pour statut scheduled
+
+**🔧 LOGIQUE CORRIGÉE**
+
+```php
+// AVANT (bug)
+if ( $workflow_status === 'calculated' ) { ... }
+// → Statut 'scheduled' = fallback vers données mockées = 0,00€
+
+// APRÈS (corrigé)
+if ( $workflow_status === 'scheduled' ) {
+    $remise_amount = $this->get_configured_discount_amount( $order_id );
+    return array(
+        'discount_amount' => $remise_amount, // 15€ depuis configuration
+        'discount_amount_formatted' => '15,00€/mois'
+    );
+}
+```
+
+**📊 RÉSULTATS ATTENDUS**
+
+- ✅ Remise affichée : **15,00€/mois** (au lieu de 0,00€)
+- ✅ Économies totales : **15€** (au lieu de timestamp)
+- ✅ Statut : **"Programmé (activation prochaine)"**
 
 ### Version 2.7.5 (12-08-2025) - CORRECTIONS BUGS CRITIQUES RÉELLES
 

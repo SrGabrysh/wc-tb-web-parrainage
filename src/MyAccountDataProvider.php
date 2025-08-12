@@ -93,9 +93,10 @@ class MyAccountDataProvider {
      * @return array Tableau des parrainages formatés
      */
     public function get_user_parrainages( $user_subscription_id, $limit = WC_TB_PARRAINAGE_LIMIT_DISPLAY ) {
-        // Vérifier le cache d'abord
+        // CORRECTIF v2.7.5 : Vider le cache pour forcer la régénération avec nouvelles corrections
         $cache_key = self::CACHE_KEY_PREFIX . $user_subscription_id;
-        $cached_data = \get_transient( $cache_key );
+        \delete_transient( $cache_key ); // Force refresh après corrections
+        $cached_data = false; // Forcer nouvelle récupération
         
         if ( $cached_data !== false ) {
             $this->logger->info( 'Données de parrainage récupérées depuis le cache', array(
@@ -466,9 +467,10 @@ class MyAccountDataProvider {
      * @return array Résumé des économies
      */
     public function get_savings_summary( $user_subscription_id ) {
-        // Cache pour éviter les recalculs
+        // CORRECTIF v2.7.5 : Vider le cache pour forcer la régénération avec nouvelles corrections  
         $cache_key = self::CACHE_KEY_PREFIX . 'summary_' . $user_subscription_id;
-        $cached_summary = \get_transient( $cache_key );
+        \delete_transient( $cache_key ); // Force refresh après corrections
+        $cached_summary = false; // Forcer nouveau calcul
         
         if ( $cached_summary !== false ) {
             return $cached_summary;
@@ -484,7 +486,7 @@ class MyAccountDataProvider {
             
             foreach ( $real_referrals as $referral ) {
                 $status = $referral['discount_client_info']['discount_status'] ?? '';
-                if ( in_array( $status, array( 'calculated', 'applied', 'active' ), true ) ) {
+                if ( in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ) ) {
                     $active_discounts++;
                     $total_monthly_savings += floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
                 }
@@ -497,7 +499,7 @@ class MyAccountDataProvider {
             $total_savings_to_date = 0;
             foreach ( $real_referrals as $referral ) {
                 $status = $referral['discount_client_info']['discount_status'] ?? '';
-                if ( in_array( $status, array( 'calculated', 'applied', 'active' ), true ) ) {
+                if ( in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ) ) {
                     $discount_amount = floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
                     $parrainage_date = strtotime( $referral['date_parrainage_raw'] ?? 'now' );
                     $months_active = max( 1, floor( ( time() - $parrainage_date ) / ( 30 * 24 * 3600 ) ) );
@@ -655,7 +657,19 @@ class MyAccountDataProvider {
                 );
             }
 
-            // 3) Autres statuts → 0 par défaut
+            // 3) Statut 'scheduled' → Récupérer depuis la configuration produit directement 
+            if ( $workflow_status === 'scheduled' ) {
+                $remise_amount = $this->get_configured_discount_amount( $order_id );
+                return array(
+                    'discount_status' => 'scheduled',
+                    'discount_status_label' => 'Programmé',
+                    'discount_amount' => $remise_amount,
+                    'discount_amount_formatted' => number_format( $remise_amount, 2, ',', '' ) . '€/mois',
+                    'is_simulation' => false
+                );
+            }
+
+            // 4) Autres statuts → 0 par défaut
             if ( $workflow_status ) {
                 return array(
                     'discount_status' => $workflow_status,
@@ -800,13 +814,56 @@ class MyAccountDataProvider {
             'calculated' => 'Calculé (Test v2.6.0)',
             'simulated' => 'Simulé (Test v2.6.0)',
             'pending' => 'En cours de calcul',
-            'scheduled' => 'Programmé',
+            'scheduled' => 'Programmé (activation prochaine)',
             'error' => 'Erreur de calcul',
             'cron_failed' => 'En attente technique'
         );
         return $labels[$status] ?? 'Statut inconnu';
     }
     
+    /**
+     * NOUVEAU v2.7.5 : Récupération du montant de remise configuré pour une commande
+     * 
+     * @param int $order_id ID de la commande
+     * @return float Montant de la remise configurée
+     */
+    private function get_configured_discount_amount( $order_id ) {
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return 0.0;
+        }
+        
+        // Récupérer la configuration des produits
+        $products_config = get_option( 'wc_tb_parrainage_products_config', array() );
+        
+        foreach ( $order->get_items() as $item ) {
+            $product_id = $item->get_product_id();
+            
+            if ( isset( $products_config[ $product_id ]['remise_parrain'] ) ) {
+                $remise = $products_config[ $product_id ]['remise_parrain'];
+                
+                // Gérer les formats de configuration uniformément 
+                if ( is_array( $remise ) && isset( $remise['montant'] ) ) {
+                    return floatval( $remise['montant'] );
+                } else {
+                    return floatval( $remise );
+                }
+            }
+        }
+        
+        // Si aucune remise spécifique, vérifier la config par défaut
+        if ( isset( $products_config['default']['remise_parrain'] ) ) {
+            $remise = $products_config['default']['remise_parrain'];
+            if ( is_array( $remise ) && isset( $remise['montant'] ) ) {
+                return floatval( $remise['montant'] );
+            } else {
+                return floatval( $remise );
+            }
+        }
+        
+        return 0.0;
+    }
+
     /**
      * NOUVEAU v2.6.0 : Récupération de l'instance du plugin
      * 
