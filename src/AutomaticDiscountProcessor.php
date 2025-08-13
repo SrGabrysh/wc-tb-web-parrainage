@@ -102,6 +102,11 @@ class AutomaticDiscountProcessor {
         // PHASE 2 : Programmation asynchrone lors activation abonnement filleul
         add_action( 'woocommerce_subscription_status_active', array( $this, 'schedule_parrain_discount' ), 10, 1 );
         
+        // NOUVEAU v2.8.0 : Surveillance changements statut filleul vers inactivité
+        add_action( 'woocommerce_subscription_status_cancelled', array( $this, 'handle_filleul_suspension' ), 10, 1 );
+        add_action( 'woocommerce_subscription_status_on-hold', array( $this, 'handle_filleul_suspension' ), 10, 1 );
+        add_action( 'woocommerce_subscription_status_expired', array( $this, 'handle_filleul_suspension' ), 10, 1 );
+        
         // PHASE 3 : Traitement différé via hook CRON personnalisé
         add_action( WC_TB_PARRAINAGE_QUEUE_HOOK, array( $this, 'process_parrain_discount_async' ), 10, 3 );
         
@@ -116,10 +121,14 @@ class AutomaticDiscountProcessor {
             array(
                 'hooks_registered' => array(
                     'woocommerce_checkout_order_processed',
-                    'woocommerce_subscription_status_active', 
+                    'woocommerce_subscription_status_active',
+                    'woocommerce_subscription_status_cancelled',  // NOUVEAU v2.8.0
+                    'woocommerce_subscription_status_on-hold',    // NOUVEAU v2.8.0
+                    'woocommerce_subscription_status_expired',    // NOUVEAU v2.8.0
                     WC_TB_PARRAINAGE_QUEUE_HOOK,
                     'tb_parrainage_retry_discount'
-                )
+                ),
+                'version' => '2.8.0-dev'
             ),
             'discount-processor'
         );
@@ -812,5 +821,165 @@ class AutomaticDiscountProcessor {
         ", '_tb_parrainage_processed', date( 'Y-m-d H:i:s', time() - 86400 ) ) );
         
         return $stats;
+    }
+    
+    /**
+     * NOUVEAU v2.8.0 : Gestion de la suspension des remises quand filleul devient inactif
+     * 
+     * @param \WC_Subscription $subscription L'abonnement filleul qui devient inactif
+     * @return void
+     */
+    public function handle_filleul_suspension( $subscription ) {
+        
+        $start_time = microtime( true );
+        $filleul_subscription_id = $subscription->get_id();
+        $new_status = $subscription->get_status();
+        
+        // Log détaillé de détection
+        $this->logger->info(
+            'TRIGGER v2.8.0 : Détection changement statut filleul vers inactivité',
+            array(
+                'filleul_subscription_id' => $filleul_subscription_id,
+                'new_status' => $new_status,
+                'trigger_time' => current_time( 'mysql' ),
+                'user_id' => $subscription->get_user_id(),
+                'customer_email' => $subscription->get_billing_email()
+            ),
+            'filleul-suspension'
+        );
+        
+        try {
+            // Rechercher le parrain associé à ce filleul
+            $parrain_data = $this->find_parrain_for_filleul( $filleul_subscription_id );
+            
+            if ( ! $parrain_data ) {
+                $this->logger->info(
+                    'Aucun parrain trouvé pour ce filleul - aucune action requise',
+                    array(
+                        'filleul_subscription_id' => $filleul_subscription_id,
+                        'search_duration' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                    ),
+                    'filleul-suspension'
+                );
+                return;
+            }
+            
+            // Parrain trouvé - logger les détails complets
+            $this->logger->info(
+                'PARRAIN IDENTIFIÉ pour filleul inactif - suspension requise',
+                array(
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'filleul_status' => $new_status,
+                    'parrain_subscription_id' => $parrain_data['subscription_id'],
+                    'parrain_user_id' => $parrain_data['user_id'],
+                    'parrain_email' => $parrain_data['email'],
+                    'ordre_filleul_id' => $parrain_data['ordre_filleul_id'],
+                    'detection_duration' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                ),
+                'filleul-suspension'
+            );
+            
+            // TODO v2.8.0 : Ici sera programmée la suspension asynchrone
+            $this->logger->warning(
+                'SUSPENSION PROGRAMMÉE (non implémentée) - Phase suivante du développement',
+                array(
+                    'parrain_subscription_id' => $parrain_data['subscription_id'],
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'reason' => 'Filleul statut : ' . $new_status,
+                    'next_step' => 'Implémenter SubscriptionLifecycleManager::suspend_discount()'
+                ),
+                'filleul-suspension'
+            );
+            
+        } catch ( \Exception $e ) {
+            $this->logger->error(
+                'ERREUR lors de la gestion suspension filleul',
+                array(
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'error_message' => $e->getMessage(),
+                    'error_trace' => $e->getTraceAsString(),
+                    'execution_time' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                ),
+                'filleul-suspension'
+            );
+        }
+    }
+    
+    /**
+     * NOUVEAU v2.8.0 : Rechercher le parrain associé à un filleul
+     * 
+     * @param int $filleul_subscription_id ID de l'abonnement filleul
+     * @return array|null Données du parrain trouvé ou null
+     */
+    private function find_parrain_for_filleul( $filleul_subscription_id ) {
+        
+        global $wpdb;
+        
+        $search_start = microtime( true );
+        
+        // Rechercher dans les métadonnées d'ordre : _billing_parrain_code = $filleul_subscription_id
+        $query = $wpdb->prepare( "
+            SELECT DISTINCT
+                pm_parrain.post_id as ordre_filleul_id,
+                pm_parrain.meta_value as parrain_subscription_id,
+                pm_user.meta_value as parrain_user_id,
+                pm_email.meta_value as parrain_email
+            FROM {$wpdb->postmeta} pm_parrain
+            LEFT JOIN {$wpdb->postmeta} pm_user 
+                ON pm_parrain.post_id = pm_user.post_id 
+                AND pm_user.meta_key = '_parrain_user_id'
+            LEFT JOIN {$wpdb->postmeta} pm_email 
+                ON pm_parrain.post_id = pm_email.post_id 
+                AND pm_email.meta_key = '_parrain_email'
+            WHERE pm_parrain.meta_key = '_billing_parrain_code'
+                AND pm_parrain.meta_value = %s
+            LIMIT 1
+        ", $filleul_subscription_id );
+        
+        $result = $wpdb->get_row( $query, ARRAY_A );
+        
+        $search_duration = round( ( microtime( true ) - $search_start ) * 1000, 2 );
+        
+        // Log détaillé de la recherche
+        $this->logger->debug(
+            'Recherche parrain pour filleul - résultats',
+            array(
+                'filleul_subscription_id' => $filleul_subscription_id,
+                'sql_query' => $query,
+                'search_duration' => $search_duration . 'ms',
+                'result_found' => ! empty( $result ),
+                'wpdb_last_error' => $wpdb->last_error ?: 'aucune erreur'
+            ),
+            'filleul-suspension'
+        );
+        
+        if ( empty( $result ) ) {
+            return null;
+        }
+        
+        // Valider que l'abonnement parrain existe toujours
+        $parrain_subscription = wcs_get_subscription( $result['parrain_subscription_id'] );
+        if ( ! $parrain_subscription ) {
+            $this->logger->warning(
+                'Parrain trouvé mais abonnement parrain inexistant',
+                array(
+                    'parrain_subscription_id' => $result['parrain_subscription_id'],
+                    'ordre_filleul_id' => $result['ordre_filleul_id']
+                ),
+                'filleul-suspension'
+            );
+            return null;
+        }
+        
+        // Retourner les données complètes du parrain
+        return array(
+            'subscription_id' => intval( $result['parrain_subscription_id'] ),
+            'user_id' => intval( $result['parrain_user_id'] ),
+            'email' => $result['parrain_email'],
+            'ordre_filleul_id' => intval( $result['ordre_filleul_id'] ),
+            'subscription_object' => $parrain_subscription,
+            'current_status' => $parrain_subscription->get_status(),
+            'current_total' => $parrain_subscription->get_total()
+        );
     }
 }

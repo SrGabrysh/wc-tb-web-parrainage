@@ -27,6 +27,9 @@ class Plugin {
     // AJOUT v2.7.0 : Gestionnaire d'application des remises
     private $subscription_discount_manager;
     
+    // AJOUT v2.7.8 : Module d'export des logs
+    private $export_manager;
+    
     public function __construct() {
         $this->logger = new Logger();
         $this->init_managers();
@@ -42,6 +45,12 @@ class Plugin {
         $this->coupon_manager = new CouponManager( $this->logger );
         $this->parrainage_stats_manager = new ParrainageStatsManager( $this->logger );
         $this->my_account_parrainage_manager = new MyAccountParrainageManager( $this->logger );
+        
+        // NOUVEAU v2.7.8 : Module d'export des logs
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Export/ExportValidator.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Export/ExportHandler.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Export/ExportManager.php';
+        $this->export_manager = new Export\ExportManager( $this->logger );
     }
     
     /**
@@ -110,6 +119,12 @@ class Plugin {
         
         // MODIFICATION v2.6.0 : Initialisation directe des services de remise
         $this->init_discount_services();
+        
+        // NOUVEAU v2.7.8 : Initialisation du module d'export
+        $this->export_manager->init();
+        
+        // Handler AJAX pour vider les logs
+        add_action( 'wp_ajax_tb_parrainage_clear_logs', array( $this, 'ajax_clear_logs' ) );
         
         // Nettoyage automatique des logs
         add_action( 'wp_scheduled_delete', array( $this, 'cleanup_old_logs' ) );
@@ -195,6 +210,9 @@ class Plugin {
                     <button type="button" class="button" id="clear-logs">
                         <?php esc_html_e( 'Vider les logs', 'wc-tb-web-parrainage' ); ?>
                     </button>
+                    <button type="button" class="button button-primary" id="export-logs">
+                        <?php esc_html_e( 'Télécharger les logs', 'wc-tb-web-parrainage' ); ?>
+                    </button>
                 </div>
             </div>
             
@@ -238,6 +256,13 @@ class Plugin {
                 </tbody>
             </table>
         </div>
+        
+        <?php 
+        // Rendu du modal d'export si le module est disponible
+        if ( isset( $this->export_manager ) ) {
+            $this->export_manager->render_export_modal();
+        }
+        ?>
         <?php
     }
     
@@ -405,6 +430,61 @@ class Plugin {
         $retention_days = $settings['log_retention_days'] ?? 30;
         
         $this->logger->cleanup_old_logs( $retention_days );
+    }
+
+    /**
+     * Handler AJAX pour vider tous les logs
+     * @since 2.7.7
+     */
+    public function ajax_clear_logs() {
+        // Vérification du nonce de sécurité
+        if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'tb_parrainage_admin_action' ) ) {
+            wp_send_json_error( array( 
+                'message' => __( 'Erreur de sécurité : nonce invalide', 'wc-tb-web-parrainage' ) 
+            ) );
+            return;
+        }
+        
+        // Vérification des permissions
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 
+                'message' => __( 'Permissions insuffisantes', 'wc-tb-web-parrainage' ) 
+            ) );
+            return;
+        }
+        
+        try {
+            // Appel de la méthode clear_all_logs() du logger
+            $deleted_count = $this->logger->clear_all_logs();
+            
+            // Log de l'action pour traçabilité
+            $this->logger->info(
+                sprintf( 'Logs vidés par l\'administrateur %s', wp_get_current_user()->user_login ),
+                array( 'deleted_count' => $deleted_count ),
+                'admin-action'
+            );
+            
+            // Retour de succès
+            wp_send_json_success( array(
+                'message' => sprintf( 
+                    __( '%d logs supprimés avec succès', 'wc-tb-web-parrainage' ), 
+                    $deleted_count 
+                ),
+                'deleted_count' => $deleted_count
+            ) );
+            
+        } catch ( \Exception $e ) {
+            // En cas d'erreur
+            $this->logger->error(
+                'Erreur lors de la suppression des logs',
+                array( 'error' => $e->getMessage() ),
+                'admin-action'
+            );
+            
+            wp_send_json_error( array(
+                'message' => __( 'Erreur lors de la suppression des logs', 'wc-tb-web-parrainage' )
+            ) );
+        }
     }
 
     /**

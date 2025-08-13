@@ -70,6 +70,15 @@ jQuery(document).ready(function ($) {
   });
 
   /**
+   * NOUVEAU v2.7.8 : Export des logs
+   */
+  $("#export-logs").on("click", function (e) {
+    e.preventDefault();
+    // Déclencher l'ouverture du modal via un événement personnalisé
+    $(document).trigger("tb-parrainage-open-export-modal");
+  });
+
+  /**
    * Auto-actualisation des logs (optionnel)
    */
   function startAutoRefresh() {
@@ -313,6 +322,201 @@ jQuery(document).ajaxSuccess(function (event, xhr, settings) {
 jQuery(document).ajaxError(function (event, xhr, settings) {
   if (settings.data && settings.data.includes("action=tb_parrainage_")) {
     console.error("TB-Parrainage AJAX error:", xhr.responseJSON);
+  }
+});
+
+/**
+ * =======================================================================
+ * NOUVEAU v2.7.8 : GESTION EXPORT DES LOGS
+ * =======================================================================
+ */
+jQuery(document).ready(function ($) {
+  /**
+   * Ouvrir le modal d'export
+   */
+  function openExportModal() {
+    $("#export-logs-modal").fadeIn(300);
+    $("body").addClass("modal-open");
+  }
+
+  /**
+   * Écouteur pour l'événement personnalisé d'ouverture du modal
+   */
+  $(document).on("tb-parrainage-open-export-modal", function () {
+    openExportModal();
+  });
+
+  /**
+   * Fonction showNotice accessible dans ce bloc
+   */
+  function showNotice(message, type) {
+    var noticeClass = "notice-" + type;
+    var $notice = $(
+      '<div class="notice ' +
+        noticeClass +
+        ' is-dismissible"><p>' +
+        message +
+        "</p></div>"
+    );
+
+    $(".wrap h1").after($notice);
+
+    // Supprimer la notice après 5 secondes
+    setTimeout(function () {
+      $notice.fadeOut(function () {
+        $(this).remove();
+      });
+    }, 5000);
+  }
+
+  /**
+   * Fermer le modal d'export
+   */
+  function closeExportModal() {
+    $("#export-logs-modal").fadeOut(300);
+    $("body").removeClass("modal-open");
+    resetExportForm();
+  }
+
+  /**
+   * Réinitialiser le formulaire d'export
+   */
+  function resetExportForm() {
+    $(".export-tab-btn").removeClass("active");
+    $(".export-tab-btn[data-tab='all']").addClass("active");
+    $(".export-tab-panel").removeClass("active");
+    $("#export-tab-all").addClass("active");
+    $("#export-duration").val("1");
+    $("#export-level").val("ALL");
+    $("#export-source").val("ALL");
+  }
+
+  /**
+   * Gestion des événements du modal d'export
+   */
+  $(document).on("click", ".export-modal-close, #export-cancel", function (e) {
+    e.preventDefault();
+    closeExportModal();
+  });
+
+  // Fermer le modal en cliquant à l'extérieur
+  $(document).on("click", "#export-logs-modal", function (e) {
+    if (e.target === this) {
+      closeExportModal();
+    }
+  });
+
+  // Échapper pour fermer
+  $(document).on("keydown", function (e) {
+    if (e.key === "Escape" && $("#export-logs-modal").is(":visible")) {
+      closeExportModal();
+    }
+  });
+
+  /**
+   * Gestion des onglets du modal
+   */
+  $(document).on("click", ".export-tab-btn", function (e) {
+    e.preventDefault();
+
+    var $btn = $(this);
+    var tab = $btn.data("tab");
+
+    // Mise à jour des boutons
+    $(".export-tab-btn").removeClass("active");
+    $btn.addClass("active");
+
+    // Mise à jour des panneaux
+    $(".export-tab-panel").removeClass("active");
+    $("#export-tab-" + tab).addClass("active");
+  });
+
+  /**
+   * Téléchargement des logs
+   */
+  $(document).on("click", "#export-download", function (e) {
+    e.preventDefault();
+
+    var $button = $(this);
+    var originalText = $button.text();
+
+    // Collecte des paramètres
+    var params = {
+      action: "tb_parrainage_export_logs",
+      nonce: tbParrainageAjax.nonce,
+      type: $(".export-tab-btn.active").data("tab"),
+      level: $("#export-level").val(),
+      source: $("#export-source").val(),
+    };
+
+    // Ajout de la durée si nécessaire
+    if (params.type === "duration") {
+      params.duration = $("#export-duration").val();
+    }
+
+    // Validation côté client
+    if (
+      params.type === "duration" &&
+      (!params.duration || params.duration < 1)
+    ) {
+      showNotice("Veuillez sélectionner une durée valide.", "error");
+      return;
+    }
+
+    $button.text("Préparation...").prop("disabled", true);
+
+    $.ajax({
+      url: tbParrainageAjax.ajaxurl,
+      type: "POST",
+      data: params,
+      success: function (response) {
+        if (response.success) {
+          // Fermer le modal
+          closeExportModal();
+
+          // Créer un lien de téléchargement temporaire
+          var $downloadLink = $("<a>", {
+            href: response.data.download_url,
+            download: response.data.filename,
+            style: "display: none;",
+          });
+
+          $("body").append($downloadLink);
+          $downloadLink[0].click();
+          $downloadLink.remove();
+
+          // Message de succès
+          showNotice(
+            "Export réussi : " +
+              response.data.logs_count +
+              " logs téléchargés (" +
+              formatFileSize(response.data.file_size) +
+              ")",
+            "success"
+          );
+        } else {
+          showNotice(
+            response.data.message || "Erreur lors de l'export des logs.",
+            "error"
+          );
+        }
+      },
+      error: function () {
+        showNotice("Erreur de communication avec le serveur.", "error");
+      },
+      complete: function () {
+        $button.text(originalText).prop("disabled", false);
+      },
+    });
+  });
+
+  /**
+   * Formatage de la taille de fichier - locale à ce bloc
+   */
+  function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return Math.round(bytes / 1024) + " KB";
+    return Math.round(bytes / 1048576) + " MB";
   }
 });
 

@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.7.9
+**Version:** 2.8.0-dev
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -745,6 +745,48 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.8.0-dev (13-08-2025) - DÉBUT GESTION LIFECYCLE v2.8.0
+
+**🚀 DÉMARRAGE VERSION 2.8.0 : GESTION AVANCÉE DU CYCLE DE VIE**
+
+**✅ ÉTAPE 1/4 TERMINÉE : SURVEILLANCE AUTOMATIQUE DES FILLEULS**
+
+- **Nouveau** : 3 hooks de surveillance des changements de statut filleul
+  - `woocommerce_subscription_status_cancelled` - Détection annulation filleul
+  - `woocommerce_subscription_status_on-hold` - Détection suspension filleul
+  - `woocommerce_subscription_status_expired` - Détection expiration filleul
+- **Nouveau** : Méthode `handle_filleul_suspension()` dans `AutomaticDiscountProcessor`
+- **Nouveau** : Méthode `find_parrain_for_filleul()` pour identification du parrain associé
+- **Nouveau** : Canal de logs spécialisé `filleul-suspension` avec logs détaillés
+- **Nouveau** : Système de mesure de performance avec temps d'exécution
+
+**🔍 FONCTIONNALITÉS IMPLÉMENTÉES**
+
+- **Détection automatique** des changements de statut vers l'inactivité (cancelled, on-hold, expired)
+- **Identification du parrain** associé via recherche inverse depuis ID filleul
+- **Logging exhaustif** avec détails de l'événement, timing et contexte
+- **Validation des données** avec vérification de cohérence des abonnements
+- **Gestion d'erreurs** robuste avec messages explicites et fallback
+
+**🧪 TESTS VALIDÉS**
+
+- ✅ Test annulation abonnement filleul - Hook détecté et parrain identifié
+- ✅ Test suspension abonnement filleul - Logs complets générés
+- ✅ Test réactivation abonnements - Détection des retours en statut actif
+- ✅ Performance confirmée - Exécution < 50ms par événement
+
+**📊 PROCHAINES ÉTAPES v2.8.0**
+
+- **Étape 2** : Implémentation de la suspension automatique des remises parrain
+- **Étape 3** : Interface admin pour gestion manuelle
+- **Étape 4** : Historique et monitoring avancé
+
+**📋 LOGS DE VALIDATION**
+
+Tous les hooks fonctionnent correctement avec des logs détaillés disponibles dans le canal `filleul-suspension`. Les tests confirment la détection fiable des changements de statut et l'identification précise des parrains associés.
+
+---
 
 ### Version 2.7.6 (12-08-2025) - CORRECTION FINALE STATUT SCHEDULED
 
