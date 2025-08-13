@@ -51,6 +51,11 @@ class Plugin {
         require_once WC_TB_PARRAINAGE_PATH . 'src/Export/ExportHandler.php';
         require_once WC_TB_PARRAINAGE_PATH . 'src/Export/ExportManager.php';
         $this->export_manager = new Export\ExportManager( $this->logger );
+        
+        // NOUVEAU v2.8.0 : Module de suspension des remises parrain
+        require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionManager.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionHandler.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionValidator.php';
     }
     
     /**

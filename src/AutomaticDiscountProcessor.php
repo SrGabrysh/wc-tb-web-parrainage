@@ -6,6 +6,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+use TBWeb\WCParrainage\SuspensionManager;
+
 /**
  * Processeur automatique de remises parrain avec workflow asynchrone
  * 
@@ -46,6 +48,12 @@ class AutomaticDiscountProcessor {
      * @var SubscriptionDiscountManager|null
      */
     private $subscription_discount_manager = null;
+    
+    /**
+     * NOUVEAU v2.8.0 : Gestionnaire de suspension des remises
+     * @var SuspensionManager|null
+     */
+    private $suspension_manager = null;
     
     /**
      * Statuts de workflow supportés
@@ -879,17 +887,33 @@ class AutomaticDiscountProcessor {
                 'filleul-suspension'
             );
             
-            // TODO v2.8.0 : Ici sera programmée la suspension asynchrone
-            $this->logger->warning(
-                'SUSPENSION PROGRAMMÉE (non implémentée) - Phase suivante du développement',
-                array(
-                    'parrain_subscription_id' => $parrain_data['subscription_id'],
-                    'filleul_subscription_id' => $filleul_subscription_id,
-                    'reason' => 'Filleul statut : ' . $new_status,
-                    'next_step' => 'Implémenter SubscriptionLifecycleManager::suspend_discount()'
-                ),
-                'filleul-suspension'
+            // STEP 3 v2.8.0 : Délégation au SuspensionManager pour orchestration complète
+            $suspension_result = $this->get_suspension_manager()->orchestrate_suspension(
+                $parrain_data['subscription_id'],
+                $filleul_subscription_id,
+                $new_status
             );
+            
+            // Log du résultat final de l'orchestration
+            if ( $suspension_result['success'] ) {
+                $this->logger->info(
+                    'STEP 3 SUSPENSION - Orchestration terminée avec SUCCÈS',
+                    array_merge( $suspension_result, array(
+                        'workflow_step' => 'suspension_completed',
+                        'total_workflow_time' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                    ) ),
+                    'filleul-suspension'
+                );
+            } else {
+                $this->logger->error(
+                    'STEP 3 SUSPENSION - Orchestration ÉCHOUÉE',
+                    array_merge( $suspension_result, array(
+                        'workflow_step' => 'suspension_failed',
+                        'total_workflow_time' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                    ) ),
+                    'filleul-suspension'
+                );
+            }
             
         } catch ( \Exception $e ) {
             $this->logger->error(
@@ -981,5 +1005,54 @@ class AutomaticDiscountProcessor {
             'current_status' => $parrain_subscription->get_status(),
             'current_total' => $parrain_subscription->get_total()
         );
+    }
+    
+    /**
+     * NOUVEAU v2.8.0 : Obtenir instance SuspensionManager
+     * 
+     * Lazy loading du SuspensionManager pour éviter l'initialisation inutile
+     * 
+     * @return SuspensionManager Instance du manager de suspension
+     */
+    private function get_suspension_manager() {
+        
+        // Initialisation paresseuse du SuspensionManager
+        if ( ! isset( $this->suspension_manager ) ) {
+            
+            // SÉCURITÉ v2.8.0 : Vérifier que les classes de suspension existent
+            if ( ! class_exists( 'TBWeb\WCParrainage\SuspensionManager' ) ) {
+                $this->logger->error(
+                    'ERREUR CRITIQUE : Classes de suspension non trouvées',
+                    array(
+                        'missing_class' => 'SuspensionManager',
+                        'workflow_step' => 'suspension_initialization_failed',
+                        'solution' => 'Les classes doivent être chargées dans Plugin.php'
+                    ),
+                    'filleul-suspension'
+                );
+                throw new \RuntimeException( 'Classes de suspension non chargées - contactez le développeur' );
+            }
+            
+            // Récupérer le SubscriptionDiscountManager injecté via setter
+            $subscription_discount_manager = $this->subscription_discount_manager;
+            
+            if ( ! $subscription_discount_manager ) {
+                throw new \RuntimeException( 'SubscriptionDiscountManager non disponible - utilisez set_subscription_discount_manager()' );
+            }
+            
+            // Créer l'instance avec injection des dépendances
+            $this->suspension_manager = new SuspensionManager( $this->logger, $subscription_discount_manager );
+            
+            $this->logger->debug(
+                'SuspensionManager initialisé via lazy loading',
+                array(
+                    'discount_manager_class' => get_class( $subscription_discount_manager ),
+                    'suspension_manager_class' => get_class( $this->suspension_manager )
+                ),
+                'discount-processor'
+            );
+        }
+        
+        return $this->suspension_manager;
     }
 }
