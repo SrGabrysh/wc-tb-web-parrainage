@@ -56,6 +56,12 @@ class AutomaticDiscountProcessor {
     private $suspension_manager = null;
     
     /**
+     * NOUVEAU v2.8.2 : Gestionnaire de réactivation des remises
+     * @var ReactivationManager|null
+     */
+    private $reactivation_manager = null;
+    
+    /**
      * Statuts de workflow supportés
      * @var array
      */
@@ -114,6 +120,9 @@ class AutomaticDiscountProcessor {
         add_action( 'woocommerce_subscription_status_cancelled', array( $this, 'handle_filleul_suspension' ), 10, 1 );
         add_action( 'woocommerce_subscription_status_on-hold', array( $this, 'handle_filleul_suspension' ), 10, 1 );
         add_action( 'woocommerce_subscription_status_expired', array( $this, 'handle_filleul_suspension' ), 10, 1 );
+        
+        // NOUVEAU v2.8.2 : Hook pour détecter les réactivations de filleuls (priorité plus haute pour traiter avant schedule_parrain_discount)
+        add_action( 'woocommerce_subscription_status_active', array( $this, 'handle_filleul_reactivation' ), 5, 1 );
         
         // PHASE 3 : Traitement différé via hook CRON personnalisé
         add_action( WC_TB_PARRAINAGE_QUEUE_HOOK, array( $this, 'process_parrain_discount_async' ), 10, 3 );
@@ -930,6 +939,110 @@ class AutomaticDiscountProcessor {
     }
     
     /**
+     * NOUVEAU v2.8.2 : Gestion de la réactivation des filleuls
+     * 
+     * Détecte quand un abonnement filleul passe à un statut actif et
+     * déclenche la réactivation automatique de la remise parrain si applicable.
+     * 
+     * @param \WC_Subscription $subscription Abonnement filleul réactivé
+     */
+    public function handle_filleul_reactivation( $subscription ) {
+        
+        $start_time = microtime( true );
+        $filleul_subscription_id = $subscription->get_id();
+        $new_status = $subscription->get_status();
+        
+        // Log détaillé de détection réactivation
+        $this->logger->info(
+            'TRIGGER v2.8.2 : Détection changement statut filleul vers ACTIF - vérification réactivation',
+            array(
+                'filleul_subscription_id' => $filleul_subscription_id,
+                'new_status' => $new_status,
+                'trigger_time' => current_time( 'mysql' ),
+                'user_id' => $subscription->get_user_id(),
+                'customer_email' => $subscription->get_billing_email()
+            ),
+            'filleul-reactivation'
+        );
+        
+        try {
+            // Rechercher le parrain associé à ce filleul
+            $parrain_data = $this->find_parrain_for_filleul( $filleul_subscription_id );
+            
+            if ( ! $parrain_data ) {
+                $this->logger->info(
+                    'Aucun parrain trouvé pour ce filleul réactivé - aucune action requise',
+                    array(
+                        'filleul_subscription_id' => $filleul_subscription_id,
+                        'search_duration' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                    ),
+                    'filleul-reactivation'
+                );
+                return;
+            }
+            
+            // Parrain trouvé - logger les détails complets
+            $this->logger->info(
+                'PARRAIN IDENTIFIÉ pour filleul réactivé - réactivation potentielle requise',
+                array(
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'filleul_status' => $new_status,
+                    'parrain_subscription_id' => $parrain_data['subscription_id'],
+                    'parrain_user_id' => $parrain_data['user_id'],
+                    'parrain_email' => $parrain_data['email'],
+                    'ordre_filleul_id' => $parrain_data['ordre_filleul_id'],
+                    'detection_duration' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                ),
+                'filleul-reactivation'
+            );
+            
+            // STEP 4 v2.8.2 : Délégation au ReactivationManager pour orchestration complète
+            $reactivation_result = $this->get_reactivation_manager()->orchestrate_reactivation(
+                $parrain_data['subscription_id'],
+                $filleul_subscription_id,
+                $new_status
+            );
+            
+            if ( $reactivation_result['success'] ) {
+                $this->logger->info(
+                    'WORKFLOW RÉACTIVATION TERMINÉ AVEC SUCCÈS v2.8.2',
+                    array_merge( $reactivation_result['details'], array(
+                        'workflow_step' => 'reactivation_completed',
+                        'total_workflow_time' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                    ) ),
+                    'filleul-reactivation'
+                );
+            } else {
+                $this->logger->warning(
+                    'WORKFLOW RÉACTIVATION ÉCHOUÉ ou NON APPLICABLE',
+                    array_merge( array(
+                        'filleul_subscription_id' => $filleul_subscription_id,
+                        'parrain_subscription_id' => $parrain_data['subscription_id'],
+                        'reason' => $reactivation_result['reason'],
+                        'message' => $reactivation_result['message']
+                    ), isset( $reactivation_result['details'] ) ? $reactivation_result['details'] : array(), array(
+                        'workflow_step' => 'reactivation_failed_or_not_applicable',
+                        'total_workflow_time' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                    ) ),
+                    'filleul-reactivation'
+                );
+            }
+            
+        } catch ( \Exception $e ) {
+            $this->logger->error(
+                'ERREUR lors de la gestion réactivation filleul',
+                array(
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'error_message' => $e->getMessage(),
+                    'error_trace' => $e->getTraceAsString(),
+                    'execution_time' => round( ( microtime( true ) - $start_time ) * 1000, 2 ) . 'ms'
+                ),
+                'filleul-reactivation'
+            );
+        }
+    }
+    
+    /**
      * NOUVEAU v2.8.0 : Rechercher le parrain associé à un filleul
      * 
      * @param int $filleul_subscription_id ID de l'abonnement filleul
@@ -941,22 +1054,37 @@ class AutomaticDiscountProcessor {
         
         $search_start = microtime( true );
         
-        // Rechercher dans les métadonnées d'ordre : _billing_parrain_code = $filleul_subscription_id
+        // CORRECTION CRITIQUE v2.8.2-fix3 : Recherche dans métadonnées abonnement parrain
+        // Logique correcte : l'abonnement parrain stocke l'ID du filleul via _tb_parrainage_filleul_id
         $query = $wpdb->prepare( "
             SELECT DISTINCT
-                pm_parrain.post_id as ordre_filleul_id,
-                pm_parrain.meta_value as parrain_subscription_id,
+                pm_filleul.post_id as subscription_id,
+                pm_filleul.meta_value as filleul_id,
                 pm_user.meta_value as parrain_user_id,
-                pm_email.meta_value as parrain_email
-            FROM {$wpdb->postmeta} pm_parrain
-            LEFT JOIN {$wpdb->postmeta} pm_user 
-                ON pm_parrain.post_id = pm_user.post_id 
-                AND pm_user.meta_key = '_parrain_user_id'
-            LEFT JOIN {$wpdb->postmeta} pm_email 
-                ON pm_parrain.post_id = pm_email.post_id 
-                AND pm_email.meta_key = '_parrain_email'
-            WHERE pm_parrain.meta_key = '_billing_parrain_code'
-                AND pm_parrain.meta_value = %s
+                pm_email.meta_value as parrain_email,
+                pm_discount.meta_value as discount_amount,
+                pm_original.meta_value as original_price
+            FROM {$wpdb->postmeta} pm_filleul
+            LEFT JOIN {$wpdb->postmeta} pm_user
+                ON pm_filleul.post_id = pm_user.post_id
+                AND pm_user.meta_key = '_customer_user'
+            LEFT JOIN {$wpdb->postmeta} pm_email
+                ON pm_filleul.post_id = pm_email.post_id
+                AND pm_email.meta_key = '_billing_email'
+            LEFT JOIN {$wpdb->postmeta} pm_discount
+                ON pm_filleul.post_id = pm_discount.post_id
+                AND pm_discount.meta_key = '_tb_parrainage_discount_amount'
+            LEFT JOIN {$wpdb->postmeta} pm_original
+                ON pm_filleul.post_id = pm_original.post_id
+                AND pm_original.meta_key = '_tb_parrainage_original_price'
+            WHERE pm_filleul.meta_key = '_tb_parrainage_filleul_id'
+                AND pm_filleul.meta_value = %s
+                AND EXISTS (
+                    SELECT 1 FROM {$wpdb->postmeta} pm_active
+                    WHERE pm_active.post_id = pm_filleul.post_id
+                    AND pm_active.meta_key = '_tb_parrainage_discount_active'
+                    AND pm_active.meta_value = '1'
+                )
             LIMIT 1
         ", $filleul_subscription_id );
         
@@ -982,13 +1110,13 @@ class AutomaticDiscountProcessor {
         }
         
         // Valider que l'abonnement parrain existe toujours
-        $parrain_subscription = wcs_get_subscription( $result['parrain_subscription_id'] );
+        $parrain_subscription = wcs_get_subscription( $result['subscription_id'] );
         if ( ! $parrain_subscription ) {
             $this->logger->warning(
                 'Parrain trouvé mais abonnement parrain inexistant',
                 array(
-                    'parrain_subscription_id' => $result['parrain_subscription_id'],
-                    'ordre_filleul_id' => $result['ordre_filleul_id']
+                    'parrain_subscription_id' => $result['subscription_id'],
+                    'filleul_id' => $result['filleul_id']
                 ),
                 'filleul-suspension'
             );
@@ -997,10 +1125,12 @@ class AutomaticDiscountProcessor {
         
         // Retourner les données complètes du parrain
         return array(
-            'subscription_id' => intval( $result['parrain_subscription_id'] ),
+            'subscription_id' => intval( $result['subscription_id'] ),
             'user_id' => intval( $result['parrain_user_id'] ),
             'email' => $result['parrain_email'],
-            'ordre_filleul_id' => intval( $result['ordre_filleul_id'] ),
+            'filleul_id' => intval( $result['filleul_id'] ),
+            'discount_amount' => floatval( $result['discount_amount'] ),
+            'original_price' => floatval( $result['original_price'] ),
             'subscription_object' => $parrain_subscription,
             'current_status' => $parrain_subscription->get_status(),
             'current_total' => $parrain_subscription->get_total()
@@ -1054,5 +1184,50 @@ class AutomaticDiscountProcessor {
         }
         
         return $this->suspension_manager;
+    }
+    
+    /**
+     * NOUVEAU v2.8.2 : Récupération lazy du ReactivationManager
+     * 
+     * @return ReactivationManager Instance configurée
+     * @throws \RuntimeException Si les classes ne sont pas chargées
+     */
+    private function get_reactivation_manager() {
+        if ( ! isset( $this->reactivation_manager ) ) {
+            // SÉCURITÉ v2.8.2 : Vérifier que les classes de réactivation existent
+            if ( ! class_exists( 'TBWeb\WCParrainage\ReactivationManager' ) ) {
+                $this->logger->error(
+                    'ERREUR CRITIQUE : Classes de réactivation non trouvées',
+                    array(
+                        'missing_class' => 'ReactivationManager',
+                        'workflow_step' => 'reactivation_initialization_failed',
+                        'solution' => 'Les classes doivent être chargées dans Plugin.php'
+                    ),
+                    'filleul-reactivation'
+                );
+                throw new \RuntimeException( 'Classes de réactivation non chargées - contactez le développeur' );
+            }
+
+            // Récupérer le SubscriptionDiscountManager injecté via setter
+            $subscription_discount_manager = $this->subscription_discount_manager;
+
+            if ( ! $subscription_discount_manager ) {
+                throw new \RuntimeException( 'SubscriptionDiscountManager non disponible - utilisez set_subscription_discount_manager()' );
+            }
+
+            // Créer l'instance avec injection des dépendances
+            $this->reactivation_manager = new ReactivationManager( $this->logger, $subscription_discount_manager );
+
+            $this->logger->debug(
+                'ReactivationManager initialisé avec succès',
+                array(
+                    'version' => '2.8.2',
+                    'workflow_step' => 'reactivation_manager_initialized'
+                ),
+                'filleul-reactivation'
+            );
+        }
+
+        return $this->reactivation_manager;
     }
 }

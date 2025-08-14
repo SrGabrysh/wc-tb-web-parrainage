@@ -56,6 +56,11 @@ class Plugin {
         require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionManager.php';
         require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionHandler.php';
         require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionValidator.php';
+        
+        // NOUVEAU v2.8.2 : Module de réactivation des remises parrain
+        require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationManager.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationHandler.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationValidator.php';
     }
     
     /**
