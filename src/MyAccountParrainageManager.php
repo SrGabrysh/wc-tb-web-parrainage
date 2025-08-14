@@ -326,7 +326,21 @@ class MyAccountParrainageManager {
                 </div>
                 <div class="savings-card">
                     <span class="savings-label">Prochaine facturation :</span>
-                    <span class="savings-value"><?php echo esc_html( $summary['next_billing']['date'] . ' (' . $summary['next_billing']['amount'] . '€)' ); ?></span>
+                    <span class="savings-value">
+                        <?php 
+                        // CORRECTION v2.8.2-fix13 : Affichage sécurisé de la date et montant
+                        $billing_date = $summary['next_billing']['date'] ?? date('d-m-Y', strtotime('+1 month'));
+                        $billing_amount = $summary['next_billing']['amount'] ?? '0,00';
+                        
+                        // Vérifier que le montant n'est pas aberrant
+                        $amount_clean = str_replace(',', '.', $billing_amount);
+                        if (is_numeric($amount_clean) && floatval($amount_clean) > 10000) {
+                            $billing_amount = '0,00';
+                        }
+                        
+                        echo esc_html( $billing_date . ' (' . $billing_amount . '€)' ); 
+                        ?>
+                    </span>
                 </div>
             </div>
             

@@ -539,9 +539,12 @@ class MyAccountDataProvider {
             
             foreach ( $real_referrals as $referral ) {
                 $status = $referral['discount_client_info']['discount_status'] ?? '';
-                if ( in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ) ) {
+                $amount = floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
+                
+                // CORRECTION v2.8.2-fix13 : Compter uniquement les remises avec montant > 0
+                if ( $amount > 0 && in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ) ) {
                     $active_discounts++;
-                    $total_monthly_savings += floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
+                    $total_monthly_savings += $amount;
                 }
             }
             
@@ -563,12 +566,12 @@ class MyAccountDataProvider {
             $summary = array(
                 'active_discounts' => $active_discounts,
                 'total_referrals' => $total_referrals,
-                'monthly_savings' => number_format( $total_monthly_savings, 2 ),
+                'monthly_savings' => $total_monthly_savings, // CORRECTION v2.8.2-fix13 : Pas de formatage ici
                 'yearly_projection' => number_format( $total_monthly_savings * 12, 2 ),
-                'total_savings_to_date' => number_format( $total_savings_to_date, 2 ),
+                'total_savings_to_date' => max( 0, $total_savings_to_date ), // CORRECTION : Éviter valeurs négatives
                 'currency' => get_woocommerce_currency_symbol(),
                 'next_billing' => array(
-                    'date' => date( 'd/m/Y', strtotime( '+1 month' ) ),
+                    'date' => date( 'd-m-Y', strtotime( '+1 month' ) ), // CORRECTION : Format DD-MM-YYYY
                     'amount' => number_format( round( $original_amount - $total_monthly_savings, 2 ), 2, ',', '' ),
                     'original_amount' => number_format( $original_amount, 2, ',', '' )
                 ),
@@ -775,20 +778,35 @@ class MyAccountDataProvider {
                 );
             }
 
-            // 3) Statut 'application_failed' → Solution simple avec configuration directe
+            // 3) Statut 'application_failed' → CORRECTION v2.8.2-fix12 - Vérifier l'état du FILLEUL
             if ( $workflow_status === 'application_failed' ) {
-                // Pour application_failed, utiliser directement la configuration produit
-                $remise_amount = $this->get_configured_discount_amount( $order_id );
+                // CORRECTION : Vérifier l'état de l'abonnement du FILLEUL, pas du parrain !
+                $filleul_status = $this->get_filleul_subscription_status( $order_id );
+                $configured_amount = $this->get_configured_discount_amount( $order_id );
                 
-                $this->logger->info( 'GESTION application_failed - remise depuis configuration', array(
+                if ( $filleul_status['is_active'] ) {
+                    // Filleul actif → Parrain reçoit la remise
+                    $remise_amount = $configured_amount;
+                    $status_label = 'Active';
+                    $discount_status = 'active';
+                } else {
+                    // Filleul inactif → Pas de remise pour le parrain
+                    $remise_amount = 0;
+                    $status_label = 'Filleul ' . $filleul_status['status_label'];
+                    $discount_status = 'suspended';
+                }
+                
+                $this->logger->info( 'GESTION application_failed - remise selon état du FILLEUL', array(
                     'order_id' => $order_id,
                     'workflow_status' => $workflow_status,
-                    'remise_amount' => $remise_amount
+                    'filleul_status' => $filleul_status,
+                    'configured_amount' => $configured_amount,
+                    'displayed_amount' => $remise_amount
                 ), 'account-data-provider' );
                 
                 return array(
-                    'discount_status' => 'application_failed',
-                    'discount_status_label' => 'Échec application - Remise configurée',
+                    'discount_status' => $discount_status,
+                    'discount_status_label' => $status_label,
                     'discount_amount' => $remise_amount,
                     'discount_amount_formatted' => number_format( $remise_amount, 2, ',', '' ) . '€/mois',
                     'is_simulation' => false
@@ -988,6 +1006,131 @@ class MyAccountDataProvider {
         }
         
         return 0.0;
+    }
+
+    /**
+     * NOUVEAU v2.8.2-fix12 : Vérification de l'état du filleul pour calculer la remise parrain
+     * 
+     * @param int $order_id ID de la commande du filleul
+     * @return array État de l'abonnement du filleul
+     */
+    private function get_filleul_subscription_status( $order_id ) {
+        global $wpdb;
+        
+        // Trouver l'abonnement associé à cette commande
+        $subscription_id = $wpdb->get_var( $wpdb->prepare( "
+            SELECT ID 
+            FROM wp_posts 
+            WHERE post_parent = %d 
+            AND post_type = 'shop_subscription'
+            LIMIT 1
+        ", $order_id ) );
+        
+        if ( ! $subscription_id ) {
+            return array(
+                'is_active' => false,
+                'status' => 'no_subscription',
+                'status_label' => 'pas d\'abonnement'
+            );
+        }
+        
+        // Récupérer le statut de l'abonnement
+        $subscription_status = $wpdb->get_var( $wpdb->prepare( "
+            SELECT post_status 
+            FROM wp_posts 
+            WHERE ID = %d
+        ", $subscription_id ) );
+        
+        $is_active = in_array( $subscription_status, array( 'wc-active' ), true );
+        
+        $status_labels = array(
+            'wc-active' => 'actif',
+            'wc-cancelled' => 'annulé',
+            'wc-on-hold' => 'suspendu',
+            'wc-expired' => 'expiré'
+        );
+        
+        $status_label = $status_labels[ $subscription_status ] ?? $subscription_status;
+        
+        $this->logger->info( 'État filleul vérifié pour remise parrain', array(
+            'order_id' => $order_id,
+            'subscription_id' => $subscription_id,
+            'status' => $subscription_status,
+            'is_active' => $is_active,
+            'status_label' => $status_label
+        ), 'account-data-provider' );
+        
+        return array(
+            'is_active' => $is_active,
+            'status' => $subscription_status,
+            'status_label' => $status_label,
+            'subscription_id' => $subscription_id
+        );
+    }
+
+    /**
+     * LEGACY v2.8.2-fix11 : Vérification de l'état RÉEL de la remise parrain
+     * 
+     * @return array État réel de la remise
+     */
+    private function get_real_parrain_discount_status() {
+        $user_id = get_current_user_id();
+        $subscription_id = $this->get_user_subscription_id( $user_id );
+        
+        if ( ! $subscription_id ) {
+            return array(
+                'is_active' => false,
+                'reason' => 'Aucun abonnement trouvé',
+                'amount' => 0
+            );
+        }
+        
+        global $wpdb;
+        
+        // Vérifier l'état réel de la remise dans la base
+        $result = $wpdb->get_row( $wpdb->prepare( "
+            SELECT 
+                pm_active.meta_value as remise_active,
+                pm_amount.meta_value as montant_remise,
+                pm_status.meta_value as statut_remise
+            FROM wp_postmeta pm_active
+            LEFT JOIN wp_postmeta pm_amount ON pm_active.post_id = pm_amount.post_id AND pm_amount.meta_key = '_tb_parrainage_discount_amount'
+            LEFT JOIN wp_postmeta pm_status ON pm_active.post_id = pm_status.post_id AND pm_status.meta_key = '_parrain_discount_status'
+            WHERE pm_active.post_id = %d 
+            AND pm_active.meta_key = '_tb_parrainage_discount_active'
+        ", $subscription_id ), ARRAY_A );
+        
+        if ( ! $result ) {
+            return array(
+                'is_active' => false,
+                'reason' => 'Pas de données de remise',
+                'amount' => 0
+            );
+        }
+        
+        $is_active = ( $result['remise_active'] === '1' );
+        $status = $result['statut_remise'] ?? 'unknown';
+        $amount = floatval( $result['montant_remise'] ?? 0 );
+        
+        $reason = '';
+        if ( ! $is_active ) {
+            $reason = $status === 'suspended' ? 'Remise suspendue' : 'Remise inactive';
+        }
+        
+        $this->logger->info( 'État réel remise parrain vérifié', array(
+            'subscription_id' => $subscription_id,
+            'is_active' => $is_active,
+            'status' => $status,
+            'amount' => $amount,
+            'reason' => $reason
+        ), 'account-data-provider' );
+        
+        return array(
+            'is_active' => $is_active,
+            'reason' => $reason,
+            'amount' => $amount,
+            'status' => $status
+        );
     }
 
     /**

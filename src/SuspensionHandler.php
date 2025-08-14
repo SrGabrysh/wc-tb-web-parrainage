@@ -224,18 +224,19 @@ class SuspensionHandler {
         try {
             
             $current_total = $subscription->get_total();
-            $original_price_meta = $subscription->get_meta( '_parrain_original_price' );
             
-            // Calcul du montant de remise actuel
-            $discount_amount = 0;
-            if ( ! empty( $original_price_meta ) && is_numeric( $original_price_meta ) ) {
-                $discount_amount = floatval( $original_price_meta ) - floatval( $current_total );
+            // CORRECTION LOGIQUE : Récupérer le montant de remise appliqué
+            $discount_amount = $subscription->get_meta( '_tb_parrainage_discount_amount' );
+            if ( empty( $discount_amount ) || ! is_numeric( $discount_amount ) ) {
+                $discount_amount = 0;
+            } else {
+                $discount_amount = floatval( $discount_amount );
             }
             
             $saved_data = array(
-                'total_with_discount' => floatval( $current_total ),
-                'original_price' => floatval( $original_price_meta ),
-                'discount_amount' => $discount_amount,
+                'current_total_with_discount' => floatval( $current_total ),
+                'discount_amount_to_remove' => $discount_amount,
+                'new_total_without_discount' => floatval( $current_total ) + $discount_amount, // ADDITIONNER la remise
                 'currency' => $subscription->get_currency(),
                 'saved_at' => current_time( 'mysql' )
             );
@@ -278,43 +279,119 @@ class SuspensionHandler {
      * @param array $saved_data État sauvegardé
      * @return array Résultat restauration
      */
-    private function restore_original_price( \WC_Subscription $subscription, array $saved_data ): array {
+        private function restore_original_price( \WC_Subscription $subscription, array $saved_data ): array {
         
         try {
             
-            if ( empty( $saved_data['original_price'] ) || $saved_data['original_price'] <= 0 ) {
+            if ( empty( $saved_data['new_total_without_discount'] ) || $saved_data['new_total_without_discount'] <= 0 ) {
                 return array(
                     'success' => false,
-                    'error' => 'Prix original invalide ou manquant'
+                    'error' => 'Nouveau prix sans remise invalide ou manquant'
                 );
             }
             
-            $original_price = $saved_data['original_price'];
+            $new_total = $saved_data['new_total_without_discount'];
+            $discount_to_remove = $saved_data['discount_amount_to_remove'];
             
-            // Mise à jour du total de l'abonnement
-            $subscription->set_total( $original_price );
+            // CORRECTION v2.8.2-fix9 : Logique Lambda - Modifier line_items ET totaux
+            // Inspiré de votre fonction Lambda qui fonctionne parfaitement
+            
+            $subscription_id = $subscription->get_id();
+            
+            // ÉTAPE 1 : Modifier les line_items (comme votre Lambda)
+            $line_items = $subscription->get_items();
+            $line_item_updated = false;
+            
+            foreach ( $line_items as $item_id => $item ) {
+                // CORRECTION v2.8.2-fix10 : Calculer le prix HT correct
+                // Prix HT normal = (Prix TTC normal) / 1.20
+                $prix_ttc_normal = $new_total; // 71.99€
+                $prix_ht_normal = round( $prix_ttc_normal / 1.20, 2 ); // 59.99€
+                
+                $current_item_total = $item->get_total();
+                
+                // Mettre à jour le line_item avec le prix HT correct
+                $item->set_total( $prix_ht_normal );
+                $item->set_subtotal( $prix_ht_normal );
+                $item->save();
+                
+                $this->logger->info(
+                    'Line item mis à jour (prix HT correct)',
+                    array(
+                        'subscription_id' => $subscription_id,
+                        'item_id' => $item_id,
+                        'old_total_ht' => $current_item_total,
+                        'new_total_ht' => $prix_ht_normal,
+                        'prix_ttc_final' => $prix_ttc_normal,
+                        'tva_rate' => '20%'
+                    ),
+                    'suspension-handler'
+                );
+                
+                $line_item_updated = true;
+                break; // Généralement un seul produit par abonnement
+            }
+            
+            if ( ! $line_item_updated ) {
+                return array(
+                    'success' => false,
+                    'error' => 'Aucun line_item trouvé pour mise à jour'
+                );
+            }
+            
+            // ÉTAPE 2 : Recalculer les totaux (comme votre Lambda)
+            $subscription->calculate_totals();
             $subscription->save();
             
+            // ÉTAPE 3 : Forcer les totaux si nécessaire (backup SQL)
+            global $wpdb;
+            
+            $update_total = $wpdb->update(
+                $wpdb->postmeta,
+                array( 'meta_value' => $new_total ),
+                array( 
+                    'post_id' => $subscription_id,
+                    'meta_key' => '_order_total'
+                )
+            );
+            
+            // Marquer la remise comme inactive
+            $update_status = $wpdb->update(
+                $wpdb->postmeta,
+                array( 'meta_value' => '0' ),
+                array( 
+                    'post_id' => $subscription_id,
+                    'meta_key' => '_tb_parrainage_discount_active'
+                )
+            );
+            
             $this->logger->info(
-                'Prix original restauré avec succès',
+                'Remise supprimée avec succès (méthode Lambda)',
                 array(
-                    'subscription_id' => $subscription->get_id(),
-                    'old_price' => $saved_data['total_with_discount'],
-                    'new_price' => $original_price,
-                    'difference' => $original_price - $saved_data['total_with_discount']
+                    'subscription_id' => $subscription_id,
+                    'old_total' => $saved_data['current_total_with_discount'],
+                    'new_total' => $new_total,
+                    'discount_removed' => $discount_to_remove,
+                    'method' => 'lambda_inspired',
+                    'line_items_updated' => true,
+                    'totals_recalculated' => true,
+                    'sql_backup' => array(
+                        'total_update' => $update_total,
+                        'status_update' => $update_status
+                    )
                 ),
                 'suspension-handler'
             );
-            
+
             return array(
                 'success' => true,
-                'new_price' => $original_price,
-                'price_difference' => $original_price - $saved_data['total_with_discount']
+                'new_price' => $new_total,
+                'price_difference' => $discount_to_remove
             );
-            
+
         } catch ( \Exception $e ) {
             $this->logger->error(
-                'Erreur restauration prix original',
+                'Erreur suppression remise',
                 array(
                     'subscription_id' => $subscription->get_id(),
                     'error' => $e->getMessage(),
@@ -322,7 +399,7 @@ class SuspensionHandler {
                 ),
                 'suspension-handler'
             );
-            
+
             return array(
                 'success' => false,
                 'error' => $e->getMessage()

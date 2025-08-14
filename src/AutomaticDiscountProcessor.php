@@ -1054,39 +1054,62 @@ class AutomaticDiscountProcessor {
         
         $search_start = microtime( true );
         
-        // CORRECTION CRITIQUE v2.8.2-fix3 : Recherche dans métadonnées abonnement parrain
-        // Logique correcte : l'abonnement parrain stocke l'ID du filleul via _tb_parrainage_filleul_id
-        $query = $wpdb->prepare( "
-            SELECT DISTINCT
-                pm_filleul.post_id as subscription_id,
-                pm_filleul.meta_value as filleul_id,
-                pm_user.meta_value as parrain_user_id,
-                pm_email.meta_value as parrain_email,
-                pm_discount.meta_value as discount_amount,
-                pm_original.meta_value as original_price
-            FROM {$wpdb->postmeta} pm_filleul
-            LEFT JOIN {$wpdb->postmeta} pm_user
-                ON pm_filleul.post_id = pm_user.post_id
-                AND pm_user.meta_key = '_customer_user'
-            LEFT JOIN {$wpdb->postmeta} pm_email
-                ON pm_filleul.post_id = pm_email.post_id
-                AND pm_email.meta_key = '_billing_email'
-            LEFT JOIN {$wpdb->postmeta} pm_discount
-                ON pm_filleul.post_id = pm_discount.post_id
-                AND pm_discount.meta_key = '_tb_parrainage_discount_amount'
-            LEFT JOIN {$wpdb->postmeta} pm_original
-                ON pm_filleul.post_id = pm_original.post_id
-                AND pm_original.meta_key = '_tb_parrainage_original_price'
-            WHERE pm_filleul.meta_key = '_tb_parrainage_filleul_id'
-                AND pm_filleul.meta_value = %s
-                AND EXISTS (
-                    SELECT 1 FROM {$wpdb->postmeta} pm_active
-                    WHERE pm_active.post_id = pm_filleul.post_id
-                    AND pm_active.meta_key = '_tb_parrainage_discount_active'
-                    AND pm_active.meta_value = '1'
-                )
+        // CORRECTION CRITIQUE v2.8.2-fix4 : Recherche CORRIGÉE du parrain
+        // ÉTAPE 1 : Trouver la commande d'origine de l'abonnement filleul
+        $order_query = $wpdb->prepare( "
+            SELECT related_orders.ID as order_id
+            FROM {$wpdb->posts} subscription
+            JOIN {$wpdb->posts} related_orders 
+                ON related_orders.post_parent = subscription.ID
+                OR related_orders.ID = subscription.post_parent
+            WHERE subscription.ID = %d
+                AND related_orders.post_type = 'shop_order'
+                AND related_orders.post_status NOT IN ('trash', 'auto-draft')
+            ORDER BY related_orders.post_date ASC
             LIMIT 1
         ", $filleul_subscription_id );
+        
+        $order_result = $wpdb->get_row( $order_query, ARRAY_A );
+        
+        if ( ! $order_result ) {
+            $this->logger->warning(
+                'Aucune commande trouvée pour l\'abonnement filleul',
+                array( 'filleul_subscription_id' => $filleul_subscription_id ),
+                'filleul-suspension'
+            );
+            return null;
+        }
+        
+        $order_id = $order_result['order_id'];
+        
+        // ÉTAPE 2 : Récupérer les métadonnées de parrainage de cette commande
+        $query = $wpdb->prepare( "
+            SELECT DISTINCT
+                pm_parrain_sub.meta_value as subscription_id,
+                pm_parrain_user.meta_value as user_id,
+                pm_parrain_email.meta_value as email,
+                pm_parrain_nom.meta_value as nom_complet,
+                %d as ordre_filleul_id,
+                pm_parrain_code.meta_value as code_parrain
+            FROM {$wpdb->postmeta} pm_parrain_code
+            LEFT JOIN {$wpdb->postmeta} pm_parrain_sub
+                ON pm_parrain_sub.post_id = pm_parrain_code.post_id
+                AND pm_parrain_sub.meta_key = '_parrain_subscription_id'
+            LEFT JOIN {$wpdb->postmeta} pm_parrain_user
+                ON pm_parrain_user.post_id = pm_parrain_code.post_id
+                AND pm_parrain_user.meta_key = '_parrain_user_id'
+            LEFT JOIN {$wpdb->postmeta} pm_parrain_email
+                ON pm_parrain_email.post_id = pm_parrain_code.post_id
+                AND pm_parrain_email.meta_key = '_parrain_email'
+            LEFT JOIN {$wpdb->postmeta} pm_parrain_nom
+                ON pm_parrain_nom.post_id = pm_parrain_code.post_id
+                AND pm_parrain_nom.meta_key = '_parrain_nom_complet'
+            WHERE pm_parrain_code.post_id = %d
+                AND pm_parrain_code.meta_key = '_billing_parrain_code'
+                AND pm_parrain_code.meta_value IS NOT NULL
+                AND pm_parrain_code.meta_value != ''
+            LIMIT 1
+        ", $order_id, $order_id );
         
         $result = $wpdb->get_row( $query, ARRAY_A );
         
