@@ -273,6 +273,9 @@ class ReactivationHandler {
 
             $subscription->calculate_totals();
             $subscription->save();
+            
+            // CORRECTION v2.9.4 : Forcer _order_total car calculate_totals() ne le met pas toujours à jour
+            \update_post_meta( $subscription->get_id(), '_order_total', $new_price );
         }
     }
 

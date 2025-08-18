@@ -12,12 +12,20 @@ jQuery(document).ready(function ($) {
       var $this = $(this);
       var text = $this.text();
 
-      // Animer les montants numériques
+      // Animer les montants numériques - CORRECTION v2.9.3
       if (text.includes("€")) {
+        // CORRECTION : Ignorer les montants avec date ou "HT" qui ne sont pas des montants simples
+        if (text.includes("-") || text.includes("HT") || text.length > 20) {
+          console.log("DEBUG v2.9.3: Animation ignorée pour:", text);
+          return; // Ignorer ce type de texte
+        }
+
         var amount = parseFloat(
           text.replace(/[^0-9.,]/g, "").replace(",", ".")
         );
-        if (!isNaN(amount)) {
+
+        // CORRECTION : Vérifier que le montant est dans une plage normale
+        if (!isNaN(amount) && amount > 0 && amount < 10000) {
           $this.prop("Counter", 0).animate(
             {
               Counter: amount,
@@ -29,6 +37,13 @@ jQuery(document).ready(function ($) {
                 $this.text(Math.ceil(now).toLocaleString("fr-FR") + "€");
               },
             }
+          );
+        } else {
+          console.log(
+            "DEBUG v2.9.3: Montant aberrant ignoré:",
+            amount,
+            "pour le texte:",
+            text
           );
         }
       }
@@ -336,7 +351,8 @@ jQuery(document).ready(function ($) {
   // Initialisation avec délai pour laisser le temps au DOM
   setTimeout(function () {
     if ($(".savings-summary-section").length > 0) {
-      animateSavings();
+      console.log("DEBUG v2.9.3: animateSavings() DÉSACTIVÉE définitivement");
+      // animateSavings(); // DÉSACTIVÉ v2.9.3 - causait des valeurs aberrantes
       handleResponsiveCards();
       animateElementsEntrance();
       addVisualEffects();

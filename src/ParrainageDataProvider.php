@@ -196,7 +196,11 @@ class ParrainageDataProvider {
                 billing_email.meta_value as filleul_email,
                 customer_user.meta_value as filleul_user_id,
                 order_total.meta_value as montant_commande,
-                order_currency.meta_value as devise
+                order_currency.meta_value as devise,
+                
+                -- CORRECTION v2.9.0 : Ajouter statut abonnement filleul
+                sub.ID as filleul_subscription_id,
+                sub.post_status as filleul_subscription_status
                 
             FROM {$wpdb->postmeta} pm_parrain
             LEFT JOIN {$wpdb->posts} p ON pm_parrain.post_id = p.ID
@@ -214,7 +218,11 @@ class ParrainageDataProvider {
             LEFT JOIN {$wpdb->postmeta} order_total ON p.ID = order_total.post_id AND order_total.meta_key = '_order_total'
             LEFT JOIN {$wpdb->postmeta} order_currency ON p.ID = order_currency.post_id AND order_currency.meta_key = '_order_currency'
             
+            -- CORRECTION v2.9.1 : Joindre l'abonnement du filleul SANS filtrer - on veut TOUS les filleuls
+            LEFT JOIN {$wpdb->posts} sub ON sub.post_parent = p.ID AND sub.post_type = 'shop_subscription'
+            
             WHERE {$where_clause}
+            AND p.post_type = 'shop_order'
             ORDER BY {$pagination['order_by']} {$pagination['order']}
             LIMIT %d OFFSET %d
         ", array_merge( $params, array( $pagination['per_page'], $offset ) ) );
@@ -268,6 +276,19 @@ class ParrainageDataProvider {
         
         // MODIFICATION v2.6.0 : Remplacement des données mockées par vraies données calculées
         $discount_data = $this->get_real_discount_data( $row->filleul_order_id, $row->parrain_subscription_id );
+        
+        // DEBUG v2.9.0 : Log données de remise calculées
+        $this->logger->info( 
+            'DISCOUNT DATA CALCULÉE pour filleul',
+            array(
+                'filleul_order_id' => $row->filleul_order_id,
+                'parrain_subscription_id' => $row->parrain_subscription_id,
+                'discount_data' => $discount_data,
+                'discount_data_type' => gettype( $discount_data ),
+                'discount_data_keys' => is_array( $discount_data ) ? array_keys( $discount_data ) : 'NOT_ARRAY'
+            ),
+            'mes-parrainages-debug'
+        );
         
         return array(
             'user_id' => $row->filleul_user_id,
@@ -502,10 +523,28 @@ class ParrainageDataProvider {
      * @return array|false Données de remise réelles ou false
      */
     private function get_real_discount_data( $filleul_order_id, $parrain_subscription_id ) {
+        // DEBUG v2.9.0 : Log entrée fonction
+        $this->logger->info( 
+            'ENTRÉE get_real_discount_data',
+            array(
+                'filleul_order_id' => $filleul_order_id,
+                'parrain_subscription_id' => $parrain_subscription_id
+            ),
+            'mes-parrainages-debug'
+        );
+        
         try {
             // Récupération de l'instance du plugin pour accès aux services
             $plugin_instance = $this->get_plugin_instance();
             if ( ! $plugin_instance ) {
+                $this->logger->warning( 
+                    'FALLBACK - Plugin instance non trouvée → données mockées',
+                    array(
+                        'filleul_order_id' => $filleul_order_id,
+                        'parrain_subscription_id' => $parrain_subscription_id
+                    ),
+                    'mes-parrainages-debug'
+                );
                 return $this->get_mock_discount_data( $filleul_order_id, $parrain_subscription_id );
             }
             
@@ -514,12 +553,14 @@ class ParrainageDataProvider {
             
             if ( ! $calculator || ! $validator ) {
                 $this->logger->warning(
-                    'Services de calcul non disponibles - fallback vers données mockées',
+                    'FALLBACK - Services de calcul non disponibles → données mockées',
                     array(
                         'filleul_order_id' => $filleul_order_id,
-                        'parrain_subscription_id' => $parrain_subscription_id
+                        'parrain_subscription_id' => $parrain_subscription_id,
+                        'calculator_exists' => ! ! $calculator,
+                        'validator_exists' => ! ! $validator
                     ),
-                    'data-provider'
+                    'mes-parrainages-debug'
                 );
                 return $this->get_mock_discount_data( $filleul_order_id, $parrain_subscription_id );
             }
@@ -527,13 +568,40 @@ class ParrainageDataProvider {
             // Récupération des informations de la commande filleul
             $order = wc_get_order( $filleul_order_id );
             if ( ! $order ) {
+                $this->logger->warning( 
+                    'ERREUR - Commande filleul non trouvée',
+                    array(
+                        'filleul_order_id' => $filleul_order_id,
+                        'parrain_subscription_id' => $parrain_subscription_id
+                    ),
+                    'mes-parrainages-debug'
+                );
                 return false;
             }
             
             $code_parrain = $order->get_meta( '_billing_parrain_code' );
             if ( ! $code_parrain ) {
+                $this->logger->warning( 
+                    'ERREUR - Code parrain non trouvé sur commande filleul',
+                    array(
+                        'filleul_order_id' => $filleul_order_id,
+                        'parrain_subscription_id' => $parrain_subscription_id,
+                        'order_meta_keys' => array_keys( $order->get_meta_data() )
+                    ),
+                    'mes-parrainages-debug'
+                );
                 return false;
             }
+            
+            $this->logger->info( 
+                'SUCCESS - Code parrain trouvé, calcul réel possible',
+                array(
+                    'filleul_order_id' => $filleul_order_id,
+                    'parrain_subscription_id' => $parrain_subscription_id,
+                    'code_parrain' => $code_parrain
+                ),
+                'mes-parrainages-debug'
+            );
             
             // Validation de l'éligibilité
             $product_ids = $this->get_order_product_ids( $order );

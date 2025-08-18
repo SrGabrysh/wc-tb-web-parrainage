@@ -343,6 +343,18 @@ class SuspensionHandler {
             $subscription->calculate_totals();
             $subscription->save();
             
+            // CORRECTION v2.9.4 : Forcer _order_total car calculate_totals() ne le met pas toujours à jour
+            \update_post_meta( $subscription_id, '_order_total', $new_total );
+            
+            $this->logger->info(
+                'Force mise à jour _order_total après calculate_totals',
+                array(
+                    'subscription_id' => $subscription_id,
+                    'new_total_forced' => $new_total
+                ),
+                'suspension-handler'
+            );
+            
             // ÉTAPE 3 : Forcer les totaux si nécessaire (backup SQL)
             global $wpdb;
             

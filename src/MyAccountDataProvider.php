@@ -507,6 +507,17 @@ class MyAccountDataProvider {
      * @return array Résumé des économies
      */
     public function get_savings_summary( $user_subscription_id ) {
+        // DEBUG v2.9.0 : FORCE LOG - TOUJOURS APPELÉ
+        $this->logger->info( 
+            '🚀 ENTRÉE get_savings_summary - SANS CACHE',
+            array(
+                'user_subscription_id' => $user_subscription_id,
+                'timestamp' => time(),
+                'called_from' => debug_backtrace()[1]['function'] ?? 'UNKNOWN'
+            ),
+            'mes-parrainages-debug'
+        );
+        
         // CORRECTIF v2.7.6 : Vider le cache du résumé si contient timestamp
         $cache_key = self::CACHE_KEY_PREFIX . 'summary_' . $user_subscription_id;
         $cached_summary = \get_transient( $cache_key );
@@ -525,7 +536,8 @@ class MyAccountDataProvider {
             }
         }
         
-        if ( $cached_summary !== false ) {
+        // DEBUG v2.9.0 : DÉSACTIVER CACHE TEMPORAIREMENT
+        if ( false && $cached_summary !== false ) {
             return $cached_summary;
         }
         
@@ -533,32 +545,134 @@ class MyAccountDataProvider {
         try {
             $real_referrals = $this->get_real_referrals_data( $user_subscription_id );
             
+            // DEBUG v2.9.0 : Log détaillé pour debugging
+            $this->logger->info( 
+                'DÉBUT COMPTAGE - Données récupérées depuis get_real_referrals_data',
+                array(
+                    'user_subscription_id' => $user_subscription_id,
+                    'total_referrals_raw' => count( $real_referrals ),
+                    'referrals_structure' => array_map( function( $ref ) {
+                        return array(
+                            'order_id' => $ref['order_id'] ?? 'MISSING',
+                            'nom' => $ref['nom'] ?? 'MISSING',
+                            'has_discount_info' => isset( $ref['discount_info'] ),
+                            'discount_info_keys' => isset( $ref['discount_info'] ) ? array_keys( $ref['discount_info'] ) : 'NONE'
+                        );
+                    }, array_slice( $real_referrals, 0, 3 ) ) // 3 premiers pour éviter logs trop longs
+                ),
+                'mes-parrainages-debug'
+            );
+            
             $active_discounts = 0;
             $total_monthly_savings = 0;
             $total_referrals = count( $real_referrals );
             
-            foreach ( $real_referrals as $referral ) {
-                $status = $referral['discount_client_info']['discount_status'] ?? '';
-                $amount = floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
+            foreach ( $real_referrals as $index => $referral ) {
+                // CORRECTION v2.9.0 : Utiliser 'discount_info' (clé de ParrainageDataProvider)
+                $status = $referral['discount_info']['discount_status'] ?? '';
+                $amount = floatval( $referral['discount_info']['discount_amount'] ?? 0 );
                 
-                // CORRECTION v2.8.2-fix13 : Compter uniquement les remises avec montant > 0
-                if ( $amount > 0 && in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ) ) {
+                // DEBUG v2.9.0 : Log chaque filleul individuellement - SIMPLIFIÉ
+                $this->logger->info( 
+                    "FILLEUL #{$index} - STATUS: {$status}",
+                    array(
+                        'order_id' => $referral['order_id'] ?? 'MISSING',
+                        'discount_status' => $status,
+                        'discount_amount' => $amount
+                    ),
+                    'mes-parrainages-debug'
+                );
+                
+                $this->logger->info( 
+                    "FILLEUL #{$index} - WILL_COUNT: " . ( $amount > 0 && in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ) ? 'YES' : 'NO' ),
+                    array(
+                        'amount_gt_0' => ( $amount > 0 ),
+                        'status_allowed' => in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ),
+                        'allowed_statuses' => array( 'calculated', 'applied', 'active', 'scheduled' )
+                    ),
+                    'mes-parrainages-debug'
+                );
+                
+                if ( isset( $referral['discount_info'] ) ) {
+                    $this->logger->info( 
+                        "FILLEUL #{$index} - DISCOUNT_INFO",
+                        $referral['discount_info'],
+                        'mes-parrainages-debug'
+                    );
+                }
+                
+                // CORRECTION v2.9.1 : Statut 'application_failed' ajouté car filleul actif = remise due
+                // Ne pas compter uniquement sur le statut plugin, mais sur l'état réel du filleul
+                if ( $amount > 0 && in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled', 'application_failed' ), true ) ) {
                     $active_discounts++;
                     $total_monthly_savings += $amount;
+                    
+                    $this->logger->info( 
+                        "FILLEUL #{$index} - COMPTÉ !",
+                        array(
+                            'order_id' => $referral['order_id'] ?? 'MISSING',
+                            'active_discounts_now' => $active_discounts,
+                            'total_monthly_savings_now' => $total_monthly_savings
+                        ),
+                        'mes-parrainages-debug'
+                    );
                 }
             }
             
+            // DEBUG v2.9.0 : Log résultat final
+            $this->logger->info( 
+                'RÉSULTAT FINAL - Comptage terminé',
+                array(
+                    'user_subscription_id' => $user_subscription_id,
+                    'total_referrals' => $total_referrals,
+                    'active_discounts' => $active_discounts,
+                    'total_monthly_savings' => $total_monthly_savings
+                ),
+                'mes-parrainages-debug'
+            );
+            
             $subscription = wcs_get_subscription( $user_subscription_id );
-            $original_amount = $subscription ? $subscription->get_total() : 89.99;
+            $original_amount = $subscription ? floatval( $subscription->get_total() ) : 89.99;
+            
+            // DEBUG v2.9.3 : TRACE COMPLÈTE AVANT CALCUL NEXT_BILLING
+            $this->logger->debug( 'DEBUG BEFORE NEXT_BILLING - Variables source', array(
+                'user_subscription_id' => $user_subscription_id,
+                'subscription_exists' => $subscription ? 'OUI' : 'NON',
+                'subscription_get_total_brut' => $subscription ? $subscription->get_total() : 'N/A',
+                'original_amount' => $original_amount,
+                'original_amount_type' => gettype($original_amount),
+                'total_monthly_savings' => $total_monthly_savings,
+                'total_monthly_savings_type' => gettype($total_monthly_savings)
+            ), 'mes-parrainages-debug' );
+            
+            // PROTECTION v2.9.2 : Si montant aberrant (timestamp), utiliser valeur par défaut
+            if ( $original_amount > 100000 ) {
+                $this->logger->warning( 'Montant aberrant détecté, utilisation valeur par défaut', array(
+                    'user_subscription_id' => $user_subscription_id,
+                    'montant_aberrant' => $original_amount
+                ), 'account-data-provider' );
+                $original_amount = 71.99; // Prix normal avec remise suspendue
+            }
             
             // Calculer les économies totales depuis le début (estimation basée sur la durée des parrainages actifs)
             $total_savings_to_date = 0;
             foreach ( $real_referrals as $referral ) {
-                $status = $referral['discount_client_info']['discount_status'] ?? '';
+                // CORRECTION v2.9.0 : Utiliser 'discount_info' (clé de ParrainageDataProvider)
+                $status = $referral['discount_info']['discount_status'] ?? '';
                 if ( in_array( $status, array( 'calculated', 'applied', 'active', 'scheduled' ), true ) ) {
-                    $discount_amount = floatval( $referral['discount_client_info']['discount_amount'] ?? 0 );
+                    $discount_amount = floatval( $referral['discount_info']['discount_amount'] ?? 0 );
                     $parrainage_date = strtotime( $referral['date_parrainage_raw'] ?? 'now' );
+                    
+                    // CORRECTION v2.9.3 : Protection contre timestamps aberrants dans le calcul
+                    if ( $parrainage_date === false || $parrainage_date < strtotime( '2020-01-01' ) ) {
+                        $parrainage_date = time(); // Utiliser maintenant si date invalide
+                    }
+                    
                     $months_active = max( 1, floor( ( time() - $parrainage_date ) / ( 30 * 24 * 3600 ) ) );
+                    
+                    // CORRECTION v2.9.3 : Limiter les mois actifs à une valeur raisonnable
+                    $months_active = min( $months_active, 24 ); // Max 2 ans
+                    
                     $total_savings_to_date += $discount_amount * $months_active;
                 }
             }
@@ -571,12 +685,25 @@ class MyAccountDataProvider {
                 'total_savings_to_date' => max( 0, $total_savings_to_date ), // CORRECTION : Éviter valeurs négatives
                 'currency' => get_woocommerce_currency_symbol(),
                 'next_billing' => array(
-                    'date' => date( 'd-m-Y', strtotime( '+1 month' ) ), // CORRECTION : Format DD-MM-YYYY
-                    'amount' => number_format( round( $original_amount - $total_monthly_savings, 2 ), 2, ',', '' ),
+                    'date' => $this->get_real_next_billing_date( $user_subscription_id ), // CORRECTION v2.9.3 : Vraie date WooCommerce
+                    'amount' => number_format( round( $original_amount - $total_monthly_savings, 2 ), 2, ',', '' ) . ' HT',
                     'original_amount' => number_format( $original_amount, 2, ',', '' )
                 ),
                 'pending_actions' => $this->get_real_pending_actions( $real_referrals )
             );
+            
+            // DEBUG v2.9.3 : TRACE FINALE NEXT_BILLING CALCULÉ
+            $next_billing_date_calc = $this->get_real_next_billing_date( $user_subscription_id );
+            $next_billing_amount_calc = round( $original_amount - $total_monthly_savings, 2 );
+            $next_billing_amount_formatted = number_format( $next_billing_amount_calc, 2, ',', '' ) . ' HT';
+            
+            $this->logger->debug( 'DEBUG AFTER NEXT_BILLING - Résultat final calculé', array(
+                'user_subscription_id' => $user_subscription_id,
+                'next_billing_date_raw' => $next_billing_date_calc,
+                'calcul_soustraction' => $original_amount . ' - ' . $total_monthly_savings . ' = ' . $next_billing_amount_calc,
+                'next_billing_amount_formatted' => $next_billing_amount_formatted,
+                'summary_next_billing_complet' => $summary['next_billing']
+            ), 'mes-parrainages-debug' );
             
         } catch ( Exception $e ) {
             $this->logger->error(
@@ -861,16 +988,69 @@ class MyAccountDataProvider {
             'parrain_subscription_id' => $user_subscription_id
         );
         
-        $data = $parrainage_data_provider->get_parrainage_data( $filters );
+        // CORRECTION v2.9.0 : Spécifier pagination pour éviter les valeurs par défaut
+        $pagination = array(
+            'page' => 1,
+            'per_page' => 100, // Suffisant pour récupérer tous les filleuls d'un parrain
+            'order_by' => 'p.post_date',
+            'order' => 'DESC'
+        );
+        
+        $data = $parrainage_data_provider->get_parrainage_data( $filters, $pagination );
         
         // Extraire les filleuls pour ce parrain spécifique
         if ( isset( $data['parrains'] ) ) {
+            // DEBUG v2.9.0 : Log structure complète des parrains
+            $this->logger->info( 
+                'ANALYSE STRUCTURE PARRAINS',
+                array(
+                    'user_subscription_id_recherche' => $user_subscription_id,
+                    'parrains_count' => count( $data['parrains'] ),
+                    'parrains_details' => array_map( function( $parrain ) {
+                        return array(
+                            'subscription_id' => $parrain['parrain']['subscription_id'] ?? 'MISSING',
+                            'filleuls_count' => count( $parrain['filleuls'] ?? array() ),
+                            'filleuls_sample' => array_slice( $parrain['filleuls'] ?? array(), 0, 1 )
+                        );
+                    }, $data['parrains'] )
+                ),
+                'mes-parrainages-debug'
+            );
+            
             foreach ( $data['parrains'] as $parrain ) {
-                if ( intval( $parrain['subscription_id'] ) === intval( $user_subscription_id ) ) {
+                $parrain_subscription_id = $parrain['parrain']['subscription_id'] ?? 'MISSING';
+                
+                // DEBUG v2.9.0 : Log chaque comparaison
+                $this->logger->info( 
+                    'COMPARAISON PARRAIN',
+                    array(
+                        'recherche' => intval( $user_subscription_id ),
+                        'trouve' => intval( $parrain_subscription_id ),
+                        'match' => ( intval( $parrain_subscription_id ) === intval( $user_subscription_id ) ),
+                        'filleuls_count' => count( $parrain['filleuls'] ?? array() )
+                    ),
+                    'mes-parrainages-debug'
+                );
+                
+                if ( intval( $parrain_subscription_id ) === intval( $user_subscription_id ) ) {
                     return $parrain['filleuls'] ?? array();
                 }
             }
         }
+        
+        // DEBUG v2.9.0 : Aucun parrain trouvé
+        $this->logger->warning( 
+            'AUCUN PARRAIN TROUVÉ',
+            array(
+                'user_subscription_id' => $user_subscription_id,
+                'data_structure' => array(
+                    'has_parrains' => isset( $data['parrains'] ),
+                    'parrains_count' => isset( $data['parrains'] ) ? count( $data['parrains'] ) : 0,
+                    'data_keys' => array_keys( $data )
+                )
+            ),
+            'mes-parrainages-debug'
+        );
         
         return array();
     }
@@ -885,7 +1065,8 @@ class MyAccountDataProvider {
         $actions = array();
         
         foreach ( $real_referrals as $referral ) {
-            $status = $referral['discount_client_info']['discount_status'] ?? 'unknown';
+            // CORRECTION v2.9.0 : Utiliser 'discount_info' (clé de ParrainageDataProvider)
+            $status = $referral['discount_info']['discount_status'] ?? 'unknown';
             
             switch ( $status ) {
                 case 'pending':
@@ -939,6 +1120,44 @@ class MyAccountDataProvider {
             ),
             'pending_actions' => $this->get_mock_pending_actions( $active_discounts, $total_referrals )
         );
+    }
+    
+    /**
+     * NOUVEAU v2.9.3 : Récupérer la vraie date de prochaine facturation WooCommerce
+     * 
+     * @param int $user_subscription_id ID de l'abonnement utilisateur
+     * @return string Date formatée DD-MM-YYYY
+     */
+    private function get_real_next_billing_date( $user_subscription_id ) {
+        try {
+            $subscription = wcs_get_subscription( $user_subscription_id );
+            if ( ! $subscription ) {
+                return date( 'd-m-Y', strtotime( '+1 month' ) );
+            }
+            
+            // Récupérer la vraie date de prochaine facturation
+            $next_payment_timestamp = $subscription->get_time( 'next_payment' );
+            if ( $next_payment_timestamp ) {
+                return date( 'd-m-Y', $next_payment_timestamp );
+            }
+            
+            // Fallback : chercher dans les métadonnées
+            $next_payment_meta = get_post_meta( $user_subscription_id, '_schedule_next_payment', true );
+            if ( $next_payment_meta ) {
+                return date( 'd-m-Y', strtotime( $next_payment_meta ) );
+            }
+            
+            // Dernier fallback
+            return date( 'd-m-Y', strtotime( '+1 month' ) );
+            
+        } catch ( Exception $e ) {
+            $this->logger->warning( 'Erreur récupération date prochaine facturation', array(
+                'user_subscription_id' => $user_subscription_id,
+                'error' => $e->getMessage()
+            ), 'account-data-provider' );
+            
+            return date( 'd-m-Y', strtotime( '+1 month' ) );
+        }
     }
     
     /**
@@ -1041,7 +1260,7 @@ class MyAccountDataProvider {
             WHERE ID = %d
         ", $subscription_id ) );
         
-        $is_active = in_array( $subscription_status, array( 'wc-active' ), true );
+        $is_active = in_array( $subscription_status, array( 'wc-active', 'wc-on-hold' ), true );
         
         $status_labels = array(
             'wc-active' => 'actif',

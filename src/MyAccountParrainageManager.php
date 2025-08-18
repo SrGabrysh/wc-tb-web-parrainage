@@ -173,7 +173,7 @@ class MyAccountParrainageManager {
             'wc-tb-parrainage-my-account-discount',
             WC_TB_PARRAINAGE_URL . 'assets/my-account-discount.js',
             array( 'jquery' ),
-            WC_TB_PARRAINAGE_VERSION,
+            WC_TB_PARRAINAGE_VERSION . '_' . time(), // FORCE CACHE REFRESH v2.9.3
             true
         );
     }
@@ -332,13 +332,38 @@ class MyAccountParrainageManager {
                         $billing_date = $summary['next_billing']['date'] ?? date('d-m-Y', strtotime('+1 month'));
                         $billing_amount = $summary['next_billing']['amount'] ?? '0,00';
                         
+                        // DEBUG v2.9.3 : Log les valeurs reçues pour diagnostic
+                        $logger = new \TBWeb\WCParrainage\Logger();
+                        $logger->debug( 'AFFICHAGE NEXT_BILLING - Valeurs reçues', array(
+                            'billing_date_raw' => $billing_date,
+                            'billing_amount_raw' => $billing_amount,
+                            'billing_amount_type' => gettype($billing_amount),
+                            'summary_next_billing_complet' => $summary['next_billing'] ?? 'AUCUN'
+                        ), 'mes-parrainages-debug' );
+                        
                         // Vérifier que le montant n'est pas aberrant
                         $amount_clean = str_replace(',', '.', $billing_amount);
                         if (is_numeric($amount_clean) && floatval($amount_clean) > 10000) {
                             $billing_amount = '0,00';
+                            $logger->warning( 'Montant aberrant détecté dans affichage, correction appliquée', array(
+                                'amount_original' => $billing_amount,
+                                'amount_clean' => $amount_clean,
+                                'amount_corrected' => '0,00'
+                            ), 'mes-parrainages-debug' );
                         }
                         
-                        echo esc_html( $billing_date . ' (' . $billing_amount . '€)' ); 
+                        echo esc_html( $billing_date . ' (' . $billing_amount . '€)' );
+                        
+                        // DEBUG v2.9.3 : Log du HTML généré pour diagnostic JavaScript
+                        $logger->debug( 'HTML GÉNÉRÉ FINAL', array(
+                            'html_output' => $billing_date . ' (' . $billing_amount . '€)',
+                            'billing_date' => $billing_date,
+                            'billing_amount' => $billing_amount,
+                            'billing_amount_length' => strlen($billing_amount)
+                        ), 'mes-parrainages-debug' );
+                        
+                        // FORCE CACHE BUSTING v2.9.3
+                        echo '<!-- Cache bust: ' . time() . ' -->'; 
                         ?>
                     </span>
                 </div>
