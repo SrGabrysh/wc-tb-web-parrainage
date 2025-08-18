@@ -34,6 +34,9 @@ class Plugin {
     private $suspension_manager;
     private $reactivation_manager;
     
+    // AJOUT v2.11.0 : Module d'expiration des remises filleul
+    private $filleul_expiration_manager;
+    
     public function __construct() {
         $this->logger = new Logger();
         $this->init_managers();
@@ -61,10 +64,13 @@ class Plugin {
         require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionHandler.php';
         require_once WC_TB_PARRAINAGE_PATH . 'src/SuspensionValidator.php';
         
-        // NOUVEAU v2.8.2 : Module de réactivation des remises parrain
-        require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationManager.php';
-        require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationHandler.php';
-        require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationValidator.php';
+            // NOUVEAU v2.8.2 : Module de réactivation des remises parrain
+    require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationManager.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationHandler.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationValidator.php';
+    
+    // NOUVEAU v2.11.0 : Module d'expiration des remises filleul
+    require_once WC_TB_PARRAINAGE_PATH . 'src/FilleulDiscountExpirationManager.php';
     }
     
     /**
@@ -98,6 +104,9 @@ class Plugin {
         // NOUVEAU v2.10.0 : Initialisation des modules de suspension/réactivation avec dépendances
         $this->suspension_manager = new SuspensionManager( $this->logger, $this->subscription_discount_manager );
         $this->reactivation_manager = new ReactivationManager( $this->logger, $this->subscription_discount_manager );
+        
+        // NOUVEAU v2.11.0 : Initialisation du module d'expiration des remises filleul
+        $this->filleul_expiration_manager = new FilleulDiscountExpirationManager( $this->logger );
     }
     
     private function init_hooks() {
@@ -146,6 +155,12 @@ class Plugin {
             $this->suspension_manager->init();
             $this->reactivation_manager->init();
             $this->logger->info( 'Modules suspension/réactivation initialisés', 'general' );
+        }
+        
+        // NOUVEAU v2.11.0 : Initialisation du module d'expiration des remises filleul
+        if ( ! empty( $settings['enable_parrainage'] ) ) {
+            $this->filleul_expiration_manager->init();
+            $this->logger->info( 'Module expiration remises filleul initialisé', 'general' );
         }
         
         // Handler AJAX pour vider les logs
