@@ -82,6 +82,189 @@ class SuspensionManager {
     }
     
     /**
+     * NOUVEAU v2.10.0 : Initialisation des hooks WordPress pour suspension automatique
+     * 
+     * Enregistre les hooks pour détecter les changements de statut des abonnements filleuls
+     * et déclencher automatiquement la suspension des remises parrain.
+     * 
+     * @return void
+     */
+    public function init(): void {
+        // Hook principal : détecter tous les changements de statut vers inactivité
+        add_action( 'woocommerce_subscription_status_cancelled', array( $this, 'handle_subscription_status_change' ), 10, 1 );
+        add_action( 'woocommerce_subscription_status_on-hold', array( $this, 'handle_subscription_status_change' ), 10, 1 );
+        add_action( 'woocommerce_subscription_status_expired', array( $this, 'handle_subscription_status_change' ), 10, 1 );
+        add_action( 'woocommerce_subscription_status_pending-cancel', array( $this, 'handle_subscription_status_change' ), 10, 1 );
+        
+        $this->logger->info(
+            'SuspensionManager hooks enregistrés avec succès',
+            array(
+                'hooks_registered' => array(
+                    'woocommerce_subscription_status_cancelled',
+                    'woocommerce_subscription_status_on-hold', 
+                    'woocommerce_subscription_status_expired',
+                    'woocommerce_subscription_status_pending-cancel'
+                )
+            ),
+            'suspension-manager'
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.10.0 : Handler unifié pour tous les changements de statut vers suspension
+     * 
+     * Méthode appelée automatiquement par les hooks WordPress quand un abonnement
+     * filleul change vers un statut inactif.
+     * 
+     * @param \WC_Subscription $subscription Instance de l'abonnement filleul
+     * @return void
+     */
+    public function handle_subscription_status_change( $subscription ): void {
+        if ( ! $subscription instanceof \WC_Subscription ) {
+            $this->logger->warning(
+                'Type d\'objet invalide reçu dans handle_subscription_status_change',
+                array( 'received_type' => get_class( $subscription ) ),
+                'suspension-manager'
+            );
+            return;
+        }
+        
+        $filleul_subscription_id = $subscription->get_id();
+        $new_status = $subscription->get_status();
+        
+        $this->logger->info(
+            'Changement statut abonnement détecté - analyse parrainage',
+            array(
+                'filleul_subscription_id' => $filleul_subscription_id,
+                'new_status' => $new_status,
+                'trigger_hook' => current_filter()
+            ),
+            'suspension-manager'
+        );
+        
+        // Rechercher si cet abonnement filleul a un parrain
+        $parrain_info = $this->find_parrain_for_filleul( $filleul_subscription_id );
+        
+        if ( ! $parrain_info ) {
+            $this->logger->debug(
+                'Aucun parrain trouvé pour cet abonnement - aucune action nécessaire',
+                array( 'filleul_subscription_id' => $filleul_subscription_id ),
+                'suspension-manager'
+            );
+            return;
+        }
+        
+        // Déclencher la suspension de la remise parrain
+        $result = $this->orchestrate_suspension(
+            $parrain_info['parrain_subscription_id'],
+            $filleul_subscription_id,
+            $new_status
+        );
+        
+        $this->logger->info(
+            'Suspension automatique déclenchée par changement statut',
+            array(
+                'filleul_subscription_id' => $filleul_subscription_id,
+                'parrain_subscription_id' => $parrain_info['parrain_subscription_id'],
+                'suspension_result' => $result['success'] ? 'SUCCESS' : 'FAILED',
+                'execution_time_ms' => $result['execution_time_ms'] ?? 0
+            ),
+            'suspension-manager'
+        );
+    }
+    
+    /**
+     * NOUVEAU v2.10.0 : Rechercher le parrain associé à un abonnement filleul
+     * 
+     * CORRIGÉ v2.10.0 : Utilise la méthode correcte basée sur les métadonnées réelles
+     * 
+     * @param int $filleul_subscription_id ID de l'abonnement filleul
+     * @return array|false Informations du parrain ou false si non trouvé
+     */
+    private function find_parrain_for_filleul( int $filleul_subscription_id ) {
+        global $wpdb;
+        
+        $this->logger->debug(
+            'Recherche parrain pour filleul',
+            array( 'filleul_subscription_id' => $filleul_subscription_id ),
+            'suspension-manager'
+        );
+        
+        // MÉTHODE 1: Chercher directement dans les métadonnées de l'abonnement filleul
+        $parrain_code = get_post_meta( $filleul_subscription_id, '_billing_parrain_code', true );
+        
+        if ( $parrain_code ) {
+            $this->logger->debug(
+                'Parrain trouvé via _billing_parrain_code',
+                array( 
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'parrain_code' => $parrain_code
+                ),
+                'suspension-manager'
+            );
+            
+            return array(
+                'parrain_subscription_id' => (int) $parrain_code,
+                'order_id' => null // Pas besoin de l'order_id pour cette méthode
+            );
+        }
+        
+        // MÉTHODE 2: Chercher via _pending_parrain_discount (fallback)
+        $pending_parrain = get_post_meta( $filleul_subscription_id, '_pending_parrain_discount', true );
+        
+        if ( $pending_parrain ) {
+            $this->logger->debug(
+                'Parrain trouvé via _pending_parrain_discount',
+                array( 
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'pending_parrain' => $pending_parrain
+                ),
+                'suspension-manager'
+            );
+            
+            return array(
+                'parrain_subscription_id' => (int) $pending_parrain,
+                'order_id' => null
+            );
+        }
+        
+        // MÉTHODE 3: Rechercher via les métadonnées Gabriel (inverse)
+        $query = $wpdb->prepare( "
+            SELECT post_id as parrain_subscription_id, meta_value as filleul_id
+            FROM {$wpdb->postmeta}
+            WHERE meta_key = '_parrain_suspension_filleul_id'
+            AND meta_value = %d
+            LIMIT 1
+        ", $filleul_subscription_id );
+        
+        $result = $wpdb->get_row( $query, ARRAY_A );
+        
+        if ( $result ) {
+            $this->logger->debug(
+                'Parrain trouvé via _parrain_suspension_filleul_id',
+                array( 
+                    'filleul_subscription_id' => $filleul_subscription_id,
+                    'parrain_subscription_id' => $result['parrain_subscription_id']
+                ),
+                'suspension-manager'
+            );
+            
+            return array(
+                'parrain_subscription_id' => (int) $result['parrain_subscription_id'],
+                'order_id' => null
+            );
+        }
+        
+        $this->logger->warning(
+            'Aucun parrain trouvé pour filleul',
+            array( 'filleul_subscription_id' => $filleul_subscription_id ),
+            'suspension-manager'
+        );
+        
+        return false;
+    }
+    
+    /**
      * STEP 3.1 : Orchestration complète de la suspension
      * 
      * Point d'entrée principal appelé par AutomaticDiscountProcessor

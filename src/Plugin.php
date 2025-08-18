@@ -30,6 +30,10 @@ class Plugin {
     // AJOUT v2.7.8 : Module d'export des logs
     private $export_manager;
     
+    // AJOUT v2.10.0 : Modules de suspension/réactivation
+    private $suspension_manager;
+    private $reactivation_manager;
+    
     public function __construct() {
         $this->logger = new Logger();
         $this->init_managers();
@@ -90,6 +94,10 @@ class Plugin {
         if ( method_exists( $this->automatic_discount_processor, 'set_subscription_discount_manager' ) ) {
             $this->automatic_discount_processor->set_subscription_discount_manager( $this->subscription_discount_manager );
         }
+        
+        // NOUVEAU v2.10.0 : Initialisation des modules de suspension/réactivation avec dépendances
+        $this->suspension_manager = new SuspensionManager( $this->logger, $this->subscription_discount_manager );
+        $this->reactivation_manager = new ReactivationManager( $this->logger, $this->subscription_discount_manager );
     }
     
     private function init_hooks() {
@@ -132,6 +140,13 @@ class Plugin {
         
         // NOUVEAU v2.7.8 : Initialisation du module d'export
         $this->export_manager->init();
+        
+        // NOUVEAU v2.10.0 : Initialisation des modules de suspension/réactivation
+        if ( ! empty( $settings['enable_parrainage'] ) ) {
+            $this->suspension_manager->init();
+            $this->reactivation_manager->init();
+            $this->logger->info( 'Modules suspension/réactivation initialisés', 'general' );
+        }
         
         // Handler AJAX pour vider les logs
         add_action( 'wp_ajax_tb_parrainage_clear_logs', array( $this, 'ajax_clear_logs' ) );
