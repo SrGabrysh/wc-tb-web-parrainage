@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.13.1
+**Version:** 2.13.2
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -753,6 +753,48 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.13.2 (20-08-2025 à 15h30) - CORRECTIONS MODALES D'AIDE
+
+#### 🔧 Corrections Techniques
+
+**🖱️ Améliorations Visuelles et UX**
+
+- **Correction affichage modal** : Résolution problème fond transparent avec overlay sombre semi-transparent
+- **Bouton fermeture optimisé** : Icône X bleue `#2271b1` assortie au liseré des modales
+- **Gestion débordement** : Correction débordement horizontal du contenu "Conseils"
+- **Responsive design** : Dimensions adaptatives selon taille d'écran (max 600px ou 90% largeur)
+- **Positionnement centré** : Modal toujours centrée avec `position: center`
+
+#### 🎨 Améliorations CSS
+
+**Interface Modale Perfectionnée**
+
+- **Overlay opaque** : Fond `rgba(0, 0, 0, 0.7)` pour isolation visuelle
+- **Bouton X stylisé** : Design cohérent avec bordure bleue et effet hover
+- **Prévention débordement** : `overflow-x: hidden` et `word-wrap: break-word`
+- **Z-index WordPress** : Compatibilité admin avec niveaux 160000/159999
+- **Accessibilité renforcée** : Focus management et navigation clavier
+
+#### 🛠️ Corrections JavaScript
+
+**Fonctionnalités Interactives**
+
+- **Dimensions intelligentes** : `Math.min(600, $(window).width() * 0.9)`
+- **closeText vide** : Suppression texte "Fermer" pour affichage icône seule
+- **CSS dynamique** : Application `max-width: 100%` et `overflow-x: hidden` à l'ouverture
+- **Centrage automatique** : Position calculée pour tous écrans
+
+#### 📱 Support Multi-écrans
+
+**Responsive Complet**
+
+- **Mobile** : Modal 95% largeur sur écrans < 600px
+- **Desktop** : Maximum 600px avec hauteur 80% écran
+- **Tablette** : Adaptation automatique selon orientation
+- **Touch-friendly** : Interactions tactiles optimisées
+
+---
 
 ### Version 2.13.0 (20-08-2025 à 10h40) - MODALES D'AIDE ANALYTICS
 

@@ -102,18 +102,29 @@
       // Charger le contenu
       this.loadHelpContent(metricKey, $modal);
 
-      // Ouvrir la modale
+      // Ouvrir la modale avec les bonnes dimensions
       $modal.dialog({
-        width: this.config.modalWidth,
-        maxHeight: this.config.modalMaxHeight,
+        width: Math.min(600, $(window).width() * 0.9), // Max 600px ou 90% de la largeur écran
+        maxHeight: Math.min(500, $(window).height() * 0.8), // Max 500px ou 80% de la hauteur écran
         modal: true,
         resizable: true,
         draggable: true,
-        closeText: tbHelpModals.strings.close,
+        closeText: "", // Vide pour ne pas afficher de texte
         dialogClass: "tb-help-modal-dialog",
+        position: {
+          my: "center",
+          at: "center",
+          of: window,
+        },
         open: function () {
           // Focus sur le contenu pour l'accessibilité
           $(this).focus();
+
+          // S'assurer que le contenu ne déborde pas
+          $(this).css({
+            "max-width": "100%",
+            "overflow-x": "hidden",
+          });
         },
         close: function () {
           // Restaurer le focus sur l'icône d'aide
