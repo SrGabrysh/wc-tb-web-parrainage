@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.11.0
+**Version:** 2.13.0
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -753,6 +753,57 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.13.0 (20-08-2025 à 10h40) - MODALES D'AIDE ANALYTICS
+
+#### 🆕 Nouvelles Fonctionnalités
+
+**📚 Système de Modales d'Aide pour Analytics**
+
+- **Icônes d'information (i)** sur chaque métrique analytics avec aide contextuelle
+- **Modales WordPress natives** avec contenu structuré et pédagogique
+- **Support multilingue** français/anglais avec sélecteur dans les modales
+- **Contenu détaillé** pour chaque métrique : définition, calcul, interprétation, conseils
+- **Accessibilité complète** : navigation clavier, lecteurs d'écran, mobile-friendly
+- **Cache intelligent** pour optimiser les performances
+
+**🎯 Métriques Documentées**
+
+- Parrains Actifs, Filleuls Actifs, Revenus Mensuels HT
+- Remises Mensuelles, ROI Mois Actuel, Codes Utilisés
+- Événements ce mois, Webhooks Envoyés, Santé du Système
+- Indicateurs de santé détaillés avec recommandations
+
+#### 🔧 Améliorations Techniques
+
+**Nouvelle Architecture Analytics**
+
+- `HelpModalManager` : gestionnaire centralisé des modales d'aide
+- Assets dédiés : `help-modals.css` et `help-modals.js`
+- Intégration AJAX pour chargement dynamique du contenu
+- Stockage des contenus via options WordPress pour faciliter la maintenance
+
+**Interface Utilisateur**
+
+- Positionnement optimal des icônes d'aide (coin supérieur droit des cartes)
+- Design cohérent avec l'interface WordPress admin
+- Responsive design pour mobile et desktop
+- Gestion du focus pour l'accessibilité
+
+#### 📝 Contenu Pédagogique
+
+**Explications Métier**
+
+- Langage simple sans jargon technique
+- Exemples concrets avec chiffres réels
+- Distinction claire entre revenus globaux et revenus parrainage
+- Conseils d'optimisation pour chaque métrique
+
+**Internationalisation**
+
+- Textes français complets avec traduction anglaise préparée
+- Sélecteur de langue persistant par utilisateur
+- Fallback automatique vers français si traduction manquante
 
 ### Version 2.10.1 (18-08-2025) - CYCLE SUSPENSION AUTOMATIQUE FINALISE
 

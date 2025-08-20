@@ -37,6 +37,9 @@ class Plugin {
     // AJOUT v2.11.0 : Module d'expiration des remises filleul
     private $filleul_expiration_manager;
     
+    // AJOUT v2.12.0 : Module Analytics
+    private $analytics_manager;
+    
     public function __construct() {
         $this->logger = new Logger();
         $this->init_managers();
@@ -71,6 +74,15 @@ class Plugin {
     
     // NOUVEAU v2.11.0 : Module d'expiration des remises filleul
     require_once WC_TB_PARRAINAGE_PATH . 'src/FilleulDiscountExpirationManager.php';
+    
+    // NOUVEAU v2.12.0 : Module Analytics
+    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsDataCollector.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsDataProvider.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/ROICalculator.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/DashboardRenderer.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/ReportGenerator.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/HelpModalManager.php';
+    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsManager.php';
     }
     
     /**
@@ -107,6 +119,9 @@ class Plugin {
         
         // NOUVEAU v2.11.0 : Initialisation du module d'expiration des remises filleul
         $this->filleul_expiration_manager = new FilleulDiscountExpirationManager( $this->logger );
+        
+        // NOUVEAU v2.12.0 : Initialisation du module Analytics
+        $this->analytics_manager = new Analytics\AnalyticsManager( $this->logger );
     }
     
     private function init_hooks() {
@@ -163,6 +178,12 @@ class Plugin {
             $this->logger->info( 'Module expiration remises filleul initialisé', 'general' );
         }
         
+        // NOUVEAU v2.12.0 : Initialisation du module Analytics
+        if ( ! empty( $settings['enable_parrainage'] ) && ! empty( $settings['enable_analytics'] ) ) {
+            $this->analytics_manager->init();
+            $this->logger->info( 'Module Analytics initialisé', 'general' );
+        }
+        
         // Handler AJAX pour vider les logs
         add_action( 'wp_ajax_tb_parrainage_clear_logs', array( $this, 'ajax_clear_logs' ) );
         
@@ -205,7 +226,7 @@ class Plugin {
                     <?php esc_html_e( 'Configuration Produits', 'wc-tb-web-parrainage' ); ?>
                 </a>
                 <a href="?page=wc-tb-parrainage&tab=stats" class="nav-tab <?php echo $current_tab === 'stats' ? 'nav-tab-active' : ''; ?>">
-                    <?php esc_html_e( 'Statistiques', 'wc-tb-web-parrainage' ); ?>
+                    <?php esc_html_e( 'Statistiques & Analytics', 'wc-tb-web-parrainage' ); ?>
                 </a>
                 <a href="?page=wc-tb-parrainage&tab=parrainage" class="nav-tab <?php echo $current_tab === 'parrainage' ? 'nav-tab-active' : ''; ?>">
                     <?php esc_html_e( 'Parrainage', 'wc-tb-web-parrainage' ); ?>
@@ -312,6 +333,7 @@ class Plugin {
                 'enable_webhooks' => isset( $_POST['enable_webhooks'] ),
                 'enable_parrainage' => isset( $_POST['enable_parrainage'] ),
                 'enable_coupon_hiding' => isset( $_POST['enable_coupon_hiding'] ),
+                'enable_analytics' => isset( $_POST['enable_analytics'] ),
                 'log_retention_days' => absint( $_POST['log_retention_days'] )
             );
             
@@ -354,6 +376,20 @@ class Plugin {
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><?php esc_html_e( 'Activer Analytics v2.12.0', 'wc-tb-web-parrainage' ); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_analytics" value="1" <?php checked( ! empty( $settings['enable_analytics'] ) ); ?>>
+                            <?php esc_html_e( 'Dashboard Analytics avec ROI, graphiques, rapports PDF/Excel', 'wc-tb-web-parrainage' ); ?>
+                        </label>
+                        <p class="description">
+                            <strong>📊 Fonctionnalités Analytics :</strong>
+                            ROI automatique, graphiques évolution, dashboard interactif, rapports mensuels/annuels, exports données, comparaison périodes, top performers...
+                            <br><em>Visible dans l'onglet "Statistiques & Analytics" une fois activé.</em>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
                     <th scope="row"><?php esc_html_e( 'Rétention des logs (jours)', 'wc-tb-web-parrainage' ); ?></th>
                     <td>
                         <input type="number" name="log_retention_days" value="<?php echo esc_attr( $settings['log_retention_days'] ?? 30 ); ?>" min="1" max="365">
@@ -368,25 +404,69 @@ class Plugin {
     }
     
     private function render_stats_tab() {
-        $stats = $this->get_parrainage_stats();
-        ?>
-        <div class="stats-container">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h3><?php esc_html_e( 'Codes parrain utilisés', 'wc-tb-web-parrainage' ); ?></h3>
-                    <p class="stat-number"><?php echo esc_html( $stats['total_parrainage'] ); ?></p>
+        
+        // Vérifier si Analytics activé pour intégration harmonieuse
+        $settings = get_option( 'wc_tb_parrainage_settings', array() );
+        $analytics_enabled = ! empty( $settings['enable_analytics'] ) && isset( $this->analytics_manager );
+        
+        if ( $analytics_enabled ) {
+            // Si Analytics activé, rendre directement le dashboard complet avec stats intégrées
+            ?>
+            <div class="tb-analytics-dashboard">
+                <?php $this->analytics_manager->render_analytics_content(); ?>
+            </div>
+            <?php
+        } else {
+            // Si Analytics désactivé, afficher stats basiques + proposition activation
+            $stats = $this->get_parrainage_stats();
+            ?>
+            <div class="stats-container">
+                <!-- Statistiques basiques style simple -->
+                <h2><?php esc_html_e( 'Statistiques Parrainage', 'wc-tb-web-parrainage' ); ?></h2>
+                <div class="tb-stats-grid">
+                    <div class="tb-stat-card tb-card-parrains">
+                        <div class="tb-stat-icon">📝</div>
+                        <div class="tb-stat-content">
+                            <div class="tb-stat-value"><?php echo esc_html( $stats['total_parrainage'] ); ?></div>
+                            <div class="tb-stat-label"><?php esc_html_e( 'Codes parrain utilisés', 'wc-tb-web-parrainage' ); ?></div>
+                        </div>
+                    </div>
+                    <div class="tb-stat-card tb-card-filleuls">
+                        <div class="tb-stat-icon">📅</div>
+                        <div class="tb-stat-content">
+                            <div class="tb-stat-value"><?php echo esc_html( $stats['parrainage_ce_mois'] ); ?></div>
+                            <div class="tb-stat-label"><?php esc_html_e( 'Ce mois', 'wc-tb-web-parrainage' ); ?></div>
+                        </div>
+                    </div>
+                    <div class="tb-stat-card tb-card-revenue">
+                        <div class="tb-stat-icon">🔗</div>
+                        <div class="tb-stat-content">
+                            <div class="tb-stat-value"><?php echo esc_html( $stats['webhooks_envoyes'] ); ?></div>
+                            <div class="tb-stat-label"><?php esc_html_e( 'Webhooks envoyés', 'wc-tb-web-parrainage' ); ?></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <h3><?php esc_html_e( 'Ce mois', 'wc-tb-web-parrainage' ); ?></h3>
-                    <p class="stat-number"><?php echo esc_html( $stats['parrainage_ce_mois'] ); ?></p>
-                </div>
-                <div class="stat-card">
-                    <h3><?php esc_html_e( 'Webhooks envoyés', 'wc-tb-web-parrainage' ); ?></h3>
-                    <p class="stat-number"><?php echo esc_html( $stats['webhooks_envoyes'] ); ?></p>
+                
+                <!-- Proposition activation Analytics -->
+                <div class="tb-analytics-section" style="margin-top: 30px;">
+                    <h2><?php esc_html_e( '📊 Analytics Avancés Disponibles', 'wc-tb-web-parrainage' ); ?></h2>
+                    <div class="notice notice-info" style="margin: 0;">
+                        <p><strong>Débloquez le potentiel complet de votre système de parrainage !</strong></p>
+                        <p>Les Analytics avancés vous permettront d'avoir :</p>
+                        <ul style="margin-left: 20px;">
+                            <li><strong>📈 Dashboard ROI</strong> - Calculs automatiques de rentabilité</li>
+                            <li><strong>📊 Graphiques interactifs</strong> - Évolution revenus, filleuls, performances</li>
+                            <li><strong>📑 Rapports automatiques</strong> - PDF/Excel mensuels et annuels</li>
+                            <li><strong>🏆 Top performers</strong> - Identification des meilleurs parrains</li>
+                            <li><strong>📈 Comparaison périodes</strong> - Évolution dans le temps</li>
+                            <li><strong>💾 Exports avancés</strong> - Données complètes CSV/Excel</li>
+                        </ul>
+                        <p><strong>Pour activer :</strong> Onglet <em>Paramètres</em> → Cocher <em>"Activer Analytics v2.12.0"</em> → Sauvegarder</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <?php
+            <?php
+        }
     }
     
     private function get_parrainage_stats() {

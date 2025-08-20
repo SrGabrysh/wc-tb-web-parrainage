@@ -1,0 +1,527 @@
+/**
+ * Styles CSS pour le module Analytics TB-Web Parrainage
+ * Version: 2.12.0
+ * Architecture modulaire KISS
+ */
+
+/* ===== DASHBOARD PRINCIPAL ===== */
+.tb-analytics-dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.tb-analytics-dashboard .tb-version {
+  background: #2271b1;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  margin-left: 10px;
+}
+
+/* ===== SECTIONS ANALYTICS ===== */
+.tb-analytics-section {
+  background: white;
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #e1e1e1;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tb-analytics-section h2 {
+  margin-top: 0;
+  color: #2271b1;
+  border-bottom: 2px solid #f1f1f1;
+  padding-bottom: 10px;
+}
+
+/* ===== MÉTRIQUES RAPIDES ===== */
+.tb-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.tb-stat-card {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  border-left: 4px solid #2271b1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tb-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tb-stat-icon {
+  font-size: 32px;
+  margin-right: 15px;
+  opacity: 0.8;
+}
+
+.tb-stat-content {
+  flex: 1;
+}
+
+.tb-stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #2c3e50;
+  line-height: 1;
+}
+
+.tb-stat-value.positive {
+  color: #27ae60;
+}
+
+.tb-stat-value.negative {
+  color: #e74c3c;
+}
+
+.tb-stat-label {
+  font-size: 13px;
+  color: #7f8c8d;
+  margin-top: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Couleurs spécifiques par type de carte */
+.tb-card-parrains {
+  border-left-color: #3498db;
+}
+.tb-card-filleuls {
+  border-left-color: #9b59b6;
+}
+.tb-card-revenue {
+  border-left-color: #27ae60;
+}
+.tb-card-discounts {
+  border-left-color: #e67e22;
+}
+.tb-card-roi {
+  border-left-color: #e74c3c;
+}
+.tb-card-basic {
+  border-left-color: #95a5a6;
+  opacity: 0.9;
+  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+}
+
+/* ===== SANTÉ SYSTÈME ===== */
+.tb-health-overview {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin: 20px 0;
+}
+
+.tb-health-score {
+  text-align: center;
+}
+
+.tb-health-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  border: 6px solid;
+  background: white;
+}
+
+.tb-health-green {
+  border-color: #27ae60;
+}
+.tb-health-blue {
+  border-color: #3498db;
+}
+.tb-health-orange {
+  border-color: #f39c12;
+}
+.tb-health-red {
+  border-color: #e74c3c;
+}
+.tb-health-gray {
+  border-color: #95a5a6;
+}
+
+.tb-health-percentage {
+  font-size: 24px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.tb-health-status {
+  font-weight: bold;
+  color: #34495e;
+}
+
+.tb-health-indicators {
+  flex: 1;
+}
+
+.tb-health-indicator {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f8f9fa;
+}
+
+.tb-indicator-icon {
+  margin-right: 10px;
+  font-size: 16px;
+}
+
+.tb-indicator-message {
+  color: #2c3e50;
+}
+
+.tb-health-recommendations {
+  margin-top: 20px;
+  padding: 15px;
+  background: #e8f4f8;
+  border-radius: 6px;
+  border-left: 4px solid #3498db;
+}
+
+.tb-health-recommendations h3 {
+  margin-top: 0;
+  color: #2980b9;
+}
+
+.tb-health-recommendations ul {
+  margin-bottom: 0;
+}
+
+/* ===== GRAPHIQUES ===== */
+.tb-charts-section {
+  min-height: 400px;
+}
+
+.tb-charts-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.tb-period-selector {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+}
+
+.tb-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.tb-chart-container {
+  position: relative;
+  background: white;
+  padding: 20px;
+  border: 1px solid #e1e1e1;
+  border-radius: 8px;
+  height: 350px; /* CORRECTION: Hauteur fixe pour éviter scroll excessif */
+  max-height: 350px; /* CORRECTION: Hauteur maximum */
+}
+
+.tb-chart-container h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.tb-chart-container canvas {
+  max-height: 280px !important; /* CORRECTION: Hauteur canvas limitée */
+  width: 100% !important;
+}
+
+.tb-chart-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+/* ===== COMPARAISON PÉRIODES ===== */
+.tb-comparison-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: end;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.tb-period-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tb-date-input {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tb-comparison-results {
+  margin-top: 20px;
+  padding: 20px;
+  background: white;
+  border: 1px solid #e1e1e1;
+  border-radius: 6px;
+}
+
+/* ===== RAPPORTS ET EXPORTS ===== */
+.tb-reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.tb-report-card {
+  background: white;
+  padding: 20px;
+  border: 1px solid #e1e1e1;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.tb-report-card h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.tb-report-card p {
+  color: #7f8c8d;
+  margin-bottom: 20px;
+}
+
+.tb-report-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.tb-export-options {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+.tb-report-status {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.tb-report-status.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.tb-report-status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.tb-report-status.loading {
+  background: #cce5ff;
+  color: #004085;
+  border: 1px solid #99d6ff;
+}
+
+/* ===== ACTIVITÉ RÉCENTE ===== */
+.tb-activity-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 20px 0;
+}
+
+.tb-activity-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.tb-activity-time {
+  font-size: 11px;
+  color: #7f8c8d;
+  min-width: 120px;
+  margin-right: 15px;
+}
+
+.tb-activity-source {
+  background: #e9ecef;
+  color: #495057;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  min-width: 100px;
+  text-align: center;
+  margin-right: 15px;
+}
+
+.tb-activity-message {
+  flex: 1;
+  color: #2c3e50;
+}
+
+.tb-activity-level-info {
+  color: #3498db;
+}
+.tb-activity-level-warning {
+  color: #f39c12;
+}
+.tb-activity-level-error {
+  color: #e74c3c;
+}
+
+.tb-activity-loading {
+  text-align: center;
+  padding: 40px;
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.tb-activity-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .tb-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tb-charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tb-chart-container {
+    height: 300px; /* CORRECTION: Hauteur réduite sur mobile */
+    max-height: 300px;
+  }
+
+  .tb-chart-container canvas {
+    max-height: 230px !important; /* CORRECTION: Canvas plus petit sur mobile */
+  }
+
+  .tb-reports-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tb-health-overview {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .tb-comparison-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tb-period-selector-group {
+    justify-content: center;
+  }
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tb-analytics-section {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.tb-chart-container {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* ===== BOUTONS CUSTOM ===== */
+.tb-generate-report,
+.tb-export-data {
+  background: #2271b1;
+  color: white;
+  border: 1px solid #2271b1;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tb-generate-report:hover,
+.tb-export-data:hover {
+  background: #135e96;
+}
+
+.tb-generate-report:disabled,
+.tb-export-data:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* ===== UTILITAIRES ===== */
+.tb-text-center {
+  text-align: center;
+}
+.tb-text-left {
+  text-align: left;
+}
+.tb-text-right {
+  text-align: right;
+}
+
+.tb-mb-20 {
+  margin-bottom: 20px;
+}
+.tb-mt-20 {
+  margin-top: 20px;
+}
+
+.tb-hidden {
+  display: none !important;
+}
+.tb-visible {
+  display: block !important;
+}
