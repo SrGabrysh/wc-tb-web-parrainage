@@ -281,3 +281,105 @@
   color: #721c24;
   border: 1px solid #f5c6cb;
 }
+
+/* ================================================
+   FIX MODAL TRANSPARENCE - Résolution du problème de superposition
+   ================================================ */
+
+/* 1. OVERLAY SEMI-TRANSPARENT (fond sombre derrière la modal) */
+.ui-widget-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+  opacity: 1 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100000;
+}
+
+/* 2. CONTENEUR PRINCIPAL DE LA MODAL avec fond blanc opaque */
+.tb-help-modal-dialog {
+  z-index: 100001 !important;
+}
+
+.tb-help-modal-dialog .ui-dialog {
+  background: #ffffff !important;
+  border: 1px solid #ddd !important;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 4px !important;
+}
+
+/* 3. FOND BLANC POUR LE CONTENU DE LA MODAL */
+.tb-help-modal-dialog .ui-dialog-content {
+  background: #ffffff !important;
+  padding: 20px !important;
+}
+
+/* 4. HEADER DE LA MODAL avec fond gris clair */
+.tb-help-modal-dialog .ui-dialog-titlebar {
+  background: #f6f7f7 !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  padding: 12px 15px !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+
+/* 5. CORRECTION DU BOUTON DE FERMETURE */
+.tb-help-modal-dialog .ui-dialog-titlebar-close {
+  background: transparent !important;
+  border: none !important;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tb-help-modal-dialog .ui-dialog-titlebar-close:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-radius: 3px !important;
+}
+
+/* 6. S'ASSURER QUE LE CONTENU EST VISIBLE */
+.tb-help-modal .tb-help-content {
+  background: #ffffff !important;
+  position: relative;
+  z-index: 1;
+}
+
+/* 7. CORRECTION POUR WORDPRESS ADMIN */
+.wp-admin .tb-help-modal-dialog {
+  /* S'assurer que la modal est au-dessus de tous les éléments WordPress */
+  z-index: 160000 !important;
+}
+
+.wp-admin .ui-widget-overlay {
+  /* L'overlay doit être juste en dessous de la modal */
+  z-index: 159999 !important;
+}
+
+/* 8. STYLES ADDITIONNELS POUR LA LISIBILITÉ */
+.tb-help-modal-dialog .tb-help-content {
+  /* Assurer un contraste suffisant */
+  color: #1d2327 !important;
+  line-height: 1.6;
+}
+
+.tb-help-modal-dialog .help-definition {
+  background: #f6f7f7 !important;
+  border-left: 4px solid #2271b1 !important;
+}
+
+.tb-help-modal-dialog .help-example {
+  background: #fff8e1 !important;
+  border: 1px solid #ffc107 !important;
+}
+
+.tb-help-modal-dialog .help-precision {
+  background: #e3f2fd !important;
+  border: 1px solid #2196f3 !important;
+}
+
+.tb-help-modal-dialog .help-tips {
+  background: #e8f5e8 !important;
+  border: 1px solid #4caf50 !important;
+}
