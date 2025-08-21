@@ -111,22 +111,75 @@ class MyAccountParrainageManager {
      * @return void
      */
     public function render_endpoint_content() {
-        // Vérification d'accès obligatoire
-        if ( ! $this->access_validator->user_can_access_parrainages() ) {
-            $this->access_validator->handle_access_denied( MyAccountAccessValidator::ERROR_NO_SUBSCRIPTION );
+        // DEBUG v2.14.0 : Log entrée dans la méthode
+        $this->logger->info( '🚀 DEBUT render_endpoint_content - Mes parrainages', array(
+            'user_id' => get_current_user_id(),
+            'timestamp' => time(),
+            'memory_usage' => memory_get_usage( true )
+        ), 'mes-parrainages-debug' );
+        
+        try {
+            // DEBUG v2.14.0 : Test access_validator
+            $this->logger->info( '🔐 Test access_validator->user_can_access_parrainages()', array(), 'mes-parrainages-debug' );
+            
+            // Vérification d'accès obligatoire
+            if ( ! $this->access_validator->user_can_access_parrainages() ) {
+                $this->logger->warning( '❌ Accès refusé par access_validator', array(), 'mes-parrainages-debug' );
+                $this->access_validator->handle_access_denied( MyAccountAccessValidator::ERROR_NO_SUBSCRIPTION );
+                return;
+            }
+            
+            $this->logger->info( '✅ Accès autorisé par access_validator', array(), 'mes-parrainages-debug' );
+            
+        } catch ( Exception $e ) {
+            $this->logger->error( '💥 ERREUR FATALE dans access_validator', array(
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ), 'mes-parrainages-debug' );
+            echo '<div class="error">Erreur d\'accès : ' . esc_html( $e->getMessage() ) . '</div>';
             return;
         }
         
-        $user_id = \get_current_user_id();
-        $subscription_id = $this->data_provider->get_user_subscription_id( $user_id );
-        
-        if ( ! $subscription_id ) {
-            $this->access_validator->handle_access_denied( MyAccountAccessValidator::ERROR_NO_SUBSCRIPTION );
+        try {
+            // DEBUG v2.14.0 : Récupération user_id
+            $user_id = \get_current_user_id();
+            $this->logger->info( '👤 User ID récupéré', array( 'user_id' => $user_id ), 'mes-parrainages-debug' );
+            
+            // DEBUG v2.14.0 : Test data_provider
+            $this->logger->info( '📊 Test data_provider->get_user_subscription_id()', array(), 'mes-parrainages-debug' );
+            $subscription_id = $this->data_provider->get_user_subscription_id( $user_id );
+            $this->logger->info( '📋 Subscription ID récupéré', array( 'subscription_id' => $subscription_id ), 'mes-parrainages-debug' );
+            
+            if ( ! $subscription_id ) {
+                $this->logger->warning( '❌ Aucun subscription_id trouvé', array( 'user_id' => $user_id ), 'mes-parrainages-debug' );
+                $this->access_validator->handle_access_denied( MyAccountAccessValidator::ERROR_NO_SUBSCRIPTION );
+                return;
+            }
+            
+            // DEBUG v2.14.0 : Test get_user_parrainages
+            $this->logger->info( '📈 Test data_provider->get_user_parrainages()', array(
+                'subscription_id' => $subscription_id,
+                'limit' => self::PARRAINAGES_LIMIT
+            ), 'mes-parrainages-debug' );
+            
+            // Récupérer les données de parrainage
+            $parrainages = $this->data_provider->get_user_parrainages( $subscription_id, self::PARRAINAGES_LIMIT );
+            $this->logger->info( '📊 Parrainages récupérés', array( 
+                'count' => count( $parrainages ),
+                'subscription_id' => $subscription_id 
+            ), 'mes-parrainages-debug' );
+            
+        } catch ( Exception $e ) {
+            $this->logger->error( '💥 ERREUR FATALE dans récupération données', array(
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'user_id' => $user_id ?? 'UNKNOWN'
+            ), 'mes-parrainages-debug' );
+            echo '<div class="error">Erreur lors de la récupération des données : ' . esc_html( $e->getMessage() ) . '</div>';
             return;
         }
-        
-        // Récupérer les données de parrainage
-        $parrainages = $this->data_provider->get_user_parrainages( $subscription_id, self::PARRAINAGES_LIMIT );
         
         // Logger l'affichage
         $this->logger->info( 'Affichage onglet Mes parrainages', array(
@@ -135,19 +188,65 @@ class MyAccountParrainageManager {
             'parrainages_count' => count( $parrainages )
         ) );
         
-        // Rendre l'interface
-        echo '<div class="woocommerce-MyAccount-content">';
-        echo '<h2>' . \esc_html__( 'Mes parrainages', 'wc-tb-web-parrainage' ) . '</h2>';
-        
-        if ( empty( $parrainages ) ) {
-            $this->render_invitation_message( $subscription_id );
-        } else {
-            // NOUVEAU v2.4.0 : Section résumé des économies
-            $this->render_savings_summary( $subscription_id );
-            $this->render_parrainages_table( $parrainages );
+        try {
+            // DEBUG v2.14.0 : Début rendu interface
+            $this->logger->info( '🎨 DEBUT rendu interface', array(
+                'parrainages_count' => count( $parrainages ),
+                'is_empty' => empty( $parrainages )
+            ), 'mes-parrainages-debug' );
+            
+            // Rendre l'interface
+            echo '<div class="woocommerce-MyAccount-content">';
+            echo '<h2>' . \esc_html__( 'Mes parrainages', 'wc-tb-web-parrainage' ) . '</h2>';
+            
+            if ( empty( $parrainages ) ) {
+                $this->logger->info( '📝 Affichage message invitation', array( 'subscription_id' => $subscription_id ), 'mes-parrainages-debug' );
+                $this->render_invitation_message( $subscription_id );
+            } else {
+                // CORRECTION v2.14.0 : Version sécurisée de render_savings_summary
+                $this->logger->info( '📊 Test render_savings_summary() SÉCURISÉ', array( 'subscription_id' => $subscription_id ), 'mes-parrainages-debug' );
+                
+                try {
+                    $this->render_savings_summary_safe( $subscription_id );
+                    $this->logger->info( '✅ render_savings_summary_safe() TERMINÉ', array(), 'mes-parrainages-debug' );
+                } catch ( Exception $e ) {
+                    $this->logger->error( '💥 Erreur dans render_savings_summary_safe()', array(
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ), 'mes-parrainages-debug' );
+                    
+                    // Affichage fallback simple
+                    echo '<div class="savings-summary-section">';
+                    echo '<h3>📊 Résumé de vos remises</h3>';
+                    echo '<p>Données temporairement indisponibles. Veuillez réessayer plus tard.</p>';
+                    echo '</div>';
+                }
+                
+                $this->logger->info( '📋 Test render_parrainages_table() - DÉSACTIVÉ TEMPORAIREMENT', array( 'parrainages_count' => count( $parrainages ) ), 'mes-parrainages-debug' );
+                
+                // CORRECTION v2.14.0 : Désactivation temporaire pour isoler le problème
+                echo '<div class="parrainages-section">';
+                echo '<h3>📋 Vos parrainages</h3>';
+                echo '<p><strong>Vous avez ' . count( $parrainages ) . ' filleul(s)</strong></p>';
+                echo '<p><em>Tableau détaillé temporairement désactivé pour debugging...</em></p>';
+                echo '</div>';
+                
+                $this->logger->info( '✅ render_parrainages_table() REMPLACÉ PAR VERSION BASIQUE', array(), 'mes-parrainages-debug' );
+            }
+            
+            echo '</div>';
+            
+            $this->logger->info( '✅ Interface rendue avec succès', array(), 'mes-parrainages-debug' );
+            
+        } catch ( Exception $e ) {
+            $this->logger->error( '💥 ERREUR FATALE dans rendu interface', array(
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ), 'mes-parrainages-debug' );
+            echo '<div class="error">Erreur lors de l\'affichage : ' . esc_html( $e->getMessage() ) . '</div>';
         }
-        
-        echo '</div>';
     }
     
     /**
@@ -169,10 +268,11 @@ class MyAccountParrainageManager {
         );
         
         // NOUVEAU v2.4.0 : Charger les assets JavaScript pour les interactions de remise côté client
+        \wp_enqueue_script( 'jquery-ui-effects-highlight' ); // CORRECTION v2.14.0 : Ajouter jQuery UI
         \wp_enqueue_script(
             'wc-tb-parrainage-my-account-discount',
             WC_TB_PARRAINAGE_URL . 'assets/my-account-discount.js',
-            array( 'jquery' ),
+            array( 'jquery', 'jquery-ui-effects-highlight' ), // CORRECTION v2.14.0 : Ajouter dépendance
             WC_TB_PARRAINAGE_VERSION . '_' . time(), // FORCE CACHE REFRESH v2.9.3
             true
         );
@@ -297,7 +397,32 @@ class MyAccountParrainageManager {
      * @return void
      */
     private function render_savings_summary( $user_subscription_id ) {
-        $summary = $this->data_provider->get_savings_summary( $user_subscription_id );
+        try {
+            $this->logger->info( '🔍 DÉBUT render_savings_summary()', array( 'subscription_id' => $user_subscription_id ), 'mes-parrainages-debug' );
+            
+            $summary = $this->data_provider->get_savings_summary( $user_subscription_id );
+            
+            $this->logger->info( '📊 Summary récupéré', array( 
+                'subscription_id' => $user_subscription_id,
+                'summary_keys' => array_keys( $summary ?? array() ),
+                'summary_type' => gettype( $summary )
+            ), 'mes-parrainages-debug' );
+            
+            if ( empty( $summary ) ) {
+                $this->logger->warning( '⚠️ Summary vide, affichage par défaut', array(), 'mes-parrainages-debug' );
+                echo '<div class="savings-summary-section"><p>Données de résumé non disponibles.</p></div>';
+                return;
+            }
+            
+        } catch ( Exception $e ) {
+            $this->logger->error( '💥 ERREUR FATALE dans render_savings_summary()', array(
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ), 'mes-parrainages-debug' );
+            echo '<div class="error">Erreur dans le résumé des économies : ' . esc_html( $e->getMessage() ) . '</div>';
+            return;
+        }
         ?>
         <div class="savings-summary-section">
             <h3><?php esc_html_e( '📊 Résumé de vos remises', 'wc-tb-web-parrainage' ); ?></h3>
@@ -379,6 +504,118 @@ class MyAccountParrainageManager {
                 </ul>
             </div>
             <?php endif; ?>
+        </div>
+        <?php
+    }
+    
+    /**
+     * NOUVEAU v2.14.0 : Version sécurisée de render_savings_summary
+     * 
+     * @param int $user_subscription_id ID de l'abonnement utilisateur
+     * @return void
+     */
+    private function render_savings_summary_safe( $user_subscription_id ) {
+        try {
+            $this->logger->info( '🔍 DÉBUT render_savings_summary_safe()', array( 'subscription_id' => $user_subscription_id ), 'mes-parrainages-debug' );
+            
+            // Récupération sécurisée du summary
+            $summary = null;
+            try {
+                $summary = $this->data_provider->get_savings_summary( $user_subscription_id );
+                $this->logger->info( '📊 Summary récupéré avec succès', array( 
+                    'summary_type' => gettype( $summary ),
+                    'summary_keys' => is_array( $summary ) ? array_keys( $summary ) : 'NOT_ARRAY'
+                ), 'mes-parrainages-debug' );
+            } catch ( Exception $e ) {
+                $this->logger->error( '❌ Erreur get_savings_summary()', array( 'error' => $e->getMessage() ), 'mes-parrainages-debug' );
+                $summary = null;
+            }
+            
+            if ( empty( $summary ) || ! is_array( $summary ) ) {
+                $this->logger->warning( '⚠️ Summary vide ou invalide - affichage basique', array(), 'mes-parrainages-debug' );
+                $this->render_basic_summary( $user_subscription_id );
+                return;
+            }
+            
+            // Validation des données du summary
+            $active_discounts = intval( $summary['active_discounts'] ?? 0 );
+            $total_referrals = intval( $summary['total_referrals'] ?? 0 );
+            $monthly_savings = floatval( $summary['monthly_savings'] ?? 0 );
+            
+            $this->logger->info( '✅ Données validées', array(
+                'active_discounts' => $active_discounts,
+                'total_referrals' => $total_referrals,
+                'monthly_savings' => $monthly_savings
+            ), 'mes-parrainages-debug' );
+            
+            ?>
+            <div class="savings-summary-section">
+                <h3><?php esc_html_e( '📊 Résumé de vos remises', 'wc-tb-web-parrainage' ); ?></h3>
+                <div class="savings-grid">
+                    <div class="savings-card">
+                        <span class="savings-label">Remises actives :</span>
+                        <span class="savings-value"><?php echo esc_html( $active_discounts . ' sur ' . $total_referrals . ' filleuls' ); ?></span>
+                    </div>
+                    <div class="savings-card">
+                        <span class="savings-label">Économie mensuelle :</span>
+                        <span class="savings-value"><?php echo esc_html( number_format( $monthly_savings, 2, ',', '' ) ); ?>€</span>
+                    </div>
+                    <div class="savings-card">
+                        <span class="savings-label">Économies totales :</span>
+                        <span class="savings-value"><?php 
+                            $total_savings = $summary['total_savings_to_date'] ?? 0;
+                            if ( is_numeric( $total_savings ) && $total_savings > 100000 ) {
+                                echo '0,00';
+                            } else {
+                                echo esc_html( $total_savings );
+                            }
+                        ?>€</span>
+                    </div>
+                    <div class="savings-card">
+                        <span class="savings-label">Prochaine facturation :</span>
+                        <span class="savings-value">
+                            <?php 
+                            $billing_date = $summary['next_billing']['date'] ?? date('d-m-Y', strtotime('+1 month'));
+                            $billing_amount = $summary['next_billing']['amount'] ?? '0,00';
+                            echo esc_html( $billing_date . ' (' . $billing_amount . '€)' ); 
+                            ?>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <?php
+            
+            $this->logger->info( '✅ render_savings_summary_safe() terminé avec succès', array(), 'mes-parrainages-debug' );
+            
+        } catch ( Exception $e ) {
+            $this->logger->error( '💥 ERREUR FATALE dans render_savings_summary_safe()', array(
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ), 'mes-parrainages-debug' );
+            
+            // Fallback ultra-basique
+            $this->render_basic_summary( $user_subscription_id );
+        }
+    }
+    
+    /**
+     * NOUVEAU v2.14.0 : Affichage basique de secours
+     * 
+     * @param int $user_subscription_id ID de l'abonnement
+     * @return void
+     */
+    private function render_basic_summary( $user_subscription_id ) {
+        ?>
+        <div class="savings-summary-section">
+            <h3>📊 Résumé de vos remises</h3>
+            <div class="savings-grid">
+                <div class="savings-card">
+                    <span class="savings-label">Statut :</span>
+                    <span class="savings-value">Données en cours de chargement...</span>
+                </div>
+            </div>
+            <p><em>Le calcul détaillé de vos économies sera disponible prochainement.</em></p>
         </div>
         <?php
     }

@@ -41,10 +41,36 @@ class Plugin {
     private $analytics_manager;
     
     public function __construct() {
-        $this->logger = new Logger();
-        $this->init_managers();
-        $this->load_discount_classes();
-        $this->init_hooks();
+        try {
+            $this->logger = new Logger();
+            $this->logger->info( '🚀 DÉBUT construction Plugin v2.14.0', array(
+                'version' => WC_TB_PARRAINAGE_VERSION,
+                'timestamp' => time(),
+                'memory_usage' => memory_get_usage( true )
+            ), 'plugin-debug' );
+            
+            $this->logger->info( '📦 Test init_managers()', array(), 'plugin-debug' );
+            $this->init_managers();
+            
+            $this->logger->info( '🔧 Test load_discount_classes()', array(), 'plugin-debug' );
+            $this->load_discount_classes();
+            
+            $this->logger->info( '🎯 Test init_hooks()', array(), 'plugin-debug' );
+            $this->init_hooks();
+            
+            $this->logger->info( '✅ Plugin construit avec succès', array(), 'plugin-debug' );
+            
+        } catch ( Exception $e ) {
+            if ( $this->logger ) {
+                $this->logger->error( '💥 ERREUR FATALE construction Plugin', array(
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'stack_trace' => $e->getTraceAsString()
+                ), 'plugin-debug' );
+            }
+            throw $e; // Re-lancer pour affichage WordPress
+        }
     }
     
     private function init_managers() {
@@ -73,16 +99,20 @@ class Plugin {
     require_once WC_TB_PARRAINAGE_PATH . 'src/ReactivationValidator.php';
     
     // NOUVEAU v2.11.0 : Module d'expiration des remises filleul
-    require_once WC_TB_PARRAINAGE_PATH . 'src/FilleulDiscountExpirationManager.php';
+    if ( file_exists( WC_TB_PARRAINAGE_PATH . 'src/FilleulDiscountExpirationManager.php' ) ) {
+        require_once WC_TB_PARRAINAGE_PATH . 'src/FilleulDiscountExpirationManager.php';
+    }
     
     // NOUVEAU v2.12.0 : Module Analytics
-    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsDataCollector.php';
-    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsDataProvider.php';
-    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/ROICalculator.php';
-    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/DashboardRenderer.php';
-    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/ReportGenerator.php';
-    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/HelpModalManager.php';
-    require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsManager.php';
+    if ( file_exists( WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsDataCollector.php' ) ) {
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsDataCollector.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsDataProvider.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/ROICalculator.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/DashboardRenderer.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/ReportGenerator.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/HelpModalManager.php';
+        require_once WC_TB_PARRAINAGE_PATH . 'src/Analytics/AnalyticsManager.php';
+    }
     }
     
     /**
@@ -118,10 +148,18 @@ class Plugin {
         $this->reactivation_manager = new ReactivationManager( $this->logger, $this->subscription_discount_manager );
         
         // NOUVEAU v2.11.0 : Initialisation du module d'expiration des remises filleul
-        $this->filleul_expiration_manager = new FilleulDiscountExpirationManager( $this->logger );
+        if ( class_exists( 'TBWeb\WCParrainage\FilleulDiscountExpirationManager' ) ) {
+            $this->filleul_expiration_manager = new FilleulDiscountExpirationManager( $this->logger );
+        } else {
+            $this->filleul_expiration_manager = null;
+        }
         
         // NOUVEAU v2.12.0 : Initialisation du module Analytics
-        $this->analytics_manager = new Analytics\AnalyticsManager( $this->logger );
+        if ( class_exists( 'TBWeb\WCParrainage\Analytics\AnalyticsManager' ) ) {
+            $this->analytics_manager = new Analytics\AnalyticsManager( $this->logger );
+        } else {
+            $this->analytics_manager = null;
+        }
     }
     
     private function init_hooks() {
@@ -173,13 +211,13 @@ class Plugin {
         }
         
         // NOUVEAU v2.11.0 : Initialisation du module d'expiration des remises filleul
-        if ( ! empty( $settings['enable_parrainage'] ) ) {
+        if ( ! empty( $settings['enable_parrainage'] ) && $this->filleul_expiration_manager ) {
             $this->filleul_expiration_manager->init();
             $this->logger->info( 'Module expiration remises filleul initialisé', 'general' );
         }
         
         // NOUVEAU v2.12.0 : Initialisation du module Analytics
-        if ( ! empty( $settings['enable_parrainage'] ) && ! empty( $settings['enable_analytics'] ) ) {
+        if ( ! empty( $settings['enable_parrainage'] ) && ! empty( $settings['enable_analytics'] ) && $this->analytics_manager ) {
             $this->analytics_manager->init();
             $this->logger->info( 'Module Analytics initialisé', 'general' );
         }
