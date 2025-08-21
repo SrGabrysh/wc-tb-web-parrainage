@@ -62,7 +62,7 @@ class ParrainageDataProvider {
     public function get_parrain_list( $search = '' ) {
         global $wpdb;
         
-        $where_conditions = array( "pm_parrain.meta_key = '_parrain_subscription_id'" );
+        $where_conditions = array( "pm_parrain.meta_key = '_billing_parrain_code'" );
         $params = array();
         
         if ( ! empty( $search ) ) {
@@ -139,7 +139,7 @@ class ParrainageDataProvider {
     public function count_total_parrainages( $filters = array() ) {
         global $wpdb;
         
-        $where_conditions = array( "pm_parrain.meta_key = '_parrain_subscription_id'" );
+        $where_conditions = array( "pm_parrain.meta_key = '_billing_parrain_code'" );
         $params = array();
         
         // Appliquer les filtres
@@ -166,7 +166,7 @@ class ParrainageDataProvider {
     private function fetch_raw_data( $filters, $pagination ) {
         global $wpdb;
         
-        $where_conditions = array( "pm_parrain.meta_key = '_parrain_subscription_id'" );
+        $where_conditions = array( "pm_parrain.meta_key = '_billing_parrain_code'" );
         $params = array();
         
         // Appliquer les filtres
@@ -185,6 +185,7 @@ class ParrainageDataProvider {
                 p.post_date as date_commande,
                 pm_prenom.meta_value as parrain_prenom,
                 pm_nom.meta_value as parrain_nom,
+                pm_nom_complet.meta_value as parrain_nom_complet,
                 pm_email.meta_value as parrain_email,
                 pm_user_id.meta_value as parrain_user_id,
                 pm_avantage.meta_value as avantage,
@@ -206,6 +207,7 @@ class ParrainageDataProvider {
             LEFT JOIN {$wpdb->posts} p ON pm_parrain.post_id = p.ID
             LEFT JOIN {$wpdb->postmeta} pm_prenom ON p.ID = pm_prenom.post_id AND pm_prenom.meta_key = '_parrain_prenom'
             LEFT JOIN {$wpdb->postmeta} pm_nom ON p.ID = pm_nom.post_id AND pm_nom.meta_key = '_parrain_nom'
+            LEFT JOIN {$wpdb->postmeta} pm_nom_complet ON p.ID = pm_nom_complet.post_id AND pm_nom_complet.meta_key = '_parrain_nom_complet'
             LEFT JOIN {$wpdb->postmeta} pm_email ON p.ID = pm_email.post_id AND pm_email.meta_key = '_parrain_email'
             LEFT JOIN {$wpdb->postmeta} pm_user_id ON p.ID = pm_user_id.post_id AND pm_user_id.meta_key = '_parrain_user_id'
             LEFT JOIN {$wpdb->postmeta} pm_avantage ON p.ID = pm_avantage.post_id AND pm_avantage.meta_key = '_parrainage_avantage'
@@ -245,7 +247,7 @@ class ParrainageDataProvider {
                     'parrain' => array(
                         'subscription_id' => $parrain_id,
                         'user_id' => $row->parrain_user_id,
-                        'nom' => trim( $row->parrain_prenom . ' ' . $row->parrain_nom ),
+                        'nom' => !empty($row->parrain_nom_complet) ? $row->parrain_nom_complet : trim( $row->parrain_prenom . ' ' . $row->parrain_nom ),
                         'email' => $row->parrain_email,
                         'user_link' => $row->parrain_user_id ? admin_url( 'user-edit.php?user_id=' . $row->parrain_user_id ) : '',
                         'subscription_link' => $this->get_subscription_admin_link( $parrain_id )

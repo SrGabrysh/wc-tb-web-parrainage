@@ -225,14 +225,28 @@ class MyAccountParrainageManager {
                 
                 $this->logger->info( '📋 Test render_parrainages_table() - DÉSACTIVÉ TEMPORAIREMENT', array( 'parrainages_count' => count( $parrainages ) ), 'mes-parrainages-debug' );
                 
-                // CORRECTION v2.14.0 : Désactivation temporaire pour isoler le problème
-                echo '<div class="parrainages-section">';
-                echo '<h3>📋 Vos parrainages</h3>';
-                echo '<p><strong>Vous avez ' . count( $parrainages ) . ' filleul(s)</strong></p>';
-                echo '<p><em>Tableau détaillé temporairement désactivé pour debugging...</em></p>';
-                echo '</div>';
+                // CORRECTION v2.14.0 : Réactivation du tableau après correction erreur 500
+                $this->logger->info( '📋 RÉACTIVATION render_parrainages_table()', array( 
+                    'parrainages_count' => count( $parrainages ) 
+                ), 'mes-parrainages-debug' );
                 
-                $this->logger->info( '✅ render_parrainages_table() REMPLACÉ PAR VERSION BASIQUE', array(), 'mes-parrainages-debug' );
+                try {
+                    $this->render_parrainages_table( $parrainages );
+                    $this->logger->info( '✅ render_parrainages_table() RÉACTIVÉ AVEC SUCCÈS', array(), 'mes-parrainages-debug' );
+                } catch ( \Throwable $e ) {
+                    $this->logger->error( '💥 ERREUR render_parrainages_table()', array(
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ), 'mes-parrainages-debug' );
+                    
+                    // Fallback sécurisé
+                    echo '<div class="parrainages-section">';
+                    echo '<h3>📋 Vos parrainages</h3>';
+                    echo '<p><strong>Vous avez ' . count( $parrainages ) . ' filleul(s)</strong></p>';
+                    echo '<p><em>Erreur lors du chargement du tableau détaillé</em></p>';
+                    echo '</div>';
+                }
             }
             
             echo '</div>';
