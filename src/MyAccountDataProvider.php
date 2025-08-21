@@ -659,21 +659,33 @@ class MyAccountDataProvider {
                 'real_referrals_count' => is_array( $real_referrals ) ? count( $real_referrals ) : 'NOT_ARRAY'
             ), 'mes-parrainages-debug' );
             
-            // PROTECTION v2.14.0 : Vérifier que $real_referrals est un tableau
+            // PROTECTION AVANCÉE v2.14.0 : Vérifier type et compatibilité count()
             if ( ! is_array( $real_referrals ) ) {
                 $this->logger->error( '💥 ERREUR FATALE: $real_referrals n\'est pas un tableau', array(
                     'type' => gettype( $real_referrals ),
-                    'value' => $real_referrals
+                    'value' => var_export( $real_referrals, true ),
+                    'stack_trace' => debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS )
                 ), 'mes-parrainages-debug' );
                 $real_referrals = array(); // Fallback vers tableau vide
             }
             
-            // DEBUG v2.9.0 : Log détaillé pour debugging
+            // Log de débogage AVANT count() avec protection is_countable()
+            $this->logger->info( 'PRE-COUNT CHECK', array(
+                'is_array' => is_array( $real_referrals ),
+                'is_countable' => is_countable( $real_referrals ),
+                'type' => gettype( $real_referrals ),
+                'php_version' => phpversion()
+            ), 'mes-parrainages-debug' );
+            
+            // Utilisation sécurisée de count() avec is_countable()
+            $total_referrals = is_countable( $real_referrals ) ? count( $real_referrals ) : 0;
+            
+            // DEBUG v2.9.0 : Log détaillé pour debugging  
             $this->logger->info( 
                 'DÉBUT COMPTAGE - Données récupérées depuis get_real_referrals_data',
                 array(
                     'user_subscription_id' => $user_subscription_id,
-                    'total_referrals_raw' => count( $real_referrals ),
+                    'total_referrals_raw' => $total_referrals,
                     'referrals_structure' => array_map( function( $ref ) {
                         // CORRECTION v2.14.0 : Utiliser les bonnes clés de données
                         return array(
