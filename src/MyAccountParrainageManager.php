@@ -290,6 +290,28 @@ class MyAccountParrainageManager {
             WC_TB_PARRAINAGE_VERSION . '_' . time(), // FORCE CACHE REFRESH v2.9.3
             true
         );
+
+        // NOUVEAU v2.14.1 : Modales d'aide client
+        \wp_enqueue_script( 'jquery-ui-dialog' );
+        \wp_enqueue_style( 'wp-jquery-ui-dialog' );
+        
+        \wp_enqueue_script(
+            'tb-client-help-modals',
+            WC_TB_PARRAINAGE_URL . 'assets/js/client-help-modals.js',
+            array( 'jquery', 'jquery-ui-dialog' ),
+            WC_TB_PARRAINAGE_VERSION,
+            true
+        );
+
+        \wp_enqueue_style(
+            'tb-client-help-modals',
+            WC_TB_PARRAINAGE_URL . 'assets/css/client-help-modals.css',
+            array(),
+            WC_TB_PARRAINAGE_VERSION
+        );
+
+        // Localiser les données des modales
+        \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents() );
     }
     
     /**
@@ -567,15 +589,15 @@ class MyAccountParrainageManager {
                 <h3><?php esc_html_e( '📊 Résumé de vos remises', 'wc-tb-web-parrainage' ); ?></h3>
                 <div class="savings-grid">
                     <div class="savings-card">
-                        <span class="savings-label">Remises actives :</span>
+                        <span class="savings-label">Remises actives :<?php echo $this->render_help_icon('active_discounts', 'Vos remises actives'); ?></span>
                         <span class="savings-value"><?php echo esc_html( $active_discounts . ' sur ' . $total_referrals . ' filleuls' ); ?></span>
                     </div>
                     <div class="savings-card">
-                        <span class="savings-label">Économie mensuelle :</span>
+                        <span class="savings-label">Économie mensuelle :<?php echo $this->render_help_icon('monthly_savings', 'Votre économie mensuelle'); ?></span>
                         <span class="savings-value"><?php echo esc_html( number_format( $monthly_savings, 2, ',', '' ) ); ?>€</span>
                     </div>
                     <div class="savings-card">
-                        <span class="savings-label">Économies totales :</span>
+                        <span class="savings-label">Économies totales :<?php echo $this->render_help_icon('total_savings', 'Vos économies depuis le début'); ?></span>
                         <span class="savings-value"><?php 
                             $total_savings = $summary['total_savings_to_date'] ?? 0;
                             if ( is_numeric( $total_savings ) && $total_savings > 100000 ) {
@@ -586,7 +608,7 @@ class MyAccountParrainageManager {
                         ?>€</span>
                     </div>
                     <div class="savings-card">
-                        <span class="savings-label">Prochaine facturation :</span>
+                        <span class="savings-label">Prochaine facturation :<?php echo $this->render_help_icon('next_billing', 'Votre prochaine facture'); ?></span>
                         <span class="savings-value">
                             <?php 
                             $billing_date = $summary['next_billing']['date'] ?? date('d-m-Y', strtotime('+1 month'));
@@ -632,5 +654,119 @@ class MyAccountParrainageManager {
             <p><em>Le calcul détaillé de vos économies sera disponible prochainement.</em></p>
         </div>
         <?php
+    }
+
+    /**
+     * NOUVEAU v2.14.1 : Rendu de l'icône d'aide
+     * 
+     * @param string $metric_key Clé de la métrique
+     * @param string $title Titre de la modal
+     * @return string HTML de l'icône
+     */
+    private function render_help_icon( $metric_key, $title ) {
+        return sprintf(
+            '<span class="tb-client-help-icon" data-metric="%s" data-title="%s" title="Cliquez pour en savoir plus">
+                <span class="dashicons dashicons-editor-help"></span>
+            </span>',
+            esc_attr( $metric_key ),
+            esc_attr( $title )
+        );
+    }
+
+    /**
+     * NOUVEAU v2.14.1 : Contenu des modales d'aide
+     * 
+     * @return array Données des modales
+     */
+    private function get_modal_contents() {
+        return array(
+            'strings' => array(
+                'close' => __( 'Fermer', 'wc-tb-web-parrainage' )
+            ),
+            'modals' => array(
+                'active_discounts' => array(
+                    'title' => __( 'Vos remises actives', 'wc-tb-web-parrainage' ),
+                    'content' => '
+                        <div class="help-definition">
+                            <p>Le nombre de remises actuellement appliquées sur votre abonnement grâce à vos filleuls.</p>
+                        </div>
+                        <div class="help-section">
+                            <h4>Comment ça marche :</h4>
+                            <p>Chaque fois qu\'un filleul souscrit à un abonnement avec votre code parrain, vous bénéficiez automatiquement d\'une remise de <strong>15€/mois</strong> sur votre propre abonnement. Cette remise reste active tant que votre filleul conserve son abonnement.</p>
+                        </div>
+                        <div class="help-example">
+                            <strong>Exemple concret :</strong><br>
+                            Si vous avez 2 filleuls actifs, vous avez 2 remises actives, soit 30€ d\'économie par mois.
+                        </div>
+                        <div class="help-tip">
+                            <p>Les remises s\'appliquent automatiquement lors de votre prochaine facturation. Si un filleul résilie son abonnement, la remise correspondante sera supprimée à la fin du mois en cours.</p>
+                        </div>
+                    '
+                ),
+                'monthly_savings' => array(
+                    'title' => __( 'Votre économie mensuelle', 'wc-tb-web-parrainage' ),
+                    'content' => '
+                        <div class="help-definition">
+                            <p>Le montant total que vous économisez chaque mois grâce au parrainage.</p>
+                        </div>
+                        <div class="help-section">
+                            <h4>Comment c\'est calculé :</h4>
+                            <p>Nombre de filleuls actifs × 15€ = Votre économie mensuelle</p>
+                        </div>
+                        <div class="help-example">
+                            <strong>Exemples concrets :</strong><br>
+                            • 1 filleul actif = 15€/mois d\'économie<br>
+                            • 3 filleuls actifs = 45€/mois d\'économie<br>
+                            • 4 filleuls actifs = 60€/mois d\'économie (presque un mois gratuit !)
+                        </div>
+                        <div class="help-tip">
+                            <p>Avec 5 filleuls actifs, votre abonnement devient quasiment gratuit ! C\'est notre façon de vous remercier pour votre confiance et vos recommandations.</p>
+                        </div>
+                    '
+                ),
+                'total_savings' => array(
+                    'title' => __( 'Vos économies depuis le début', 'wc-tb-web-parrainage' ),
+                    'content' => '
+                        <div class="help-definition">
+                            <p>Le montant total économisé depuis votre premier parrainage réussi.</p>
+                        </div>
+                        <div class="help-section">
+                            <h4>Comment c\'est calculé :</h4>
+                            <p>Nous additionnons toutes les remises appliquées sur vos factures depuis le début de votre activité de parrain. Ce montant inclut les remises des filleuls actuels et passés.</p>
+                        </div>
+                        <div class="help-section">
+                            <h4>Votre impact :</h4>
+                            <p>Ce montant représente l\'argent que vous avez économisé grâce à vos recommandations. C\'est aussi le signe que vous avez aidé plusieurs personnes à découvrir nos services !</p>
+                        </div>
+                        <div class="help-tip">
+                            <p>Plus vos filleuls restent longtemps abonnés, plus vos économies totales augmentent. Pensez à les accompagner dans leur découverte de nos services.</p>
+                        </div>
+                    '
+                ),
+                'next_billing' => array(
+                    'title' => __( 'Votre prochaine facture', 'wc-tb-web-parrainage' ),
+                    'content' => '
+                        <div class="help-definition">
+                            <p>La date et le montant de votre prochaine facture après application de vos remises parrainage.</p>
+                        </div>
+                        <div class="help-section">
+                            <h4>Ce qui est affiché :</h4>
+                            <p>• <strong>Date</strong> : Le jour où votre prochaine facture sera émise<br>
+                            • <strong>Montant réduit</strong> : Le prix que vous paierez après remises<br>
+                            • <strong>Prix normal</strong> : Le prix sans les remises (barré)</p>
+                        </div>
+                        <div class="help-example">
+                            <strong>Exemple :</strong><br>
+                            Prix normal : <del>71,99€</del><br>
+                            Votre prix : <strong>56,99€</strong> (avec 1 filleul actif)<br>
+                            Date : 14 septembre 2025
+                        </div>
+                        <div class="help-tip">
+                            <p>Ce montant peut varier si de nouveaux filleuls s\'inscrivent ou si certains résilient leur abonnement avant votre prochaine facturation.</p>
+                        </div>
+                    '
+                )
+            )
+        );
     }
 } 
