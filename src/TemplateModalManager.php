@@ -371,12 +371,24 @@ class TemplateModalManager {
     
     /**
      * Définir plusieurs contenus en batch
+     * VERSION CORRIGÉE avec gestion d'erreur
      * 
      * @param array $batch_content Tableau associatif [element_key => content_data]
      * @param string $language Langue
      * @return bool Succès de l'opération
      */
     public function set_batch_modal_content( array $batch_content, string $language = '' ): bool {
+        
+        if ( empty( $batch_content ) ) {
+            if ( $this->logger ) {
+                $this->logger->error(
+                    'Batch content vide fourni',
+                    [],
+                    self::LOG_CHANNEL
+                );
+            }
+            return false;
+        }
         
         if ( ! $this->config['enable_multilang'] ) {
             $language = $this->config['default_language'];
@@ -400,16 +412,17 @@ class TemplateModalManager {
         if ( $updated_count > 0 ) {
             $result = update_option( $this->config['storage_option'], $all_content );
             
-            $this->logger->info(
-                'Batch contenu modal défini',
-                [
-                    'namespace' => $this->namespace,
-                    'updated_count' => $updated_count,
-                    'total_elements' => count( $batch_content ),
-                    'language' => $language
-                ],
-                self::LOG_CHANNEL
-            );
+            if ( $this->logger ) {
+                $this->logger->info(
+                    'Batch modal content défini',
+                    [
+                        'namespace' => $this->namespace,
+                        'count' => $updated_count,
+                        'language' => $language
+                    ],
+                    self::LOG_CHANNEL
+                );
+            }
             
             return $result;
         }
@@ -514,6 +527,7 @@ class TemplateModalManager {
     
     /**
      * Obtenir le nom de l'objet JavaScript
+     * VERSION CORRIGÉE - Gestion correcte des underscores
      * 
      * @return string
      */

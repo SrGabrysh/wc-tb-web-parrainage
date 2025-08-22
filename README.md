@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.16.5
+**Version:** 2.15.9
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
