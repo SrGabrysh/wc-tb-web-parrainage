@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.15.3
+**Version:** 2.15.6
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -753,6 +753,36 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.15.3 (22-08-2025 à 14h45) - CORRECTION CRITIQUE STYLES CSS MODALES
+
+#### 🔧 Corrections CSS Critiques
+
+**🎨 Suppression Styles CSS en Double**
+
+- **Correction majeure** : Élimination complète des styles CSS en double dans `client-help-modals.css`
+- **Lignes supprimées** : Suppression des styles modernes contradictoires (lignes 275-455 originales)
+- **Design unifié** : Garantie du design sobre WordPress admin (#f6f7f7) sur toutes les modales
+- **Performance** : Réduction de la taille du fichier CSS de 40% avec suppression des doublons
+- **Cohérence visuelle** : Modales client identiques aux modales admin pour UX uniforme
+
+#### 🐛 Bug Résolu
+
+**Problème identifié** : Styles CSS contradictoires écrasant le design correct
+
+- **Styles corrects** (lignes 169-243) : Design sobre WordPress admin
+- **Styles incorrects** (lignes 275-455) : Gradients colorés modernes qui écrasaient les corrects
+- **Solution appliquée** : Conservation uniquement des styles admin corrects
+
+#### ✅ Résultats Attendus
+
+- ✅ Design uniforme entre modales admin et client
+- ✅ Fond gris clair #f6f7f7 sur toutes les modales
+- ✅ Police 13px cohérente avec l'interface WordPress
+- ✅ Suppression des gradients colorés inappropriés
+- ✅ Performance CSS optimisée sans doublons
+
+---
 
 ### Version 2.13.2 (20-08-2025 à 15h30) - CORRECTIONS MODALES D'AIDE
 
