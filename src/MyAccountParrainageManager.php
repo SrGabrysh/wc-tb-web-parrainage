@@ -320,7 +320,24 @@ class MyAccountParrainageManager {
             true
         );
 
-                // RESTAURATION : TOUJOURS utiliser l'ancien système qui fonctionne
+        // CORRECTION v2.15.4 : Utiliser UNIQUEMENT le Template Modal System si disponible
+        if ( $this->modal_manager ) {
+            try {
+                $this->modal_manager->enqueue_modal_assets();
+                
+                $this->logger->info( 'Template Modal System chargé avec succès', array(), 'my-account-modals' );
+                return; // STOP - Ne pas charger l'ancien système
+                
+            } catch ( \Exception $e ) {
+                $this->logger->error( 'Template Modal System failed, using fallback', [
+                    'error' => $e->getMessage()
+                ], 'my-account-modals' );
+            }
+        }
+        
+        // Fallback SEULEMENT si Template Modal System échoue
+        $this->logger->warning( 'Utilisation du système de fallback client-help-modals', array(), 'my-account-modals' );
+        
         \wp_enqueue_script( 'jquery-ui-dialog' );
         \wp_enqueue_style( 'wp-jquery-ui-dialog' );
         
@@ -686,14 +703,26 @@ class MyAccountParrainageManager {
     }
 
     /**
-     * NOUVEAU v2.14.1 : Rendu de l'icône d'aide (Template Modal System + Fallback)
+     * CORRECTION v2.15.4 : Rendu de l'icône d'aide (Template Modal System + Fallback)
      * 
      * @param string $metric_key Clé de la métrique
      * @param string $title Titre de la modal
      * @return string HTML de l'icône
      */
     private function render_help_icon( $metric_key, $title = '' ) {
-        // RESTAURATION : Utiliser UNIQUEMENT l'ancien système qui fonctionne
+        // CORRECTION v2.15.4 : Utiliser le Template Modal System si disponible
+        if ( $this->modal_manager ) {
+            try {
+                return $this->modal_manager->render_help_icon( $metric_key, $title );
+            } catch ( \Exception $e ) {
+                $this->logger->error( 'Erreur render_help_icon Template Modal System', [
+                    'error' => $e->getMessage(),
+                    'metric_key' => $metric_key
+                ], 'my-account-modals' );
+            }
+        }
+        
+        // Fallback vers l'ancien système
         return sprintf(
             '<span class="tb-client-help-icon" data-metric="%s" data-title="%s" title="Cliquez pour en savoir plus">
                 <span class="dashicons dashicons-editor-help"></span>
@@ -704,19 +733,7 @@ class MyAccountParrainageManager {
     }
 
     /**
-     * DEPRECATED v2.14.1 : Méthode remplacée par MyAccountModalManager
-     * TEMPORAIRE : Restaurée pour fallback
-     * 
-     * @deprecated Utiliser MyAccountModalManager à la place
-     * @return array Données des modales (ancien format)
-     */
-    private function get_modal_contents() {
-        // Cette méthode est désormais vide car le contenu est géré par MyAccountModalManager
-        return array();
-    }
-    
-    /**
-     * TEMPORAIRE : Contenu de fallback pour ancien système (CORRIGÉ)
+     * CORRECTION v2.15.4 : Contenu de fallback pour ancien système (maintenu pour compatibilité)
      * 
      * @return array Données des modales au format ancien système
      */

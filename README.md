@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.15.6
+**Version:** 2.15.8
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -753,6 +753,70 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.15.4 (22-08-2025 à 10h55) - FINALISATION MIGRATION TEMPLATE MODAL SYSTEM
+
+#### 🎯 PROBLÈME RÉSOLU : SYSTÈME DE MODALES EN DOUBLE
+
+Cette version finalise complètement la migration vers le Template Modal System en supprimant le problème de double système de modales identifié dans l'analyse bug.md.
+
+**🔧 CORRECTIONS MAJEURES APPLIQUÉES**
+
+- **Logique de fallback corrigée** : Le Template Modal System est désormais utilisé en priorité
+- **Ancien système en fallback uniquement** : client-help-modals.js/css chargé seulement si Template Modal System échoue
+- **render_help_icon() unifié** : Utilise le Template Modal System avec fallback vers l'ancien format
+- **Logs enrichis** : Traçabilité complète du système utilisé (Template Modal System vs fallback)
+- **Code nettoyé** : Suppression des méthodes deprecated et commentaires temporaires
+
+**🏗️ ARCHITECTURE TECHNIQUE FINALISÉE**
+
+```php
+// Workflow v2.15.4 : Migration Template Modal System complète
+if ( $this->modal_manager ) {
+    // PRIORITÉ : Template Modal System
+    $this->modal_manager->enqueue_modal_assets();
+    return; // STOP - Pas d'ancien système
+} else {
+    // FALLBACK : Ancien système client-help-modals
+    wp_enqueue_script('tb-client-help-modals');
+}
+```
+
+**📊 AVANTAGES DE LA CORRECTION**
+
+- ✅ **Un seul système actif** : Plus de conflit entre deux systèmes de modales
+- ✅ **Design uniforme** : Modales client identiques aux modales admin Analytics
+- ✅ **Performance optimisée** : Suppression du double chargement CSS/JS
+- ✅ **Maintenabilité** : Code centralisé dans TemplateModalManager
+- ✅ **Robustesse** : Fallback automatique en cas d'erreur
+
+**🎨 RÉSULTAT VISUEL**
+
+Les modales d'aide sur `/mon-compte/mes-parrainages/` utilisent désormais le même design moderne que les modales admin Analytics avec :
+
+- Fond gris clair WordPress admin (#f6f7f7)
+- Police 13px cohérente
+- Liseré bleu #2271b1
+- Bouton de fermeture stylisé
+- Positionnement centré responsive
+
+**🔍 DIAGNOSTIC SYSTÈME**
+
+La version inclut des logs détaillés pour identifier quel système est utilisé :
+
+```
+[INFO] Template Modal System chargé avec succès
+[WARNING] Utilisation du système de fallback client-help-modals (si échec)
+[ERROR] Template Modal System failed, using fallback (avec détails erreur)
+```
+
+**⚠️ BREAKING CHANGE**
+
+Le Template Modal System est désormais le système par défaut. Les sites avec des personnalisations sur l'ancien système client-help-modals doivent migrer vers TemplateModalManager.
+
+**MISE À JOUR FORTEMENT RECOMMANDÉE** pour tous les environnements utilisant les modales d'aide côté client.
+
+---
 
 ### Version 2.15.3 (22-08-2025 à 14h45) - CORRECTION CRITIQUE STYLES CSS MODALES
 
