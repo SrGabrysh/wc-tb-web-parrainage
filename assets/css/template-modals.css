@@ -1,0 +1,634 @@
+/**
+ * CSS générique pour Template Modal System
+ * TB-Web Parrainage - Version réutilisable
+ * @since 2.14.1
+ * @version 1.0.0
+ */
+
+/* ================================================
+   ICÔNES D'AIDE GÉNÉRIQUES
+   ================================================ */
+
+/* Style de base pour toutes les icônes d'aide */
+[class*="tb-modal-"][class*="-icon"] {
+  display: inline-block;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+[class*="tb-modal-"][class*="-icon"]:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+[class*="tb-modal-"][class*="-icon"]:focus {
+  outline: 2px solid #2271b1;
+  outline-offset: 2px;
+  border-radius: 2px;
+  opacity: 1;
+}
+
+/* Dashicons dans les icônes d'aide */
+[class*="tb-modal-"][class*="-icon"] .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #646970;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+[class*="tb-modal-"][class*="-icon"]:hover .dashicons {
+  color: #2271b1;
+}
+
+/* ================================================
+   POSITIONS DES ICÔNES
+   ================================================ */
+
+/* Position inline (par défaut) */
+[class*="tb-modal-"][class*="-icon-inline"] {
+  margin-left: 8px;
+}
+
+/* Position absolue (coin supérieur droit) */
+[class*="tb-modal-"][class*="-icon-absolute"] {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+
+/* Position float right */
+[class*="tb-modal-"][class*="-icon-float-right"] {
+  float: right;
+  margin: 0 0 8px 8px;
+}
+
+/* ================================================
+   TAILLES DES ICÔNES
+   ================================================ */
+
+/* Petite taille */
+[class*="tb-modal-"][class*="-icon-small"] .dashicons {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+/* Taille normale (par défaut) */
+[class*="tb-modal-"][class*="-icon-normal"] .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+/* Grande taille */
+[class*="tb-modal-"][class*="-icon-large"] .dashicons {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* ================================================
+   CONTENEURS AVEC ICÔNES
+   ================================================ */
+
+/* Conteneur avec position relative pour icônes absolues */
+.tb-modal-container {
+  position: relative;
+}
+
+/* Cards/boîtes avec icônes */
+.tb-modal-card {
+  position: relative;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.tb-modal-card [class*="tb-modal-"][class*="-icon-absolute"] {
+  top: 12px;
+  right: 12px;
+}
+
+/* ================================================
+   MODALES GÉNÉRIQUES
+   ================================================ */
+
+/* Conteneur modal */
+[class*="tb-modal-"][class*="-modal"] {
+  display: none;
+  max-width: 600px;
+}
+
+[class*="tb-modal-"][class*="-modal"] .ui-dialog-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2327;
+}
+
+/* ================================================
+   CONTENU DES MODALES
+   ================================================ */
+
+/* Style de base pour tout contenu de modal */
+[class*="tb-modal-"][class*="-content"] {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  line-height: 1.6;
+  color: #1d2327;
+  font-size: 14px;
+}
+
+/* Titres dans les modales */
+[class*="tb-modal-"][class*="-content"] h1,
+[class*="tb-modal-"][class*="-content"] h2,
+[class*="tb-modal-"][class*="-content"] h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d2327;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+[class*="tb-modal-"][class*="-content"] h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #646970;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Paragraphes */
+[class*="tb-modal-"][class*="-content"] p {
+  margin: 0 0 12px 0;
+}
+
+/* Listes */
+[class*="tb-modal-"][class*="-content"] ul,
+[class*="tb-modal-"][class*="-content"] ol {
+  margin: 8px 0;
+  padding-left: 20px;
+  max-width: 100%;
+}
+
+[class*="tb-modal-"][class*="-content"] li {
+  margin-bottom: 4px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ================================================
+   ZONES DE CONTENU SPÉCIALISÉES
+   ================================================ */
+
+/* Zone de définition */
+[class*="tb-modal-"][class*="-content"] .modal-definition {
+  background: #f6f7f7;
+  padding: 12px;
+  border-left: 4px solid #2271b1;
+  margin: 0 0 16px 0;
+  border-radius: 0 4px 4px 0;
+}
+
+[class*="tb-modal-"][class*="-content"] .modal-definition p {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Zone d'exemple */
+[class*="tb-modal-"][class*="-content"] .modal-example {
+  background: #fff8e1;
+  border: 1px solid #ffc107;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 12px 0;
+}
+
+[class*="tb-modal-"][class*="-content"] .modal-example strong {
+  color: #e65100;
+}
+
+/* Zone de précision */
+[class*="tb-modal-"][class*="-content"] .modal-precision {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 12px 0;
+  font-style: italic;
+}
+
+/* Zone de conseils */
+[class*="tb-modal-"][class*="-content"] .modal-tips {
+  background: #e8f5e8;
+  border: 1px solid #4caf50;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 12px 0;
+}
+
+[class*="tb-modal-"][class*="-content"] .modal-tips h4 {
+  color: #2e7d32;
+  margin-bottom: 8px;
+}
+
+/* Zone d'alerte */
+[class*="tb-modal-"][class*="-content"] .modal-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 12px 0;
+}
+
+[class*="tb-modal-"][class*="-content"] .modal-warning h4 {
+  color: #856404;
+  margin-bottom: 8px;
+}
+
+/* Zone d'erreur */
+[class*="tb-modal-"][class*="-content"] .modal-error {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 12px 0;
+}
+
+[class*="tb-modal-"][class*="-content"] .modal-error h4 {
+  color: #721c24;
+  margin-bottom: 8px;
+}
+
+/* ================================================
+   SECTIONS DE CONTENU
+   ================================================ */
+
+[class*="tb-modal-"][class*="-content"] .modal-section {
+  margin-bottom: 16px;
+}
+
+[class*="tb-modal-"][class*="-content"] .modal-section:last-child {
+  margin-bottom: 0;
+}
+
+/* ================================================
+   SÉLECTEUR DE LANGUE
+   ================================================ */
+
+.tb-modal-language-selector {
+  float: right;
+  margin-bottom: 16px;
+  clear: both;
+}
+
+.tb-modal-language-selector select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-size: 12px;
+  background: white;
+  min-width: 80px;
+}
+
+.tb-modal-language-selector label {
+  font-size: 12px;
+  color: #646970;
+  margin-right: 8px;
+  font-weight: normal;
+}
+
+/* ================================================
+   ÉTATS DE CHARGEMENT ET D'ERREUR
+   ================================================ */
+
+/* État de chargement */
+.tb-modal-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #646970;
+}
+
+.tb-modal-loading::before {
+  content: "";
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #2271b1;
+  border-radius: 50%;
+  animation: tb-modal-spin 1s linear infinite;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+@keyframes tb-modal-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* État d'erreur */
+.tb-modal-error {
+  text-align: center;
+  padding: 20px;
+  color: #d63384;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+/* ================================================
+   CORRECTIONS TRANSPARENCE ET Z-INDEX
+   ================================================ */
+
+/* Overlay semi-transparent */
+.ui-widget-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+  opacity: 1 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100000;
+}
+
+/* Conteneur principal de la modal */
+[class*="tb-modal-"][class*="-dialog"] {
+  z-index: 100001 !important;
+}
+
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog {
+  background: #ffffff !important;
+  border: 1px solid #ddd !important;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 4px !important;
+}
+
+/* Fond blanc pour le contenu */
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog-content {
+  background: #ffffff !important;
+  padding: 20px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Header de la modal */
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog-titlebar {
+  background: #f6f7f7 !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  padding: 12px 15px !important;
+  border-radius: 4px 4px 0 0 !important;
+}
+
+/* Bouton de fermeture stylisé */
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog-titlebar-close {
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  text-indent: -9999px !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  right: 8px !important;
+  top: 8px !important;
+  transform: none !important;
+  border: 1px solid #2271b1 !important;
+  background: #ffffff !important;
+  cursor: pointer !important;
+  border-radius: 3px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Icône X pour le bouton fermer */
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog-titlebar-close::before {
+  content: "×" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  line-height: 1 !important;
+  color: #2271b1 !important;
+  text-indent: 0 !important;
+}
+
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog-titlebar-close:hover {
+  background: #2271b1 !important;
+  border-color: #1e5a8a !important;
+}
+
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog-titlebar-close:hover::before {
+  color: #ffffff !important;
+}
+
+[class*="tb-modal-"][class*="-dialog"] .ui-dialog-titlebar-close:focus {
+  outline: 2px solid #2271b1 !important;
+  outline-offset: 2px !important;
+}
+
+/* ================================================
+   CORRECTIONS DÉBORDEMENT
+   ================================================ */
+
+/* Prévention débordement pour tout le contenu */
+[class*="tb-modal-"][class*="-content"] * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+[class*="tb-modal-"][class*="-content"] {
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-wrap: break-word !important;
+}
+
+/* Zones spécialisées - prévention débordement */
+[class*="tb-modal-"][class*="-content"] .modal-tips,
+[class*="tb-modal-"][class*="-content"] .modal-example,
+[class*="tb-modal-"][class*="-content"] .modal-precision,
+[class*="tb-modal-"][class*="-content"] .modal-definition,
+[class*="tb-modal-"][class*="-content"] .modal-warning,
+[class*="tb-modal-"][class*="-content"] .modal-error {
+  max-width: 100% !important;
+  overflow: hidden !important;
+  word-wrap: break-word !important;
+  box-sizing: border-box !important;
+}
+
+/* ================================================
+   RESPONSIVE DESIGN
+   ================================================ */
+
+@media (max-width: 782px) {
+  /* Adaptation mobile pour les modales */
+  [class*="tb-modal-"][class*="-modal"] {
+    max-width: 95vw;
+  }
+
+  /* Icônes en position absolue deviennent statiques */
+  [class*="tb-modal-"][class*="-icon-absolute"] {
+    position: static;
+    float: right;
+    margin: 0 0 8px 8px;
+  }
+
+  /* Sélecteur de langue centré */
+  .tb-modal-language-selector {
+    float: none;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  /* Réduction de la taille de police */
+  [class*="tb-modal-"][class*="-content"] {
+    font-size: 14px;
+  }
+
+  /* Adaptation du bouton fermer sur mobile */
+  [class*="tb-modal-"][class*="-dialog"] .ui-dialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 10px !important;
+  }
+
+  [class*="tb-modal-"][class*="-dialog"] .ui-dialog-content {
+    padding: 15px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Adaptation pour très petits écrans */
+  [class*="tb-modal-"][class*="-content"] h4 {
+    font-size: 13px !important;
+  }
+
+  /* Cards plus compactes */
+  .tb-modal-card {
+    padding: 12px;
+  }
+
+  .tb-modal-card [class*="tb-modal-"][class*="-icon-absolute"] {
+    top: 8px;
+    right: 8px;
+  }
+}
+
+/* ================================================
+   INTÉGRATION WORDPRESS ADMIN
+   ================================================ */
+
+/* S'assurer que la modal est au-dessus de tous les éléments WordPress */
+.wp-admin [class*="tb-modal-"][class*="-dialog"] {
+  z-index: 160000 !important;
+}
+
+.wp-admin .ui-widget-overlay {
+  z-index: 159999 !important;
+}
+
+/* Styles pour l'admin WordPress */
+.wp-admin [class*="tb-modal-"][class*="-modal"] .ui-dialog-titlebar {
+  background: #f6f7f7;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.wp-admin [class*="tb-modal-"][class*="-modal"] .ui-dialog-content {
+  background: white;
+  color: #1d2327;
+}
+
+/* ================================================
+   ACCESSIBILITÉ
+   ================================================ */
+
+/* Focus visible pour tous les éléments interactifs */
+[class*="tb-modal-"][class*="-icon"]:focus {
+  outline: 2px solid #2271b1;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+[class*="tb-modal-"][class*="-modal"] .ui-dialog-content:focus {
+  outline: none;
+}
+
+/* Taille minimum des cibles tactiles */
+[class*="tb-modal-"][class*="-icon"] {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+/* ================================================
+   UTILITAIRES
+   ================================================ */
+
+/* Classes utilitaires pour espacement */
+.tb-modal-mt-1 {
+  margin-top: 8px;
+}
+.tb-modal-mt-2 {
+  margin-top: 16px;
+}
+.tb-modal-mb-1 {
+  margin-bottom: 8px;
+}
+.tb-modal-mb-2 {
+  margin-bottom: 16px;
+}
+.tb-modal-p-1 {
+  padding: 8px;
+}
+.tb-modal-p-2 {
+  padding: 16px;
+}
+
+/* Classes pour alignement */
+.tb-modal-text-center {
+  text-align: center;
+}
+.tb-modal-text-left {
+  text-align: left;
+}
+.tb-modal-text-right {
+  text-align: right;
+}
+
+/* Classes pour couleurs de texte */
+.tb-modal-text-muted {
+  color: #646970;
+}
+.tb-modal-text-primary {
+  color: #2271b1;
+}
+.tb-modal-text-success {
+  color: #4caf50;
+}
+.tb-modal-text-warning {
+  color: #ffc107;
+}
+.tb-modal-text-danger {
+  color: #dc3545;
+}
+
+/* Clearfix */
+.tb-modal-clearfix::after {
+  content: "";
+  display: table;
+  clear: both;
+}

@@ -39,6 +39,11 @@ class MyAccountParrainageManager {
     private $access_validator;
     
     /**
+     * @var MyAccountModalManager Gestionnaire de modales (nouveau système)
+     */
+    private $modal_manager;
+    
+    /**
      * Constructeur
      * 
      * @param Logger $logger Instance du système de logs
@@ -47,6 +52,18 @@ class MyAccountParrainageManager {
         $this->logger = $logger;
         $this->data_provider = new MyAccountDataProvider( $logger );
         $this->access_validator = new MyAccountAccessValidator( $logger );
+        
+        // NOUVEAU v2.14.1 : Initialiser le gestionnaire de modales Template Modal System
+        try {
+            $this->modal_manager = new MyAccountModalManager( $logger );
+        } catch ( \Exception $e ) {
+            $this->logger->error( 'Impossible de créer MyAccountModalManager', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 'my-account-modals' );
+            $this->modal_manager = null; // Fallback
+        }
     }
     
     /**
@@ -60,6 +77,18 @@ class MyAccountParrainageManager {
         \add_filter( 'woocommerce_account_menu_items', array( $this, 'add_menu_item' ) );
         \add_action( 'woocommerce_account_' . self::ENDPOINT_KEY . '_endpoint', array( $this, 'render_endpoint_content' ) );
         \add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
+        
+        // NOUVEAU v2.14.1 : Initialiser le gestionnaire de modales Template Modal System
+        if ( $this->modal_manager ) {
+            try {
+                $this->modal_manager->init();
+            } catch ( \Exception $e ) {
+                $this->logger->error( 'Erreur init MyAccountModalManager', [
+                    'error' => $e->getMessage()
+                ], 'my-account-modals' );
+                $this->modal_manager = null; // Désactiver
+            }
+        }
         
         $this->logger->info( 'MyAccountParrainageManager initialisé', array(
             'endpoint_key' => self::ENDPOINT_KEY,
@@ -291,7 +320,17 @@ class MyAccountParrainageManager {
             true
         );
 
-        // NOUVEAU v2.14.1 : Modales d'aide client
+        // NOUVEAU v2.14.1 : Template Modal System pour modales d'aide client
+        // TEMPORAIRE : Fallback vers ancien système en cas de problème
+        if ( $this->modal_manager ) {
+            try {
+                $this->modal_manager->enqueue_modal_assets();
+            } catch ( \Exception $e ) {
+            $this->logger->error( 'Erreur Template Modal System, fallback ancien système', [
+                'error' => $e->getMessage()
+            ], 'my-account-modals' );
+            
+            // Fallback vers ancien système
         \wp_enqueue_script( 'jquery-ui-dialog' );
         \wp_enqueue_style( 'wp-jquery-ui-dialog' );
         
@@ -310,8 +349,33 @@ class MyAccountParrainageManager {
             WC_TB_PARRAINAGE_VERSION
         );
 
-        // Localiser les données des modales
-        \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents() );
+            // Localiser les données des modales (ancien format)
+            \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents_fallback() );
+            }
+        } else {
+            // Aucun modal manager disponible, forcer ancien système
+            $this->logger->info( 'Modal manager non disponible, utilisation ancien système', [], 'my-account-modals' );
+            
+            \wp_enqueue_script( 'jquery-ui-dialog' );
+            \wp_enqueue_style( 'wp-jquery-ui-dialog' );
+            
+            \wp_enqueue_script(
+                'tb-client-help-modals',
+                WC_TB_PARRAINAGE_URL . 'assets/js/client-help-modals.js',
+                array( 'jquery', 'jquery-ui-dialog' ),
+                WC_TB_PARRAINAGE_VERSION,
+                true
+            );
+
+            \wp_enqueue_style(
+                'tb-client-help-modals',
+                WC_TB_PARRAINAGE_URL . 'assets/css/client-help-modals.css',
+                array(),
+                WC_TB_PARRAINAGE_VERSION
+            );
+
+            \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents_fallback() );
+        }
     }
     
     /**
@@ -657,46 +721,73 @@ class MyAccountParrainageManager {
     }
 
     /**
-     * NOUVEAU v2.14.1 : Rendu de l'icône d'aide
+     * NOUVEAU v2.14.1 : Rendu de l'icône d'aide (Template Modal System + Fallback)
      * 
      * @param string $metric_key Clé de la métrique
      * @param string $title Titre de la modal
      * @return string HTML de l'icône
      */
     private function render_help_icon( $metric_key, $title ) {
+        if ( $this->modal_manager ) {
+            try {
+                // Essayer le nouveau système
+                return $this->modal_manager->render_help_icon( $metric_key, $title );
+            } catch ( \Exception $e ) {
+                // Fallback vers ancien système
+                $this->logger->debug( 'Fallback icône aide vers ancien système', [
+                    'metric_key' => $metric_key,
+                    'error' => $e->getMessage()
+                ], 'my-account-modals' );
+            }
+        }
+        
+        // Utiliser ancien système (fallback ou par défaut)
         return sprintf(
             '<span class="tb-client-help-icon" data-metric="%s" data-title="%s" title="Cliquez pour en savoir plus">
                 <span class="dashicons dashicons-editor-help"></span>
             </span>',
-            esc_attr( $metric_key ),
-            esc_attr( $title )
+            \esc_attr( $metric_key ),
+            \esc_attr( $title )
         );
     }
 
     /**
-     * NOUVEAU v2.14.1 : Contenu des modales d'aide
+     * DEPRECATED v2.14.1 : Méthode remplacée par MyAccountModalManager
+     * TEMPORAIRE : Restaurée pour fallback
      * 
-     * @return array Données des modales
+     * @deprecated Utiliser MyAccountModalManager à la place
+     * @return array Données des modales (ancien format)
      */
     private function get_modal_contents() {
+        // Cette méthode est désormais vide car le contenu est géré par MyAccountModalManager
+        return array();
+    }
+    
+    /**
+     * TEMPORAIRE : Contenu de fallback pour ancien système
+     * 
+     * @return array Données des modales au format ancien système
+     */
+    private function get_modal_contents_fallback() {
         return array(
             'strings' => array(
-                'close' => __( 'Fermer', 'wc-tb-web-parrainage' )
+                'close' => \__( 'Fermer', 'wc-tb-web-parrainage' )
             ),
             'modals' => array(
                 'active_discounts' => array(
-                    'title' => __( 'Vos remises actives', 'wc-tb-web-parrainage' ),
+                    'title' => \__( 'Vos remises actives', 'wc-tb-web-parrainage' ),
                     'content' => '
                         <div class="help-definition">
                             <p>Le nombre de remises actuellement appliquées sur votre abonnement grâce à vos filleuls.</p>
                         </div>
                         <div class="help-section">
                             <h4>Comment ça marche :</h4>
-                            <p>Chaque fois qu\'un filleul souscrit à un abonnement avec votre code parrain, vous bénéficiez automatiquement d\'une remise de <strong>15€/mois</strong> sur votre propre abonnement. Cette remise reste active tant que votre filleul conserve son abonnement.</p>
+                            <p>Chaque fois qu\'un filleul souscrit à un abonnement avec votre code parrain, vous bénéficiez automatiquement d\'une remise correspondant à <strong>20% du montant TTC</strong> de l\'abonnement de votre filleul. Cette remise reste active tant que votre filleul conserve son abonnement.</p>
                         </div>
                         <div class="help-example">
                             <strong>Exemple concret :</strong><br>
-                            Si vous avez 2 filleuls actifs, vous avez 2 remises actives, soit 30€ d\'économie par mois.
+                            Si votre filleul paie 71,99€ TTC/mois, vous économisez 14,40€/mois (20% de 71,99€).<br>
+                            Si vous avez 2 filleuls à 71,99€ TTC chacun, vous économisez 28,80€/mois au total.
                         </div>
                         <div class="help-tip">
                             <p>Les remises s\'appliquent automatiquement lors de votre prochaine facturation. Si un filleul résilie son abonnement, la remise correspondante sera supprimée à la fin du mois en cours.</p>
@@ -704,28 +795,29 @@ class MyAccountParrainageManager {
                     '
                 ),
                 'monthly_savings' => array(
-                    'title' => __( 'Votre économie mensuelle', 'wc-tb-web-parrainage' ),
+                    'title' => \__( 'Votre économie mensuelle', 'wc-tb-web-parrainage' ),
                     'content' => '
                         <div class="help-definition">
                             <p>Le montant total que vous économisez chaque mois grâce au parrainage.</p>
                         </div>
                         <div class="help-section">
                             <h4>Comment c\'est calculé :</h4>
-                            <p>Nombre de filleuls actifs × 15€ = Votre économie mensuelle</p>
+                            <p>Somme de toutes vos remises actives = 20% du montant TTC de chacun de vos filleuls</p>
                         </div>
                         <div class="help-example">
                             <strong>Exemples concrets :</strong><br>
-                            • 1 filleul actif = 15€/mois d\'économie<br>
-                            • 3 filleuls actifs = 45€/mois d\'économie<br>
-                            • 4 filleuls actifs = 60€/mois d\'économie (presque un mois gratuit !)
+                            • 1 filleul à 71,99€ TTC = 14,40€/mois d\'économie<br>
+                            • 2 filleuls à 71,99€ TTC = 28,80€/mois d\'économie<br>
+                            • 3 filleuls à 71,99€ TTC = 43,20€/mois d\'économie<br>
+                            • 5 filleuls à 71,99€ TTC = 72€/mois d\'économie (abonnement gratuit !)
                         </div>
                         <div class="help-tip">
-                            <p>Avec 5 filleuls actifs, votre abonnement devient quasiment gratuit ! C\'est notre façon de vous remercier pour votre confiance et vos recommandations.</p>
+                            <p>Votre économie varie selon les montants d\'abonnement de vos filleuls. Plus ils paient, plus vous économisez !</p>
                         </div>
                     '
                 ),
                 'total_savings' => array(
-                    'title' => __( 'Vos économies depuis le début', 'wc-tb-web-parrainage' ),
+                    'title' => \__( 'Vos économies depuis le début', 'wc-tb-web-parrainage' ),
                     'content' => '
                         <div class="help-definition">
                             <p>Le montant total économisé depuis votre premier parrainage réussi.</p>
@@ -744,7 +836,7 @@ class MyAccountParrainageManager {
                     '
                 ),
                 'next_billing' => array(
-                    'title' => __( 'Votre prochaine facture', 'wc-tb-web-parrainage' ),
+                    'title' => \__( 'Votre prochaine facture', 'wc-tb-web-parrainage' ),
                     'content' => '
                         <div class="help-definition">
                             <p>La date et le montant de votre prochaine facture après application de vos remises parrainage.</p>
