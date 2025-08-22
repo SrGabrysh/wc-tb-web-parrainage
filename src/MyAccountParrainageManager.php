@@ -310,54 +310,23 @@ class MyAccountParrainageManager {
             WC_TB_PARRAINAGE_VERSION
         );
         
-        // NOUVEAU v2.4.0 : Charger les assets JavaScript pour les interactions de remise côté client
-        \wp_enqueue_script( 'jquery-ui-effects-highlight' ); // CORRECTION v2.14.0 : Ajouter jQuery UI
+        // JavaScript pour les interactions
+        \wp_enqueue_script( 'jquery-ui-effects-highlight' );
         \wp_enqueue_script(
             'wc-tb-parrainage-my-account-discount',
             WC_TB_PARRAINAGE_URL . 'assets/my-account-discount.js',
-            array( 'jquery', 'jquery-ui-effects-highlight' ), // CORRECTION v2.14.0 : Ajouter dépendance
-            WC_TB_PARRAINAGE_VERSION . '_' . time(), // FORCE CACHE REFRESH v2.9.3
-            true
-        );
-
-        // CORRECTION v2.15.4 : Utiliser UNIQUEMENT le Template Modal System si disponible
-        if ( $this->modal_manager ) {
-            try {
-                $this->modal_manager->enqueue_modal_assets();
-                
-                $this->logger->info( 'Template Modal System chargé avec succès', array(), 'my-account-modals' );
-                return; // STOP - Ne pas charger l'ancien système
-                
-            } catch ( \Exception $e ) {
-                $this->logger->error( 'Template Modal System failed, using fallback', [
-                    'error' => $e->getMessage()
-                ], 'my-account-modals' );
-            }
-        }
-        
-        // Fallback SEULEMENT si Template Modal System échoue
-        $this->logger->warning( 'Utilisation du système de fallback client-help-modals', array(), 'my-account-modals' );
-        
-        \wp_enqueue_script( 'jquery-ui-dialog' );
-        \wp_enqueue_style( 'wp-jquery-ui-dialog' );
-        
-        \wp_enqueue_script(
-            'tb-client-help-modals',
-            WC_TB_PARRAINAGE_URL . 'assets/js/client-help-modals.js',
-            array( 'jquery', 'jquery-ui-dialog' ),
+            array( 'jquery', 'jquery-ui-effects-highlight' ),
             WC_TB_PARRAINAGE_VERSION,
             true
         );
-
-        \wp_enqueue_style(
-            'tb-client-help-modals',
-            WC_TB_PARRAINAGE_URL . 'assets/css/client-help-modals.css',
-            array(),
-            WC_TB_PARRAINAGE_VERSION
-        );
-
-        // Localiser les données des modales (contenu complet)
-        \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents_fallback() );
+        
+        // UNIQUEMENT le Template Modal System - PLUS D'ANCIEN SYSTÈME
+        if ( $this->modal_manager ) {
+            $this->modal_manager->enqueue_modal_assets();
+            $this->logger->info( 'Template Modal System chargé (SEUL système actif)', [], 'my-account-modals' );
+        } else {
+            $this->logger->error( 'ERREUR CRITIQUE : Template Modal System non disponible', [], 'my-account-modals' );
+        }
     }
     
     /**
@@ -703,124 +672,26 @@ class MyAccountParrainageManager {
     }
 
     /**
-     * CORRECTION v2.15.4 : Rendu de l'icône d'aide (Template Modal System + Fallback)
+     * CORRECTION v2.16.3 : Rendu de l'icône d'aide avec Template Modal System UNIQUEMENT
      * 
      * @param string $metric_key Clé de la métrique
      * @param string $title Titre de la modal
      * @return string HTML de l'icône
      */
     private function render_help_icon( $metric_key, $title = '' ) {
-        // CORRECTION v2.15.4 : Utiliser le Template Modal System si disponible
         if ( $this->modal_manager ) {
-            try {
-                return $this->modal_manager->render_help_icon( $metric_key, $title );
-            } catch ( \Exception $e ) {
-                $this->logger->error( 'Erreur render_help_icon Template Modal System', [
-                    'error' => $e->getMessage(),
-                    'metric_key' => $metric_key
-                ], 'my-account-modals' );
-            }
+            return $this->modal_manager->render_help_icon( $metric_key, $title );
         }
         
-        // Fallback vers l'ancien système
+        // Si pas de modal manager, retourner une icône qui utilise le format Template Modal
+        $namespace = MyAccountModalManager::MODAL_NAMESPACE;
         return sprintf(
-            '<span class="tb-client-help-icon" data-metric="%s" data-title="%s" title="Cliquez pour en savoir plus">
+            '<span class="tb-modal-client-icon" data-modal-key="%s" data-namespace="%s" title="%s">
                 <span class="dashicons dashicons-editor-help"></span>
             </span>',
-            \esc_attr( $metric_key ),
-            \esc_attr( $title )
-        );
-    }
-
-    /**
-     * CORRECTION v2.15.4 : Contenu de fallback pour ancien système (maintenu pour compatibilité)
-     * 
-     * @return array Données des modales au format ancien système
-     */
-    private function get_modal_contents_fallback() {
-        return array(
-            'strings' => array(
-                'close' => \__( 'Fermer', 'wc-tb-web-parrainage' )
-            ),
-            'modals' => array(
-                'active_discounts' => array(
-                    'title' => \__( 'Vos remises actives', 'wc-tb-web-parrainage' ),
-                    'content' => '
-                        <div class="help-definition">
-                            <p>Le nombre de remises actuellement appliquées sur votre abonnement grâce à vos filleuls.</p>
-                        </div>
-                        <div class="help-section">
-                            <h4>Comment ça marche :</h4>
-                            <p>Chaque fois qu\'un filleul souscrit à un abonnement avec votre code parrain, vous bénéficiez automatiquement d\'une remise correspondant à <strong>20% du montant TTC</strong> de l\'abonnement de votre filleul.</p>
-                        </div>
-                        <div class="help-section">
-                            <h4>Points importants :</h4>
-                            <ul>
-                                <li>Les remises restent actives tant que vos filleuls conservent leur abonnement</li>
-                                <li>Si un filleul résilie, la remise correspondante disparaît à votre prochaine facturation</li>
-                                <li>Les remises sont appliquées automatiquement sur votre facture</li>
-                            </ul>
-                        </div>'
-                ),
-                'monthly_savings' => array(
-                    'title' => \__( 'Votre économie mensuelle', 'wc-tb-web-parrainage' ),
-                    'content' => '
-                        <div class="help-definition">
-                            <p>Le montant total que vous économisez chaque mois grâce au parrainage.</p>
-                        </div>
-                        <div class="help-section">
-                            <h4>Calcul :</h4>
-                            <p>Économie mensuelle = Somme de toutes vos remises actives</p>
-                            <p>= 20% du montant TTC de chacun de vos filleuls actifs</p>
-                        </div>
-                        <div class="help-section">
-                            <h4>Exemple :</h4>
-                            <ul>
-                                <li>1 filleul à 71,99€ TTC = 14,40€/mois d\'économie</li>
-                                <li>3 filleuls à 71,99€ TTC = 43,20€/mois d\'économie</li>
-                                <li>5 filleuls = votre abonnement devient gratuit !</li>
-                            </ul>
-                        </div>'
-                ),
-                'total_savings' => array(
-                    'title' => \__( 'Économies depuis le début', 'wc-tb-web-parrainage' ),
-                    'content' => '
-                        <div class="help-definition">
-                            <p>Le montant total économisé depuis que vous êtes parrain.</p>
-                        </div>
-                        <div class="help-section">
-                            <h4>Ce montant inclut :</h4>
-                            <ul>
-                                <li>Toutes les remises appliquées sur vos factures passées</li>
-                                <li>Les remises des filleuls actuels et passés</li>
-                                <li>L\'historique complet depuis votre premier filleul</li>
-                            </ul>
-                        </div>
-                        <div class="help-section">
-                            <h4>À noter :</h4>
-                            <p>Ce montant représente l\'argent réel que vous avez économisé grâce à vos recommandations.</p>
-                        </div>'
-                ),
-                'next_billing' => array(
-                    'title' => \__( 'Votre prochaine facture', 'wc-tb-web-parrainage' ),
-                    'content' => '
-                        <div class="help-definition">
-                            <p>La date et le montant de votre prochaine facture après application de vos remises.</p>
-                        </div>
-                        <div class="help-section">
-                            <h4>Le montant affiché comprend :</h4>
-                            <ul>
-                                <li>Votre abonnement de base</li>
-                                <li>Moins toutes vos remises parrainage actives</li>
-                                <li>= Le montant final que vous paierez</li>
-                            </ul>
-                        </div>
-                        <div class="help-section">
-                            <h4>Important :</h4>
-                            <p>Ce montant peut varier si de nouveaux filleuls s\'inscrivent ou si certains résilient avant votre prochaine facturation.</p>
-                        </div>'
-                )
-            )
+            esc_attr( $metric_key ),
+            esc_attr( $namespace ),
+            esc_attr( $title ?: __( 'Aide', 'wc-tb-web-parrainage' ) )
         );
     }
 } 

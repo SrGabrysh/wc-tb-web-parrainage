@@ -140,6 +140,15 @@ class TemplateModalManager {
             true
         );
         
+        // NOUVEAU : Script d'auto-initialisation
+        wp_enqueue_script(
+            $js_handle . '-init',
+            WC_TB_PARRAINAGE_URL . 'assets/js/template-modals-init.js',
+            [ $js_handle ],
+            WC_TB_PARRAINAGE_VERSION,
+            true
+        );
+        
         // Localisation pour AJAX et configuration
         wp_localize_script( $js_handle, $this->get_js_object_name(), [
             'ajaxUrl' => admin_url( 'admin-ajax.php' ),
@@ -164,16 +173,16 @@ class TemplateModalManager {
             'strings' => $this->get_localized_strings()
         ] );
         
-        $this->logger->info(
-            'Assets modales chargés',
-            [
-                'namespace' => $this->namespace,
-                'hook' => $hook,
-                'css_handle' => $css_handle,
-                'js_handle' => $js_handle
-            ],
-            self::LOG_CHANNEL
-        );
+        if ( $this->logger ) {
+            $this->logger->info(
+                'Assets modales chargés avec auto-init',
+                [
+                    'namespace' => $this->namespace,
+                    'js_object' => $this->get_js_object_name()
+                ],
+                self::LOG_CHANNEL
+            );
+        }
     }
     
     /**
@@ -509,7 +518,10 @@ class TemplateModalManager {
      * @return string
      */
     private function get_js_object_name(): string {
-        return 'tbModal' . ucfirst( $this->namespace );
+        // Convertir client_account en ClientAccount pour avoir tbModalClientAccount
+        $parts = explode('_', $this->namespace);
+        $camelCase = implode('', array_map('ucfirst', $parts));
+        return 'tbModal' . $camelCase;
     }
     
     /**
