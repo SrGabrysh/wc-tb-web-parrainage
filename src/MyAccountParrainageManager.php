@@ -320,17 +320,7 @@ class MyAccountParrainageManager {
             true
         );
 
-        // NOUVEAU v2.14.1 : Template Modal System pour modales d'aide client
-        // TEMPORAIRE : Fallback vers ancien système en cas de problème
-        if ( $this->modal_manager ) {
-            try {
-                $this->modal_manager->enqueue_modal_assets();
-            } catch ( \Exception $e ) {
-            $this->logger->error( 'Erreur Template Modal System, fallback ancien système', [
-                'error' => $e->getMessage()
-            ], 'my-account-modals' );
-            
-            // Fallback vers ancien système
+                // RESTAURATION : TOUJOURS utiliser l'ancien système qui fonctionne
         \wp_enqueue_script( 'jquery-ui-dialog' );
         \wp_enqueue_style( 'wp-jquery-ui-dialog' );
         
@@ -349,33 +339,8 @@ class MyAccountParrainageManager {
             WC_TB_PARRAINAGE_VERSION
         );
 
-            // Localiser les données des modales (ancien format)
-            \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents_fallback() );
-            }
-        } else {
-            // Aucun modal manager disponible, forcer ancien système
-            $this->logger->info( 'Modal manager non disponible, utilisation ancien système', [], 'my-account-modals' );
-            
-            \wp_enqueue_script( 'jquery-ui-dialog' );
-            \wp_enqueue_style( 'wp-jquery-ui-dialog' );
-            
-            \wp_enqueue_script(
-                'tb-client-help-modals',
-                WC_TB_PARRAINAGE_URL . 'assets/js/client-help-modals.js',
-                array( 'jquery', 'jquery-ui-dialog' ),
-                WC_TB_PARRAINAGE_VERSION,
-                true
-            );
-
-            \wp_enqueue_style(
-                'tb-client-help-modals',
-                WC_TB_PARRAINAGE_URL . 'assets/css/client-help-modals.css',
-                array(),
-                WC_TB_PARRAINAGE_VERSION
-            );
-
-            \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents_fallback() );
-        }
+        // Localiser les données des modales (contenu complet)
+        \wp_localize_script( 'tb-client-help-modals', 'tbClientHelp', $this->get_modal_contents_fallback() );
     }
     
     /**
@@ -727,21 +692,8 @@ class MyAccountParrainageManager {
      * @param string $title Titre de la modal
      * @return string HTML de l'icône
      */
-    private function render_help_icon( $metric_key, $title ) {
-        if ( $this->modal_manager ) {
-            try {
-                // Essayer le nouveau système
-                return $this->modal_manager->render_help_icon( $metric_key, $title );
-            } catch ( \Exception $e ) {
-                // Fallback vers ancien système
-                $this->logger->debug( 'Fallback icône aide vers ancien système', [
-                    'metric_key' => $metric_key,
-                    'error' => $e->getMessage()
-                ], 'my-account-modals' );
-            }
-        }
-        
-        // Utiliser ancien système (fallback ou par défaut)
+    private function render_help_icon( $metric_key, $title = '' ) {
+        // RESTAURATION : Utiliser UNIQUEMENT l'ancien système qui fonctionne
         return sprintf(
             '<span class="tb-client-help-icon" data-metric="%s" data-title="%s" title="Cliquez pour en savoir plus">
                 <span class="dashicons dashicons-editor-help"></span>
@@ -764,7 +716,7 @@ class MyAccountParrainageManager {
     }
     
     /**
-     * TEMPORAIRE : Contenu de fallback pour ancien système
+     * TEMPORAIRE : Contenu de fallback pour ancien système (CORRIGÉ)
      * 
      * @return array Données des modales au format ancien système
      */
@@ -782,17 +734,16 @@ class MyAccountParrainageManager {
                         </div>
                         <div class="help-section">
                             <h4>Comment ça marche :</h4>
-                            <p>Chaque fois qu\'un filleul souscrit à un abonnement avec votre code parrain, vous bénéficiez automatiquement d\'une remise correspondant à <strong>20% du montant TTC</strong> de l\'abonnement de votre filleul. Cette remise reste active tant que votre filleul conserve son abonnement.</p>
+                            <p>Chaque fois qu\'un filleul souscrit à un abonnement avec votre code parrain, vous bénéficiez automatiquement d\'une remise correspondant à <strong>20% du montant TTC</strong> de l\'abonnement de votre filleul.</p>
                         </div>
-                        <div class="help-example">
-                            <strong>Exemple concret :</strong><br>
-                            Si votre filleul paie 71,99€ TTC/mois, vous économisez 14,40€/mois (20% de 71,99€).<br>
-                            Si vous avez 2 filleuls à 71,99€ TTC chacun, vous économisez 28,80€/mois au total.
-                        </div>
-                        <div class="help-tip">
-                            <p>Les remises s\'appliquent automatiquement lors de votre prochaine facturation. Si un filleul résilie son abonnement, la remise correspondante sera supprimée à la fin du mois en cours.</p>
-                        </div>
-                    '
+                        <div class="help-section">
+                            <h4>Points importants :</h4>
+                            <ul>
+                                <li>Les remises restent actives tant que vos filleuls conservent leur abonnement</li>
+                                <li>Si un filleul résilie, la remise correspondante disparaît à votre prochaine facturation</li>
+                                <li>Les remises sont appliquées automatiquement sur votre facture</li>
+                            </ul>
+                        </div>'
                 ),
                 'monthly_savings' => array(
                     'title' => \__( 'Votre économie mensuelle', 'wc-tb-web-parrainage' ),
@@ -801,62 +752,56 @@ class MyAccountParrainageManager {
                             <p>Le montant total que vous économisez chaque mois grâce au parrainage.</p>
                         </div>
                         <div class="help-section">
-                            <h4>Comment c\'est calculé :</h4>
-                            <p>Somme de toutes vos remises actives = 20% du montant TTC de chacun de vos filleuls</p>
+                            <h4>Calcul :</h4>
+                            <p>Économie mensuelle = Somme de toutes vos remises actives</p>
+                            <p>= 20% du montant TTC de chacun de vos filleuls actifs</p>
                         </div>
-                        <div class="help-example">
-                            <strong>Exemples concrets :</strong><br>
-                            • 1 filleul à 71,99€ TTC = 14,40€/mois d\'économie<br>
-                            • 2 filleuls à 71,99€ TTC = 28,80€/mois d\'économie<br>
-                            • 3 filleuls à 71,99€ TTC = 43,20€/mois d\'économie<br>
-                            • 5 filleuls à 71,99€ TTC = 72€/mois d\'économie (abonnement gratuit !)
-                        </div>
-                        <div class="help-tip">
-                            <p>Votre économie varie selon les montants d\'abonnement de vos filleuls. Plus ils paient, plus vous économisez !</p>
-                        </div>
-                    '
+                        <div class="help-section">
+                            <h4>Exemple :</h4>
+                            <ul>
+                                <li>1 filleul à 71,99€ TTC = 14,40€/mois d\'économie</li>
+                                <li>3 filleuls à 71,99€ TTC = 43,20€/mois d\'économie</li>
+                                <li>5 filleuls = votre abonnement devient gratuit !</li>
+                            </ul>
+                        </div>'
                 ),
                 'total_savings' => array(
-                    'title' => \__( 'Vos économies depuis le début', 'wc-tb-web-parrainage' ),
+                    'title' => \__( 'Économies depuis le début', 'wc-tb-web-parrainage' ),
                     'content' => '
                         <div class="help-definition">
-                            <p>Le montant total économisé depuis votre premier parrainage réussi.</p>
+                            <p>Le montant total économisé depuis que vous êtes parrain.</p>
                         </div>
                         <div class="help-section">
-                            <h4>Comment c\'est calculé :</h4>
-                            <p>Nous additionnons toutes les remises appliquées sur vos factures depuis le début de votre activité de parrain. Ce montant inclut les remises des filleuls actuels et passés.</p>
+                            <h4>Ce montant inclut :</h4>
+                            <ul>
+                                <li>Toutes les remises appliquées sur vos factures passées</li>
+                                <li>Les remises des filleuls actuels et passés</li>
+                                <li>L\'historique complet depuis votre premier filleul</li>
+                            </ul>
                         </div>
                         <div class="help-section">
-                            <h4>Votre impact :</h4>
-                            <p>Ce montant représente l\'argent que vous avez économisé grâce à vos recommandations. C\'est aussi le signe que vous avez aidé plusieurs personnes à découvrir nos services !</p>
-                        </div>
-                        <div class="help-tip">
-                            <p>Plus vos filleuls restent longtemps abonnés, plus vos économies totales augmentent. Pensez à les accompagner dans leur découverte de nos services.</p>
-                        </div>
-                    '
+                            <h4>À noter :</h4>
+                            <p>Ce montant représente l\'argent réel que vous avez économisé grâce à vos recommandations.</p>
+                        </div>'
                 ),
                 'next_billing' => array(
                     'title' => \__( 'Votre prochaine facture', 'wc-tb-web-parrainage' ),
                     'content' => '
                         <div class="help-definition">
-                            <p>La date et le montant de votre prochaine facture après application de vos remises parrainage.</p>
+                            <p>La date et le montant de votre prochaine facture après application de vos remises.</p>
                         </div>
                         <div class="help-section">
-                            <h4>Ce qui est affiché :</h4>
-                            <p>• <strong>Date</strong> : Le jour où votre prochaine facture sera émise<br>
-                            • <strong>Montant réduit</strong> : Le prix que vous paierez après remises<br>
-                            • <strong>Prix normal</strong> : Le prix sans les remises (barré)</p>
+                            <h4>Le montant affiché comprend :</h4>
+                            <ul>
+                                <li>Votre abonnement de base</li>
+                                <li>Moins toutes vos remises parrainage actives</li>
+                                <li>= Le montant final que vous paierez</li>
+                            </ul>
                         </div>
-                        <div class="help-example">
-                            <strong>Exemple :</strong><br>
-                            Prix normal : <del>71,99€</del><br>
-                            Votre prix : <strong>56,99€</strong> (avec 1 filleul actif)<br>
-                            Date : 14 septembre 2025
-                        </div>
-                        <div class="help-tip">
-                            <p>Ce montant peut varier si de nouveaux filleuls s\'inscrivent ou si certains résilient leur abonnement avant votre prochaine facturation.</p>
-                        </div>
-                    '
+                        <div class="help-section">
+                            <h4>Important :</h4>
+                            <p>Ce montant peut varier si de nouveaux filleuls s\'inscrivent ou si certains résilient avant votre prochaine facturation.</p>
+                        </div>'
                 )
             )
         );
