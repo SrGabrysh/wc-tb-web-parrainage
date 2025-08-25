@@ -417,10 +417,10 @@
 
   // Exposer l'objet globalement pour les tests/debug
   window.TBHelpModals = TBHelpModals;
-  
+
   // Alias pour compatibilité avec les tests
   window.tbHelpModals = window.tbHelpModals || {};
-  window.tbHelpModals.openModal = function(metricKey) {
+  window.tbHelpModals.openModal = function (metricKey) {
     return TBHelpModals.showHelpModal(metricKey);
   };
 })(jQuery);
