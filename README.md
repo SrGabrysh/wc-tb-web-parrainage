@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.17.0
+**Version:** 2.17.1
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -754,6 +754,40 @@ GPL v2 or later
 
 ## Changelog
 
+### Version 2.17.1 (15-01-2025 à 16h00) - CORRECTION AUTOMATIQUE CSS MODALS
+
+#### 🎉 PROBLÈME RÉSOLU : AFFICHAGE AUTOMATIQUE DU CONTENU COMPLET
+
+Cette version corrige définitivement le problème d'affichage des modals en appliquant automatiquement les corrections CSS nécessaires après le rendu du contenu AJAX.
+
+**🔧 CORRECTION TECHNIQUE MAJEURE**
+
+1. **Correction CSS automatique post-rendu** :
+   - **Timing parfait** : Application des styles après le chargement AJAX
+   - **Hauteur optimale** : `minHeight: 400px`, `maxHeight: 800px`
+   - **Overflow intelligent** : `overflow: visible`, `overflowY: auto`
+   - **Recalcul forcé** : `offsetHeight` pour garantir l'affichage
+   - **Debug intégré** : Logs de vérification si mode debug activé
+
+2. **Fonctionnement garanti** :
+   - ✅ **Titre principal visible** en premier
+   - ✅ **Définition complète** avec styles
+   - ✅ **Sections structurées** (Détails, Interprétation, Conseils)
+   - ✅ **Exemples et formules** dans des encadrés colorés
+   - ✅ **Scroll automatique** si contenu trop long
+
+**📊 IMPACT UTILISATEUR**
+
+- **Avant v2.17.1** : Modals vides ou tronquées malgré le contenu présent
+- **Après v2.17.1** : **Contenu complet systématiquement visible** avec mise en forme parfaite
+
+**🎯 TEST DE VALIDATION**
+
+Sur `/mon-compte/mes-parrainages/`, toutes les icônes `?` affichent maintenant :
+- Titre + Définition + Détails + Conseils + Exemples
+- Hauteur adaptative avec scroll si nécessaire
+- Styles cohérents et professionnels
+
 ### Version 2.17.0 (15-01-2025 à 15h45) - CORRECTION DÉFINITIVE RENDU MODALS
 
 #### 🎯 PROBLÈME RÉSOLU : CONTENU MODAL COMPLET ENFIN AFFICHÉ
@@ -763,6 +797,7 @@ Cette version corrige définitivement le problème des modals qui affichaient se
 **🔧 CORRECTIONS TECHNIQUES CRITIQUES**
 
 1. **Fonction `renderModalContent()` entièrement corrigée** :
+
    - **Titre principal** maintenant affiché en premier avec `content.title`
    - **Définition** avec styles améliorés et espacement correct
    - **Contenu structuré** systématiquement rendu après la définition
@@ -789,6 +824,7 @@ Cette version corrige définitivement le problème des modals qui affichaient se
 **📊 PROBLÈME TECHNIQUE RÉSOLU**
 
 **Avant v2.17.0 :**
+
 ```javascript
 // PROBLÈME : Seule la définition était affichée
 if (content.definition) {
@@ -798,13 +834,14 @@ if (content.definition) {
 ```
 
 **Après v2.17.0 :**
+
 ```javascript
 // SOLUTION : Titre + Définition + Contenu structuré complet
 if (content.title) {
-  html += '<h3>titre</h3>';
+  html += "<h3>titre</h3>";
 }
 if (content.definition) {
-  html += '<div>définition</div>';
+  html += "<div>définition</div>";
 }
 html += this.renderStructuredContent(content); // Détails, conseils, exemples
 ```

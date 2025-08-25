@@ -353,13 +353,17 @@
 
       // Titre principal
       if (content.title) {
-        html += `<h3 style="color: #2c3e50; margin-bottom: 15px; margin-top: 0;">${this.escapeHtml(content.title)}</h3>`;
+        html += `<h3 style="color: #2c3e50; margin-bottom: 15px; margin-top: 0;">${this.escapeHtml(
+          content.title
+        )}</h3>`;
       }
 
       // Définition principale
       if (content.definition) {
         html += `<div class="modal-definition" style="margin-bottom: 15px;">
-          <p style="font-size: 14px; line-height: 1.5; margin-bottom: 10px;">${this.escapeHtml(content.definition)}</p>
+          <p style="font-size: 14px; line-height: 1.5; margin-bottom: 10px;">${this.escapeHtml(
+            content.definition
+          )}</p>
         </div>`;
       }
 
@@ -374,6 +378,26 @@
       html += "</div>";
 
       $modal.html(html);
+      
+      // Correction CSS immédiate pour assurer l'affichage complet du contenu
+      const self = this;
+      setTimeout(() => {
+        const modalElement = $modal[0];
+        if (modalElement) {
+          modalElement.style.minHeight = "400px";
+          modalElement.style.maxHeight = "800px";
+          modalElement.style.height = "auto";
+          modalElement.style.overflow = "visible";
+          modalElement.style.overflowY = "auto";
+          
+          // Forcer le recalcul de la taille pour afficher tout le contenu
+          modalElement.offsetHeight;
+          
+          if (self.config.debug) {
+            console.log(`[TB Modal ${self.config.namespace}] CSS corrections appliquées - hauteur: ${modalElement.scrollHeight}px`);
+          }
+        }
+      }, 50);
     };
 
     /**
@@ -385,10 +409,13 @@
       // Détails
       if (content.details && Array.isArray(content.details)) {
         html += '<div class="modal-section" style="margin-bottom: 15px;">';
-        html += '<h4 style="color: #34495e; margin-bottom: 10px;">📋 Détails</h4>';
+        html +=
+          '<h4 style="color: #34495e; margin-bottom: 10px;">📋 Détails</h4>';
         html += '<ul style="margin-left: 20px;">';
         content.details.forEach(function (detail) {
-          html += `<li style="margin-bottom: 5px;">${this.escapeHtml(detail)}</li>`;
+          html += `<li style="margin-bottom: 5px;">${this.escapeHtml(
+            detail
+          )}</li>`;
         }, this);
         html += "</ul>";
         html += "</div>";
@@ -397,15 +424,20 @@
       // Interprétation
       if (content.interpretation) {
         html += '<div class="modal-section" style="margin-bottom: 15px;">';
-        html += '<h4 style="color: #34495e; margin-bottom: 10px;">🔍 Interprétation</h4>';
+        html +=
+          '<h4 style="color: #34495e; margin-bottom: 10px;">🔍 Interprétation</h4>';
         if (Array.isArray(content.interpretation)) {
           html += '<ul style="margin-left: 20px;">';
           content.interpretation.forEach(function (item) {
-            html += `<li style="margin-bottom: 5px;">${this.escapeHtml(item)}</li>`;
+            html += `<li style="margin-bottom: 5px;">${this.escapeHtml(
+              item
+            )}</li>`;
           }, this);
           html += "</ul>";
         } else {
-          html += `<p style="font-style: italic; background: #f8f9fa; padding: 10px; border-radius: 5px;">${this.escapeHtml(content.interpretation)}</p>`;
+          html += `<p style="font-style: italic; background: #f8f9fa; padding: 10px; border-radius: 5px;">${this.escapeHtml(
+            content.interpretation
+          )}</p>`;
         }
         html += "</div>";
       }
@@ -432,7 +464,9 @@
       if (content.precision) {
         html += `<div class="modal-precision" style="margin-bottom: 15px;">
           <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
-            <strong>⚠️ Précision :</strong> ${this.escapeHtml(content.precision)}
+            <strong>⚠️ Précision :</strong> ${this.escapeHtml(
+              content.precision
+            )}
           </div>
         </div>`;
       }
@@ -440,10 +474,13 @@
       // Conseils
       if (content.tips && Array.isArray(content.tips)) {
         html += '<div class="modal-tips">';
-        html += '<h4 style="color: #34495e; margin-bottom: 10px;">💡 Conseils</h4>';
+        html +=
+          '<h4 style="color: #34495e; margin-bottom: 10px;">💡 Conseils</h4>';
         html += '<ul style="margin-left: 20px;">';
         content.tips.forEach(function (tip) {
-          html += `<li style="margin-bottom: 5px; color: #2c3e50;">${this.escapeHtml(tip)}</li>`;
+          html += `<li style="margin-bottom: 5px; color: #2c3e50;">${this.escapeHtml(
+            tip
+          )}</li>`;
         }, this);
         html += "</ul>";
         html += "</div>";
