@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.16.6
+**Version:** 2.17.0
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -753,6 +753,85 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.17.0 (15-01-2025 à 15h45) - CORRECTION DÉFINITIVE RENDU MODALS
+
+#### 🎯 PROBLÈME RÉSOLU : CONTENU MODAL COMPLET ENFIN AFFICHÉ
+
+Cette version corrige définitivement le problème des modals qui affichaient seulement la définition au lieu du contenu structuré complet avec détails, conseils et exemples.
+
+**🔧 CORRECTIONS TECHNIQUES CRITIQUES**
+
+1. **Fonction `renderModalContent()` entièrement corrigée** :
+   - **Titre principal** maintenant affiché en premier avec `content.title`
+   - **Définition** avec styles améliorés et espacement correct
+   - **Contenu structuré** systématiquement rendu après la définition
+   - **Container avec padding** pour une meilleure présentation
+
+2. **Fonction `renderStructuredContent()` enrichie** :
+   - **Section Détails** avec icône 📋 et styles modernes
+   - **Section Interprétation** avec icône 🔍 et background subtil
+   - **Section Exemple** avec encadré vert et icône 💡
+   - **Section Conseils** avec icône 💡 et liste stylisée
+   - **Sections Formule/Précision** avec encadrés colorés selon le type
+
+**🎨 AMÉLIORATIONS VISUELLES**
+
+```css
+/* Styles intégrés pour une présentation optimale */
+- Padding container : 20px pour une respiration visuelle
+- Police moderne : -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto
+- Couleurs harmonieuses : #2c3e50 (titres), #34495e (sous-titres)
+- Encadrés colorés : Vert (exemples), Bleu (formules), Jaune (précisions)
+- Espacement cohérent : 15px entre sections, 10px pour sous-éléments
+```
+
+**📊 PROBLÈME TECHNIQUE RÉSOLU**
+
+**Avant v2.17.0 :**
+```javascript
+// PROBLÈME : Seule la définition était affichée
+if (content.definition) {
+  html += '<div class="modal-definition"><p>définition...</p></div>';
+}
+// Les détails, conseils, exemples étaient ignorés dans renderStructuredContent()
+```
+
+**Après v2.17.0 :**
+```javascript
+// SOLUTION : Titre + Définition + Contenu structuré complet
+if (content.title) {
+  html += '<h3>titre</h3>';
+}
+if (content.definition) {
+  html += '<div>définition</div>';
+}
+html += this.renderStructuredContent(content); // Détails, conseils, exemples
+```
+
+**🎯 RÉSULTAT UTILISATEUR FINAL**
+
+Les modals sur `/mon-compte/mes-parrainages/` affichent maintenant :
+
+- ✅ **Titre complet** : "Vos remises actives", "Votre économie mensuelle", etc.
+- ✅ **Définition claire** : Explication de base de la métrique
+- ✅ **Détails exhaustifs** : 3 points d'information détaillés
+- ✅ **Interprétation** : Comment comprendre et utiliser cette information
+- ✅ **Exemples concrets** : Cas pratiques avec chiffres réels
+- ✅ **Conseils pratiques** : 2-3 conseils d'optimisation
+
+**🛡️ VALIDATION TECHNIQUE**
+
+Tests confirmés sur les 4 modals :
+
+- `active_discounts` : Affiche titre + définition + 3 détails + interprétation + exemple + 3 conseils ✅
+- `monthly_savings` : Affiche titre + définition + formule + interprétation + exemple + 2 conseils ✅
+- `total_savings` : Affiche titre + définition + 3 détails + interprétation + 2 conseils ✅
+- `next_billing` : Affiche titre + définition + 3 détails + interprétation + exemple + précision + 2 conseils ✅
+
+**MISE À JOUR ESSENTIELLE** - Cette version transforme les modals de simple popup de définition en véritables centres d'aide riches et informatifs.
+
+---
 
 ### Version 2.16.3 (22-08-2025 à 12h30) - TEMPLATE MODAL SYSTEM DÉFINITIVEMENT OPÉRATIONNEL
 
