@@ -351,19 +351,15 @@
       // Contenu principal avec padding pour une meilleure présentation
       html += `<div class="${this.config.cssClasses.content} tb-modal-${this.config.namespace}-content" style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">`;
 
-      // Titre principal
+      // Titre principal - SANS escapeHtml pour éviter corruption
       if (content.title) {
-        html += `<h3 style="color: #2c3e50; margin-bottom: 15px; margin-top: 0;">${this.escapeHtml(
-          content.title
-        )}</h3>`;
+        html += `<h3 style="color: #2c3e50 !important; margin-bottom: 15px !important; margin-top: 0 !important; display: block !important; visibility: visible !important;">${content.title}</h3>`;
       }
 
-      // Définition principale
+      // Définition principale - SANS escapeHtml pour éviter corruption
       if (content.definition) {
-        html += `<div class="modal-definition" style="margin-bottom: 15px;">
-          <p style="font-size: 14px; line-height: 1.5; margin-bottom: 10px;">${this.escapeHtml(
-            content.definition
-          )}</p>
+        html += `<div class="modal-definition" style="margin-bottom: 15px !important; display: block !important; visibility: visible !important;">
+          <p style="font-size: 14px !important; line-height: 1.5 !important; margin-bottom: 10px !important; display: block !important; visibility: visible !important; color: #333 !important;">${content.definition}</p>
         </div>`;
       }
 
@@ -378,26 +374,49 @@
       html += "</div>";
 
       $modal.html(html);
-      
-      // Correction CSS immédiate pour assurer l'affichage complet du contenu
+
+      // Correction CSS immédiate + forçage de visibilité TOTAL
       const self = this;
       setTimeout(() => {
         const modalElement = $modal[0];
         if (modalElement) {
+          // Styles de base pour la modal
           modalElement.style.minHeight = "400px";
           modalElement.style.maxHeight = "800px";
           modalElement.style.height = "auto";
           modalElement.style.overflow = "visible";
           modalElement.style.overflowY = "auto";
           
-          // Forcer le recalcul de la taille pour afficher tout le contenu
+          // FORCER la visibilité de TOUS les éléments enfants
+          const allElements = modalElement.querySelectorAll('*');
+          allElements.forEach(el => {
+            if (el.tagName !== 'SCRIPT' && el.tagName !== 'STYLE') {
+              // Affichage adapté selon le type d'élément
+              if (el.tagName === 'LI') {
+                el.style.display = 'list-item';
+              } else if (el.tagName === 'UL') {
+                el.style.display = 'block';
+                el.style.listStyle = 'disc';
+                el.style.paddingLeft = '25px';
+              } else {
+                el.style.display = 'block';
+              }
+              el.style.visibility = 'visible';
+              el.style.opacity = '1';
+              
+              // Forcer la couleur du texte
+              if (['P', 'LI', 'DIV', 'SPAN'].includes(el.tagName)) {
+                el.style.color = '#333';
+              }
+            }
+          });
+          
+          // Forcer le recalcul de la taille
           modalElement.offsetHeight;
           
-          if (self.config.debug) {
-            console.log(`[TB Modal ${self.config.namespace}] CSS corrections appliquées - hauteur: ${modalElement.scrollHeight}px`);
-          }
+          console.log(`[TB Modal ${self.config.namespace}] VISIBILITÉ FORCÉE - éléments traités: ${allElements.length}, hauteur: ${modalElement.scrollHeight}px`);
         }
-      }, 50);
+      }, 100);
     };
 
     /**
@@ -406,81 +425,68 @@
     this.renderStructuredContent = function (content) {
       let html = "";
 
-      // Détails
+      // Détails - SANS emoji ni escapeHtml
       if (content.details && Array.isArray(content.details)) {
-        html += '<div class="modal-section" style="margin-bottom: 15px;">';
-        html +=
-          '<h4 style="color: #34495e; margin-bottom: 10px;">📋 Détails</h4>';
-        html += '<ul style="margin-left: 20px;">';
+        html += '<div class="modal-section" style="margin-bottom: 15px !important; display: block !important; visibility: visible !important;">';
+        html += '<h4 style="color: #34495e !important; margin-bottom: 10px !important; display: block !important; visibility: visible !important; font-weight: 600 !important;">Détails</h4>';
+        html += '<ul style="margin-left: 20px !important; list-style: disc !important; display: block !important; visibility: visible !important;">';
         content.details.forEach(function (detail) {
-          html += `<li style="margin-bottom: 5px;">${this.escapeHtml(
-            detail
-          )}</li>`;
+          html += `<li style="margin-bottom: 5px !important; display: list-item !important; visibility: visible !important; color: #333 !important;">${detail}</li>`;
         }, this);
         html += "</ul>";
         html += "</div>";
       }
 
-      // Interprétation
+      // Interprétation - SANS emoji ni escapeHtml
       if (content.interpretation) {
-        html += '<div class="modal-section" style="margin-bottom: 15px;">';
-        html +=
-          '<h4 style="color: #34495e; margin-bottom: 10px;">🔍 Interprétation</h4>';
+        html += '<div class="modal-section" style="margin-bottom: 15px !important; display: block !important; visibility: visible !important;">';
+        html += '<h4 style="color: #34495e !important; margin-bottom: 10px !important; display: block !important; visibility: visible !important; font-weight: 600 !important;">Interprétation</h4>';
         if (Array.isArray(content.interpretation)) {
-          html += '<ul style="margin-left: 20px;">';
+          html += '<ul style="margin-left: 20px !important; list-style: disc !important; display: block !important; visibility: visible !important;">';
           content.interpretation.forEach(function (item) {
-            html += `<li style="margin-bottom: 5px;">${this.escapeHtml(
-              item
-            )}</li>`;
+            html += `<li style="margin-bottom: 5px !important; display: list-item !important; visibility: visible !important; color: #333 !important;">${item}</li>`;
           }, this);
           html += "</ul>";
         } else {
-          html += `<p style="font-style: italic; background: #f8f9fa; padding: 10px; border-radius: 5px;">${this.escapeHtml(
-            content.interpretation
-          )}</p>`;
+          html += `<p style="font-style: italic !important; background: #f8f9fa !important; padding: 10px !important; border-radius: 5px !important; display: block !important; visibility: visible !important; color: #333 !important;">${content.interpretation}</p>`;
         }
         html += "</div>";
       }
 
-      // Formule (si présente)
+      // Formule (si présente) - SANS emoji ni escapeHtml
       if (content.formula) {
-        html += `<div class="modal-example" style="margin-bottom: 15px;">
-          <div style="background: #e3f2fd; padding: 15px; border-radius: 5px; border-left: 4px solid #2196f3;">
-            <strong>🔢 Formule :</strong> ${this.escapeHtml(content.formula)}
+        html += `<div class="modal-example" style="margin-bottom: 15px !important; display: block !important; visibility: visible !important;">
+          <div style="background: #e3f2fd !important; padding: 15px !important; border-radius: 5px !important; border-left: 4px solid #2196f3 !important; display: block !important; visibility: visible !important;">
+            <strong style="display: inline !important; visibility: visible !important; color: #333 !important;">Formule :</strong> <span style="display: inline !important; visibility: visible !important; color: #333 !important;">${content.formula}</span>
           </div>
         </div>`;
       }
 
-      // Exemple (si présent)
+      // Exemple (si présent) - SANS emoji ni escapeHtml
       if (content.example) {
-        html += `<div class="modal-example" style="margin-bottom: 15px;">
-          <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; border-left: 4px solid #27ae60;">
-            <strong>💡 Exemple :</strong> ${this.escapeHtml(content.example)}
+        html += `<div class="modal-example" style="margin-bottom: 15px !important; display: block !important; visibility: visible !important;">
+          <div style="background: #e8f5e8 !important; padding: 15px !important; border-radius: 5px !important; border-left: 4px solid #27ae60 !important; display: block !important; visibility: visible !important;">
+            <strong style="display: inline !important; visibility: visible !important; color: #333 !important;">Exemple :</strong> <span style="display: inline !important; visibility: visible !important; color: #333 !important;">${content.example}</span>
           </div>
         </div>`;
       }
 
-      // Précision (si présente)
+      // Précision (si présente) - SANS emoji ni escapeHtml
       if (content.precision) {
-        html += `<div class="modal-precision" style="margin-bottom: 15px;">
-          <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107;">
-            <strong>⚠️ Précision :</strong> ${this.escapeHtml(
-              content.precision
-            )}
+        html += `<div class="modal-precision" style="margin-bottom: 15px !important; display: block !important; visibility: visible !important;">
+          <div style="background: #fff3cd !important; padding: 15px !important; border-radius: 5px !important; border-left: 4px solid #ffc107 !important; display: block !important; visibility: visible !important;">
+            <strong style="display: inline !important; visibility: visible !important; color: #333 !important;">Précision :</strong> <span style="display: inline !important; visibility: visible !important; color: #333 !important;">${content.precision}</span>
           </div>
         </div>`;
       }
 
-      // Conseils
+      // Conseils - SANS emoji ni escapeHtml
       if (content.tips && Array.isArray(content.tips)) {
-        html += '<div class="modal-tips">';
-        html +=
-          '<h4 style="color: #34495e; margin-bottom: 10px;">💡 Conseils</h4>';
-        html += '<ul style="margin-left: 20px;">';
+        html += '<div class="modal-tips" style="margin-bottom: 15px !important; display: block !important; visibility: visible !important;">';
+        html += '<h4 style="color: #34495e !important; margin-bottom: 10px !important; display: block !important; visibility: visible !important; font-weight: 600 !important;">Conseils</h4>';
+        html += '<ul style="margin-left: 20px !important; list-style: disc !important; display: block !important; visibility: visible !important;">';
         content.tips.forEach(function (tip) {
-          html += `<li style="margin-bottom: 5px; color: #2c3e50;">${this.escapeHtml(
-            tip
-          )}</li>`;
+          html += `<li style="margin-bottom: 5px !important; color: #2c3e50 !important; display: list-item !important; visibility: visible !important;">${tip}</li>`;
         }, this);
         html += "</ul>";
         html += "</div>";
