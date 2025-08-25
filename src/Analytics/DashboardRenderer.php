@@ -35,10 +35,10 @@ class DashboardRenderer {
     private $roi_calculator;
     
     /**
-     * Gestionnaire modales d'aide (migré vers TemplateModalManager)
-     * @var AdminStatsModalAdapter
+     * Gestionnaire modales d'aide
+     * @var HelpModalManager
      */
-    private $modal_adapter;
+    private $help_modal_manager;
     
     /**
      * Canal de logs spécialisé
@@ -51,13 +51,13 @@ class DashboardRenderer {
      * @param Logger $logger Instance du logger
      * @param AnalyticsDataProvider $data_provider Provider données
      * @param ROICalculator $roi_calculator Calculateur ROI
-     * @param AdminStatsModalAdapter $modal_adapter Adaptateur modales unifié
+     * @param HelpModalManager $help_modal_manager Gestionnaire modales d'aide
      */
-    public function __construct( $logger, AnalyticsDataProvider $data_provider, ROICalculator $roi_calculator, AdminStatsModalAdapter $modal_adapter ) {
+    public function __construct( $logger, AnalyticsDataProvider $data_provider, ROICalculator $roi_calculator, HelpModalManager $help_modal_manager ) {
         $this->logger = $logger;
         $this->data_provider = $data_provider;
         $this->roi_calculator = $roi_calculator;
-        $this->modal_adapter = $modal_adapter;
+        $this->help_modal_manager = $help_modal_manager;
         
         $this->logger->info(
             'DashboardRenderer initialisé avec dépendances',
@@ -168,7 +168,7 @@ class DashboardRenderer {
                 
                 <!-- Stats Analytics avancées -->
                 <div class="tb-stat-card tb-card-parrains">
-                    <?php $this->modal_adapter->render_help_icon( 'total_parrains' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'total_parrains' ); ?>
                     <div class="tb-stat-icon">👥</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value"><?php echo esc_html( $stats['total_parrains'] ); ?></div>
@@ -177,7 +177,7 @@ class DashboardRenderer {
                 </div>
                 
                 <div class="tb-stat-card tb-card-filleuls">
-                    <?php $this->modal_adapter->render_help_icon( 'total_filleuls' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'total_filleuls' ); ?>
                     <div class="tb-stat-icon">👤</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value"><?php echo esc_html( $stats['total_filleuls'] ); ?></div>
@@ -186,7 +186,7 @@ class DashboardRenderer {
                 </div>
                 
                 <div class="tb-stat-card tb-card-revenue">
-                    <?php $this->modal_adapter->render_help_icon( 'monthly_total_revenue' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'monthly_total_revenue' ); ?>
                     <div class="tb-stat-icon">💰</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value"><?php echo esc_html( number_format( $stats['monthly_total_revenue'], 2 ) ); ?>€ HT</div>
@@ -195,7 +195,7 @@ class DashboardRenderer {
                 </div>
                 
                 <div class="tb-stat-card tb-card-discounts">
-                    <?php $this->modal_adapter->render_help_icon( 'monthly_discounts' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'monthly_discounts' ); ?>
                     <div class="tb-stat-icon">🎁</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value"><?php echo esc_html( number_format( $stats['monthly_discounts'], 2 ) ); ?>€</div>
@@ -204,7 +204,7 @@ class DashboardRenderer {
                 </div>
                 
                 <div class="tb-stat-card tb-card-roi">
-                    <?php $this->modal_adapter->render_help_icon( 'roi_current_month' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'roi_current_month' ); ?>
                     <div class="tb-stat-icon">📈</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value <?php echo $stats['roi_current_month'] >= 0 ? 'positive' : 'negative'; ?>">
@@ -216,7 +216,7 @@ class DashboardRenderer {
                 
                 <!-- Stats basiques intégrées harmonieusement -->
                 <div class="tb-stat-card tb-card-basic">
-                    <?php $this->modal_adapter->render_help_icon( 'total_codes_used' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'total_codes_used' ); ?>
                     <div class="tb-stat-icon">📝</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value"><?php echo esc_html( $basic_stats['total_parrainage'] ?: 0 ); ?></div>
@@ -225,7 +225,7 @@ class DashboardRenderer {
                 </div>
                 
                 <div class="tb-stat-card tb-card-basic">
-                    <?php $this->modal_adapter->render_help_icon( 'monthly_events' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'monthly_events' ); ?>
                     <div class="tb-stat-icon">📅</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value"><?php echo esc_html( $basic_stats['parrainage_ce_mois'] ?: 0 ); ?></div>
@@ -234,7 +234,7 @@ class DashboardRenderer {
                 </div>
                 
                 <div class="tb-stat-card tb-card-basic">
-                    <?php $this->modal_adapter->render_help_icon( 'webhooks_sent' ); ?>
+                    <?php $this->help_modal_manager->render_help_icon( 'webhooks_sent' ); ?>
                     <div class="tb-stat-icon">🔗</div>
                     <div class="tb-stat-content">
                         <div class="tb-stat-value"><?php echo esc_html( $basic_stats['webhooks_envoyes'] ?: 0 ); ?></div>
@@ -268,7 +268,7 @@ class DashboardRenderer {
         <div class="tb-analytics-section tb-health-section">
             <h2>
                 <?php esc_html_e( 'Santé du Système', 'wc-tb-web-parrainage' ); ?>
-                <?php $this->modal_adapter->render_help_icon( 'system_health' ); ?>
+                <?php $this->help_modal_manager->render_help_icon( 'system_health' ); ?>
             </h2>
             
             <div class="tb-health-overview">

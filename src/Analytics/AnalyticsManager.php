@@ -47,10 +47,10 @@ class AnalyticsManager {
     private $dashboard_renderer;
     
     /**
-     * Gestionnaire modales d'aide (migré vers TemplateModalManager)
-     * @var AdminStatsModalAdapter
+     * Gestionnaire modales d'aide
+     * @var HelpModalManager
      */
-    private $modal_adapter;
+    private $help_modal_manager;
     
     /**
      * Canal de logs spécialisé
@@ -75,8 +75,8 @@ class AnalyticsManager {
         $this->data_provider = new AnalyticsDataProvider( $logger );
         $this->roi_calculator = new ROICalculator( $logger, $this->data_provider );
         $this->report_generator = new ReportGenerator( $logger, $this->data_provider, $this->roi_calculator );
-        $this->modal_adapter = new AdminStatsModalAdapter( $logger );
-        $this->dashboard_renderer = new DashboardRenderer( $logger, $this->data_provider, $this->roi_calculator, $this->modal_adapter );
+        $this->help_modal_manager = new HelpModalManager( $logger );
+        $this->dashboard_renderer = new DashboardRenderer( $logger, $this->data_provider, $this->roi_calculator, $this->help_modal_manager );
         
         $this->logger->info(
             'AnalyticsManager initialisé avec tous les composants',
@@ -87,7 +87,7 @@ class AnalyticsManager {
                     'roi_calculator', 
                     'report_generator',
                     'dashboard_renderer',
-                    'modal_adapter'
+                    'help_modal_manager'
                 )
             ),
             self::LOG_CHANNEL
@@ -106,8 +106,8 @@ class AnalyticsManager {
             add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_analytics_assets' ) );
         }
         
-        // Initialiser l'adaptateur de modales unifié
-        $this->modal_adapter->init();
+        // Initialiser le gestionnaire de modales d'aide
+        $this->help_modal_manager->init();
         
         // Hooks AJAX pour dashboard
         add_action( 'wp_ajax_tb_analytics_get_dashboard_data', array( $this, 'ajax_get_dashboard_data' ) );
@@ -173,6 +173,39 @@ class AnalyticsManager {
         if ( strpos( $hook, 'wc-tb-parrainage' ) === false ) {
             return;
         }
+
+        // Vérifier l'onglet analytics/stats
+        $current_tab = $_GET['tab'] ?? 'dashboard';
+        if ( $current_tab !== 'stats' ) {
+            return;
+        }
+        
+        // ====================================================
+        // 1. CHARGER JQUERY UI (CRITIQUE - MANQUANT!)
+        // ====================================================
+        
+        // jQuery UI Core et Dialog
+        wp_enqueue_script( 'jquery-ui-core' );
+        wp_enqueue_script( 'jquery-ui-dialog' );
+        
+        // CSS jQuery UI
+        wp_enqueue_style(
+            'jquery-ui-theme',
+            'https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.min.css',
+            array(),
+            '1.13.2'
+        );
+        
+        // ====================================================
+        // 2. CHARGER LES ASSETS MODALES D'AIDE
+        // ====================================================
+        
+        // Charger les assets des modales via HelpModalManager
+        $this->help_modal_manager->enqueue_help_assets( $hook );
+        
+        // ====================================================
+        // 3. CHARGER LES SCRIPTS ANALYTICS
+        // ====================================================
         
         // Chart.js pour graphiques
         wp_enqueue_script(
@@ -183,11 +216,11 @@ class AnalyticsManager {
             true
         );
         
-        // Script analytics custom
+        // Script analytics custom (avec dépendances Chart.js)
         wp_enqueue_script(
             'tb-analytics-dashboard',
             WC_TB_PARRAINAGE_URL . 'assets/js/analytics-dashboard.js',
-            array( 'jquery', 'chartjs' ),
+            array( 'jquery', 'chartjs', 'jquery-ui-dialog' ),
             WC_TB_PARRAINAGE_VERSION,
             true
         );
@@ -208,12 +241,40 @@ class AnalyticsManager {
                 'loading' => __( 'Chargement...', 'wc-tb-web-parrainage' ),
                 'error' => __( 'Erreur lors du chargement', 'wc-tb-web-parrainage' ),
                 'no_data' => __( 'Aucune donnée disponible', 'wc-tb-web-parrainage' )
+            ),
+            'chartConfig' => array(
+                'responsive' => true,
+                'maintainAspectRatio' => false
             )
         ) );
         
+        // Script d'initialisation pour éviter les conflits Chart.js
+        wp_add_inline_script( 'tb-analytics-dashboard', "
+            jQuery(document).ready(function($) {
+                // Détruire les graphiques existants pour éviter les conflits
+                if (typeof Chart !== 'undefined') {
+                    Chart.defaults.responsive = true;
+                    Chart.defaults.maintainAspectRatio = false;
+                    
+                    // Détruire tous les graphiques existants
+                    $('.tb-chart-canvas').each(function() {
+                        const chart = Chart.getChart(this);
+                        if (chart) {
+                            chart.destroy();
+                        }
+                    });
+                }
+            });
+        " );
+        
         $this->logger->info(
-            'Assets analytics chargés pour dashboard',
-            array( 'hook' => $hook ),
+            'Assets analytics chargés avec modales pour dashboard',
+            array( 
+                'hook' => $hook,
+                'tab' => $current_tab,
+                'jquery_ui' => true,
+                'help_modals' => true
+            ),
             self::LOG_CHANNEL
         );
     }
