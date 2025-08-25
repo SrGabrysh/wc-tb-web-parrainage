@@ -298,7 +298,7 @@ class MyAccountParrainageManager {
      * @return void
      */
     public function enqueue_styles() {
-        // Charger seulement sur les pages Mon Compte
+        // Charger seulement sur les pages Mon Compte (condition corrigée)
         if ( ! \is_wc_endpoint_url( self::ENDPOINT_KEY ) && ! \is_account_page() ) {
             return;
         }
@@ -310,7 +310,7 @@ class MyAccountParrainageManager {
             WC_TB_PARRAINAGE_VERSION
         );
         
-        // JavaScript pour les interactions
+        // JavaScript pour les interactions - TOUJOURS charger sur pages mon compte
         \wp_enqueue_script( 'jquery-ui-effects-highlight' );
         \wp_enqueue_script(
             'wc-tb-parrainage-my-account-discount',
@@ -319,6 +319,19 @@ class MyAccountParrainageManager {
             WC_TB_PARRAINAGE_VERSION,
             true
         );
+        
+        // Log pour débugger
+        if ( $this->logger ) {
+            $this->logger->info( 
+                'Script my-account-discount.js chargé',
+                [
+                    'endpoint_check' => \is_wc_endpoint_url( self::ENDPOINT_KEY ),
+                    'account_page_check' => \is_account_page(),
+                    'current_url' => $_SERVER['REQUEST_URI'] ?? 'N/A'
+                ],
+                'my-account-assets'
+            );
+        }
         
         // UNIQUEMENT le Template Modal System - PLUS D'ANCIEN SYSTÈME
         if ( $this->modal_manager ) {
