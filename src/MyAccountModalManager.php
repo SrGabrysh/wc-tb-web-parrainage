@@ -44,7 +44,7 @@ class MyAccountModalManager {
             $logger,
             [
                 'modal_width' => 600,
-                'modal_max_height' => 500,
+                'modal_max_height' => 800,
                 'enable_cache' => true,
                 'cache_duration' => 1800,
                 'enable_keyboard_nav' => true,
@@ -132,7 +132,7 @@ class MyAccountModalManager {
                 window.tbModalClient_account = new window.TBTemplateModals({
                     namespace: 'client_account',
                     modalWidth: 600,
-                    modalMaxHeight: 500,
+                    modalMaxHeight: 800,
                     enableCache: true,
                     ajaxUrl: '" . admin_url('admin-ajax.php') . "',
                     nonce: '" . wp_create_nonce('tb_modal_client_account_nonce') . "',

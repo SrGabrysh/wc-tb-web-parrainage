@@ -54,7 +54,7 @@ class TemplateModalManager {
         // Configuration par défaut fusionnée avec config personnalisée
         $this->config = wp_parse_args( $config, [
             'modal_width' => 600,
-            'modal_max_height' => 500,
+            'modal_max_height' => 800,
             'enable_multilang' => false,
             'default_language' => 'fr',
             'ajax_action_prefix' => 'tb_modal_' . $this->namespace,
