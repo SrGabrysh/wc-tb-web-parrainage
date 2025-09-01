@@ -401,14 +401,20 @@ class MyAccountParrainageManager {
             </tbody>
         </table>
         
-        <!-- Explications pédagogiques v2.0.2 -->
+        <!-- Explications pédagogiques v2.0.3 - Correction taux et base de calcul -->
         <div class="tb-parrainage-explanations" style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #0073aa;">
-            <p><strong>* À propos de votre remise :</strong></p>
+            <p><strong>* Comment fonctionne votre remise parrain :</strong></p>
             <ul style="margin-left: 20px;">
-                <li>La remise de <strong>25% s'applique sur le montant hors taxes (HT)</strong> de l'abonnement de votre filleul</li>
-                <li>Elle est automatiquement déduite de vos mensualités <strong>après la souscription</strong> de votre filleul</li>
-                <li>La remise n'est active que si <strong>l'abonnement de votre filleul reste en cours</strong></li>
-                <li>En cas d'annulation de l'abonnement du filleul, votre remise sera automatiquement supprimée</li>
+                <li><strong>Montant :</strong> 20% du prix TTC payé par votre filleul</li>
+                <li><strong>Exemple concret :</strong> 
+                    <ul style="margin-left: 20px; margin-top: 5px;">
+                        <li>Votre filleul souscrit à 59,99€ HT (71,99€ TTC)</li>
+                        <li>→ Vous économisez 14,40€/mois (20% × 71,99€)</li>
+                    </ul>
+                </li>
+                <li><strong>Application :</strong> Remise automatique sur vos prochaines factures après validation de l'abonnement filleul</li>
+                <li><strong>Durée :</strong> Active tant que votre filleul maintient son abonnement</li>
+                <li><strong>Annulation :</strong> Si le filleul résilie, la remise est automatiquement supprimée</li>
             </ul>
         </div>
         

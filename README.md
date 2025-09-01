@@ -1,6 +1,6 @@
 # WC TB-Web Parrainage
 
-**Version:** 2.20.4
+**Version:** 2.20.6
 **Auteur:** TB-Web  
 **Compatible:** WordPress 6.0+, PHP 8.1+, WooCommerce 3.0+
 
@@ -753,6 +753,51 @@ Pour toute question ou problème :
 GPL v2 or later
 
 ## Changelog
+
+### Version 2.20.5 (2025-01-16) - CORRECTION TEXTE EXPLICATIF REMISES
+
+#### 📝 Correction du Texte Explicatif
+
+**🎯 PROBLÈME RÉSOLU : INFORMATIONS INCORRECTES DANS L'INTERFACE CLIENT**
+
+Cette version corrige les erreurs factuelles dans le texte explicatif des remises parrain sur la page client `/mon-compte/mes-parrainages/`.
+
+**🔧 CORRECTIONS APPORTÉES**
+
+- **Taux correct** : Correction de 25% → 20% (taux réel)
+- **Base de calcul** : Correction de "HT" → "TTC" (base réelle)
+- **Structure améliorée** : Réorganisation de l'information avec sections claires
+- **Exemple concret** : Ajout d'un calcul illustratif avec montants réels
+- **Lisibilité** : Amélioration de la présentation avec listes imbriquées
+
+**📊 CONTENU CORRIGÉ**
+
+**Avant v2.20.5 :**
+- ❌ "La remise de **25% s'applique sur le montant hors taxes (HT)**"
+- ❌ Informations peu structurées sans exemple
+
+**Après v2.20.5 :**
+- ✅ "**Montant :** 20% du prix TTC payé par votre filleul"
+- ✅ **Exemple concret :** 59,99€ HT (71,99€ TTC) → 14,40€/mois d'économie
+- ✅ Structure claire : Montant, Exemple, Application, Durée, Annulation
+
+**🎨 AMÉLIORATIONS UX**
+
+- **Titre enrichi** : "Comment fonctionne votre remise parrain"
+- **Sections thématiques** : Chaque aspect clairement identifié
+- **Exemple pratique** : Calcul concret pour meilleure compréhension
+- **Cohérence visuelle** : Conservation du style existant
+
+**🔧 IMPACT TECHNIQUE**
+
+- **Fichier modifié** : `src/MyAccountParrainageManager.php` (ligne 404-419)
+- **Version commentaire** : v2.0.2 → v2.0.3 pour traçabilité
+- **Aucun impact** : Performance, sécurité ou fonctionnalités
+- **Compatibilité** : Totale avec versions existantes
+
+**MISE À JOUR RECOMMANDÉE** pour corriger les informations affichées aux utilisateurs.
+
+---
 
 ### Version 2.17.2 (15-01-2025 à 16h15) - FIX DÉFINITIF VISIBILITÉ CONTENU MODAL
 
