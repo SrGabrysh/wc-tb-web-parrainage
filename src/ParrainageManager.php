@@ -451,7 +451,20 @@ class ParrainageManager {
 
                 /*  Validation à la soumission du checkout  */
                 $('form.checkout').on('checkout_place_order', function(){
-                    var code = $('#billing_parrain_code').val().replace(/\s+/g, '');
+                    // CORRECTION BUG STRIPE : Vérifier que le champ existe avant de l'utiliser
+                    var $parrainField = $('#billing_parrain_code');
+                    if ($parrainField.length === 0) {
+                        // Pas de champ parrain = pas de validation nécessaire
+                        return true;
+                    }
+                    
+                    var code = $parrainField.val();
+                    if (!code) {
+                        // Champ vide = pas de validation nécessaire
+                        return true;
+                    }
+                    
+                    code = code.replace(/\s+/g, '');
                     
                     if (code !== '') {
                         // Vérifier si le champ est en erreur

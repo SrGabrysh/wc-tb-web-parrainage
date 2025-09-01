@@ -218,7 +218,7 @@ class AutomaticDiscountProcessor {
             
             if ( $pending_discount && $parent_order->get_meta( '_parrainage_workflow_status' ) === 'pending' ) {
                 // Programmation avec délai de sécurité (filtrable)
-                $delay = (int) \apply_filters( 'tb_parrainage_async_delay', WC_TB_PARRAINAGE_ASYNC_DELAY );
+                $delay = (int) apply_filters( 'tb_parrainage_async_delay', WC_TB_PARRAINAGE_ASYNC_DELAY );
                 $schedule_time = time() + max( 0, $delay );
                 
                 $scheduled = wp_schedule_single_event(
@@ -659,9 +659,9 @@ class AutomaticDiscountProcessor {
      */
     public function check_cron_health() {
         $health_status = array(
-            'cron_enabled' => defined( 'DISABLE_WP_CRON' ) ? ! DISABLE_WP_CRON : true,
-            'pending_events' => \wp_get_scheduled_event( WC_TB_PARRAINAGE_QUEUE_HOOK ),
-            'last_run' => \get_option( 'tb_parrainage_last_cron_run', false ),
+            'cron_enabled' => defined( 'DISABLE_WP_CRON' ) ? ! \DISABLE_WP_CRON : true,
+            'pending_events' => wp_get_scheduled_event( WC_TB_PARRAINAGE_QUEUE_HOOK ),
+            'last_run' => get_option( 'tb_parrainage_last_cron_run', false ),
             'failed_orders' => $this->get_failed_orders_count(),
             'recommendations' => array()
         );
@@ -741,10 +741,10 @@ class AutomaticDiscountProcessor {
         );
         
         // Vérification des services WordPress
-        $validation_result['checks']['wordpress'] = get_bloginfo( 'version' );
+        $validation_result['checks']['wordpress'] = \get_bloginfo( 'version' );
         $validation_result['checks']['woocommerce'] = class_exists( 'WooCommerce' );
         $validation_result['checks']['subscriptions'] = class_exists( 'WC_Subscriptions' );
-        $validation_result['checks']['cron_enabled'] = ! ( defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON );
+        $validation_result['checks']['cron_enabled'] = ! ( defined( 'DISABLE_WP_CRON' ) && \DISABLE_WP_CRON );
         
         // Vérification des services techniques
         $validation_result['checks']['calculator_loaded'] = ! is_null( $this->discount_calculator );
@@ -792,7 +792,7 @@ class AutomaticDiscountProcessor {
      */
     public function generate_diagnostic_report() {
         return array(
-            'timestamp' => current_time( 'mysql' ),
+            'timestamp' => \current_time( 'mysql' ),
             'version' => WC_TB_PARRAINAGE_VERSION,
             'system_validation' => $this->validate_system_readiness(),
             'cron_health' => $this->check_cron_health(),
@@ -822,7 +822,7 @@ class AutomaticDiscountProcessor {
             FROM {$wpdb->postmeta}
             WHERE meta_key = %s
             GROUP BY meta_value
-        ", '_parrainage_workflow_status' ), ARRAY_A );
+        ", '_parrainage_workflow_status' ), \ARRAY_A );
         
         foreach ( $status_counts as $status_count ) {
             $stats['by_status'][ $status_count['status'] ] = intval( $status_count['count'] );
@@ -1069,7 +1069,7 @@ class AutomaticDiscountProcessor {
             LIMIT 1
         ", $filleul_subscription_id );
         
-        $order_result = $wpdb->get_row( $order_query, ARRAY_A );
+        $order_result = $wpdb->get_row( $order_query, \ARRAY_A );
         
         if ( ! $order_result ) {
             $this->logger->warning(
@@ -1111,7 +1111,7 @@ class AutomaticDiscountProcessor {
             LIMIT 1
         ", $order_id, $order_id );
         
-        $result = $wpdb->get_row( $query, ARRAY_A );
+        $result = $wpdb->get_row( $query, \ARRAY_A );
         
         $search_duration = round( ( microtime( true ) - $search_start ) * 1000, 2 );
         
